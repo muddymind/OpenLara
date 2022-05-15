@@ -1091,7 +1091,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     Core::defLang = checkLanguage();
 
-    FILE *f = fopen("baserom.us.z64", "rb");
+    FILE *f = fopen("sm64.us.z64", "rb");
     if (!f)
         MessageBoxA(hWnd, "Place baserom.us.z64 in this folder", "Mario 64 US ROM not found", MB_ICONHAND);
     else

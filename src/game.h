@@ -269,7 +269,7 @@ namespace Game {
         // load libsm64
         uint8_t *romBuffer;
         size_t romFileLength;
-        FILE *f = fopen("baserom.us.z64", "rb");
+        FILE *f = fopen("sm64.us.z64", "rb");
 
         fseek(f, 0, SEEK_END);
         romFileLength = (size_t)ftell(f);
