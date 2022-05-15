@@ -1,6 +1,9 @@
 #ifndef H_MARIO
 #define H_MARIO
 
+#define MARIO_SCALE 4.f
+#define IMARIO_SCALE 4
+
 extern "C" {
 	#include <libsm64/src/libsm64.h>
 	#include <libsm64/src/decomp/include/surface_terrains.h>
@@ -95,19 +98,19 @@ struct Mario : Lara
 			for (int j = 0; j < d.fCount; j++)
 			{
 				TR::Face &f = d.faces[j];
-				surfaces[surface_ind] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {
-					{(room.info.x + d.vertices[f.vertices[2]].pos.x)/1, d.vertices[f.vertices[2]].pos.y/1, (room.info.z + d.vertices[f.vertices[2]].pos.z)/1},
-					{(room.info.x + d.vertices[f.vertices[1]].pos.x)/1, d.vertices[f.vertices[1]].pos.y/1, (room.info.z + d.vertices[f.vertices[1]].pos.z)/1},
-					{(room.info.x + d.vertices[f.vertices[0]].pos.x)/1, d.vertices[f.vertices[0]].pos.y/1, (room.info.z + d.vertices[f.vertices[0]].pos.z)/1},
+				surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+					{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+					{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
+					{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
 				}};
 
 				if (!f.triangle)
 				{
 					surface_ind++;
-					surfaces[surface_ind] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {
-						{(room.info.x + d.vertices[f.vertices[0]].pos.x)/1, d.vertices[f.vertices[0]].pos.y/1, (room.info.z + d.vertices[f.vertices[0]].pos.z)/1},
-						{(room.info.x + d.vertices[f.vertices[3]].pos.x)/1, d.vertices[f.vertices[3]].pos.y/1, (room.info.z + d.vertices[f.vertices[3]].pos.z)/1},
-						{(room.info.x + d.vertices[f.vertices[2]].pos.x)/1, d.vertices[f.vertices[2]].pos.y/1, (room.info.z + d.vertices[f.vertices[2]].pos.z)/1},
+					surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+						{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+						{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
+						{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
 					}};
 				}
 
@@ -116,7 +119,7 @@ struct Mario : Lara
 		}
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
-		marioId = sm64_mario_create(pos.x, pos.y, pos.z);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 	}
 	
 	virtual ~Mario()
@@ -148,7 +151,7 @@ struct Mario : Lara
 
 		TRmarioMesh->render(range);
 
-		Core::setCullMode(cmNone);
+		Core::setCullMode(cmFront);
 
 		if (dtex) dtex->bind(sDiffuse);
 	}
@@ -202,28 +205,44 @@ struct Mario : Lara
 			marioInputs.buttonZ = false;
 			marioInputs.camLookX = 0;
 			marioInputs.camLookZ = 0;
-			marioInputs.stickX = 0;
+			marioInputs.stickX = -1;
 			marioInputs.stickY = 0;
 
 			if (flags.active) {
 				// do mario64 tick here
 				marioTicks += Core::deltaTime;
+
 				while (marioTicks > 1./30)
 				{
 					sm64_mario_tick(marioId, &marioInputs, &marioState, &marioGeometry);
 					marioTicks -= 1./30;
-				}
-				marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
-				TRmarioMesh->update(&marioGeometry);
-				/*
-				for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
-				{
-					//marioGeometry.position[i] *= 2;
-					if (i%3 != 0) // flip y and z
+					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
+
+					for (int i=0; i<3; i++)
 					{
-						//marioGeometry.position[i] = -marioGeometry.position[i];
+						marioState.position[i] *= MARIO_SCALE;
 					}
-				}*/
+
+					float* centerPos = marioState.position;
+					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
+					{
+						marioGeometry.position[i] *= MARIO_SCALE;
+
+						// scale up the model
+						marioGeometry.position[i] = (marioGeometry.position[i] - centerPos[i%3]) + centerPos[i%3];
+						//marioGeometry.normal[i] = (marioGeometry.normal[i] - centerPos[i%3]) * marioScale + centerPos[i%3];
+						//marioGeometry.color[i] = (marioGeometry.color[i] - centerPos[i%3]) * marioScale + centerPos[i%3];
+						//if (i<6 * SM64_GEO_MAX_TRIANGLES) marioGeometry.uv[i] = (marioGeometry.uv[i] - centerPos[i%3]) * marioScale + centerPos[i%3];
+
+						if (i%3 != 0) // flip y and z
+						{
+							marioGeometry.position[i] = -marioGeometry.position[i];
+							//marioGeometry.normal[i] = -marioGeometry.normal[i];
+							//if (i<6 * SM64_GEO_MAX_TRIANGLES) marioGeometry.uv[i] = -marioGeometry.uv[i];
+						}
+					}
+					TRmarioMesh->update(&marioGeometry);
+				}
 
 				updateVelocity();
 				updatePosition();
@@ -320,8 +339,8 @@ struct Mario : Lara
 		pos.y = marioState.position[1];
 		pos.z = marioState.position[2];
 		*/
-		printf("L %.2f %.2f %.2f\n", pos.x, pos.y, pos.z);
-		printf("M %.2f %.2f %.2f\n", marioState.position[0], marioState.position[1], marioState.position[2]);
+		//printf("L %.2f %.2f %.2f\n", pos.x, pos.y, pos.z);
+		//printf("M %.2f %.2f %.2f\n", marioState.position[0], marioState.position[1], marioState.position[2]);
 	}
 
 	void updateVelocity()
