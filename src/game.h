@@ -2,6 +2,97 @@
 #define H_GAME
 
 #include "core.h"
+
+// some code taken from libsm64 test program
+// i'm so sorry, xproger... call me a noob all you want but i TRIED
+const char *MARIO_SHADER =
+"\n uniform mat4 view;"
+"\n uniform mat4 projection;"
+"\n uniform sampler2D marioTex;"
+"\n "
+"\n v2f vec3 v_color;"
+"\n v2f vec3 v_normal;"
+"\n v2f vec3 v_light;"
+"\n v2f vec2 v_uv;"
+"\n "
+"\n #ifdef VERTEX"
+"\n "
+"\n     layout(location = 0) in vec3 position;"
+"\n     layout(location = 1) in vec3 normal;"
+"\n     layout(location = 2) in vec3 color;"
+"\n     layout(location = 3) in vec2 uv;"
+"\n "
+"\n     void main()"
+"\n     {"
+"\n         v_color = color;"
+"\n         v_normal = normal;"
+"\n         v_light = transpose( mat3( view )) * normalize( vec3( 1 ));"
+"\n         v_uv = uv;"
+"\n "
+"\n         gl_Position = projection * view * vec4( position, 1. );"
+"\n     }"
+"\n "
+"\n #endif"
+"\n #ifdef FRAGMENT"
+"\n "
+"\n     out vec4 color;"
+"\n "
+"\n     void main() "
+"\n     {"
+"\n         float light = .5 + .5 * clamp( dot( v_normal, v_light ), 0., 1. );"
+"\n         vec4 texColor = texture2D( marioTex, v_uv );"
+"\n         vec3 mainColor = mix( v_color, texColor.rgb, texColor.a ); // v_uv.x >= 0. ? texColor.a : 0. );"
+"\n         color = vec4( mainColor * light, 1 );"
+"\n     }"
+"\n "
+"\n #endif";
+
+GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, GLenum shaderType )
+{
+    const GLchar *shaderDefine = shaderType == GL_VERTEX_SHADER 
+        ? "\n#version 410\n#define VERTEX  \n#define v2f out\n" 
+        : "\n#version 410\n#define FRAGMENT\n#define v2f in \n";
+
+    const GLchar *shaderStrings[2] = { shaderDefine, shaderContents };
+    GLint shaderStringLengths[2] = { strlen( shaderDefine ), (GLint)shaderContentsLength };
+
+    GLuint shader = glCreateShader( shaderType );
+    glShaderSource( shader, 2, shaderStrings, shaderStringLengths );
+    glCompileShader( shader );
+
+    GLint isCompiled;
+    glGetShaderiv( shader, GL_COMPILE_STATUS, &isCompiled );
+    if( isCompiled == GL_FALSE ) 
+    {
+        GLint maxLength;
+        glGetShaderiv( shader, GL_INFO_LOG_LENGTH, &maxLength );
+        char *log = (char*)malloc( maxLength );
+        glGetShaderInfoLog( shader, maxLength, &maxLength, log );
+
+        printf( "Error in shader: %s\n%s\n%s\n", log, shaderStrings[0], shaderStrings[1] );
+        exit( 1 );
+    }
+
+    return shader;
+}
+
+GLuint shader_load( const char *shaderContents )
+{
+    GLuint result;
+    GLuint vert = shader_compile( shaderContents, strlen( shaderContents ), GL_VERTEX_SHADER );
+    GLuint frag = shader_compile( shaderContents, strlen( shaderContents ), GL_FRAGMENT_SHADER );
+
+    GLuint ref = glCreateProgram();
+    glAttachShader( ref, vert );
+    glAttachShader( ref, frag );
+    glLinkProgram ( ref );
+    glDetachShader( ref, vert );
+    glDetachShader( ref, frag );
+    result = ref;
+
+    return result;
+}
+
 #include "format.h"
 #include "cache.h"
 #include "inventory.h"
@@ -15,6 +106,8 @@ namespace Game {
     Level      *level;
     Stream     *nextLevel;
     ControlKey cheatSeq[MAX_PLAYERS][MAX_CHEAT_SEQUENCE];
+
+    uint8_t *marioTextureUint8;
 
     void cheatControl(int32 playerIndex) {
         ControlKey key = Input::lastState[playerIndex];
@@ -50,7 +143,7 @@ namespace Game {
     // dozy mode
         if (CHECK_CHEAT(CHEAT_DOZY_MODE))
         {
-            Lara *lara = (Lara*)level->getLara(playerIndex);
+            Mario *lara = (Mario*)level->getLara(playerIndex);
             if (lara) {
                 lara->setDozy(true);
             }
@@ -172,6 +265,29 @@ namespace Game {
         Core::settings.version = SETTINGS_READING;
         Stream::cacheRead("settings", loadSettings, lvl);
         readSlots();
+
+        // load libsm64
+        uint8_t *romBuffer;
+        size_t romFileLength;
+        FILE *f = fopen("baserom.us.z64", "rb");
+
+        fseek(f, 0, SEEK_END);
+        romFileLength = (size_t)ftell(f);
+        rewind(f);
+        romBuffer = (uint8_t*)malloc(romFileLength + 1);
+        fread(romBuffer, 1, romFileLength, f);
+        romBuffer[romFileLength] = 0;
+        fclose(f);
+
+        // Mario texture is 704x64 RGBA
+        marioTextureUint8 = (uint8_t*)malloc(4 * SM64_TEXTURE_WIDTH * SM64_TEXTURE_HEIGHT);
+
+        sm64_global_terminate();
+        sm64_global_init(romBuffer, Game::marioTextureUint8, NULL);
+
+        // Put Mario texture in OpenLara
+        Core::marioShader = shader_load( MARIO_SHADER );
+        Core::marioTexture = new Texture(SM64_TEXTURE_WIDTH, SM64_TEXTURE_HEIGHT, 1, FMT_RGBA, 0, marioTextureUint8, true);
     }
 
     void init(const char *lvlName = NULL) {

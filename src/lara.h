@@ -329,6 +329,8 @@ struct Lara : Character {
 
     int32       networkInput;
 
+	bool isMario;
+
 #ifdef _DEBUG
     //uint16      *dbgBoxes;
     //int         dbgBoxesCount;
@@ -502,6 +504,7 @@ struct Lara : Character {
 
     Lara(IGame *game, int entity) : Character(game, entity, LARA_MAX_HEALTH), wpnCurrent(TR::Entity::NONE), wpnNext(TR::Entity::NONE) {
         camera = new Camera(game, this);
+		isMario = false;
 
         braid[0] = braid[1] = NULL;
 
@@ -3287,7 +3290,7 @@ struct Lara : Character {
             }
         }
         
-        camera->update();
+        camera->update(pos);
 
         if (hitTimer > 0.0f) {
             hitTimer -= Core::deltaTime;

@@ -1,6 +1,10 @@
 #ifndef H_GAPI_GL
 #define H_GAPI_GL
 
+extern "C" {
+	#include <libsm64/src/libsm64.h>
+}
+
 #include "core.h"
 
 #if defined(_DEBUG) || defined(PROFILE)
@@ -364,9 +368,11 @@
         PFNGLDELETESHADERPROC               glDeleteShader;
         PFNGLSHADERSOURCEPROC               glShaderSource;
         PFNGLATTACHSHADERPROC               glAttachShader;
+        PFNGLDETACHSHADERPROC               glDetachShader;
         PFNGLCOMPILESHADERPROC              glCompileShader;
         PFNGLGETSHADERINFOLOGPROC           glGetShaderInfoLog;
         PFNGLGETUNIFORMLOCATIONPROC         glGetUniformLocation;
+        PFNGLUNIFORM1IPROC                  glUniform1i;
         PFNGLUNIFORM1IVPROC                 glUniform1iv;
         PFNGLUNIFORM1FVPROC                 glUniform1fv;
         PFNGLUNIFORM2FVPROC                 glUniform2fv;
@@ -378,6 +384,7 @@
         PFNGLDISABLEVERTEXATTRIBARRAYPROC   glDisableVertexAttribArray;
         PFNGLVERTEXATTRIBPOINTERPROC        glVertexAttribPointer;
         PFNGLGETPROGRAMIVPROC               glGetProgramiv;
+        PFNGLGETSHADERIVPROC                glGetShaderiv;
     // Render to texture
         PFNGLGENFRAMEBUFFERSPROC                     glGenFramebuffers;
         PFNGLBINDFRAMEBUFFERPROC                     glBindFramebuffer;
@@ -819,13 +826,14 @@ namespace GAPI {
     };
 
     struct Texture {
-        uint32     ID;
+        GLuint     ID;
         int        width, height, depth, origWidth, origHeight, origDepth;
         TexFormat  fmt;
         uint32     opt;
         GLenum     target;
+		bool       isMario;
 
-        Texture(int width, int height, int depth, uint32 opt) : ID(0), width(width), height(height), depth(depth), origWidth(width), origHeight(height), origDepth(depth), fmt(FMT_RGBA), opt(opt) {}
+        Texture(int width, int height, int depth, uint32 opt, bool mario=false) : ID(0), width(width), height(height), depth(depth), origWidth(width), origHeight(height), origDepth(depth), fmt(FMT_RGBA), opt(opt), isMario(mario) {}
 
         void init(void *data) {
             ASSERT((opt & OPT_PROXY) == 0);
@@ -841,6 +849,19 @@ namespace GAPI {
             glGenTextures(1, &ID);
 
             Core::active.textures[0] = NULL;
+
+			/*
+			if (isMario)
+			{
+				glBindTexture( GL_TEXTURE_2D, ID );
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (uint8_t*)data);
+				return;
+			}*/
+
             bind(0);
 
             if (isShadow) {
@@ -1004,8 +1025,15 @@ namespace GAPI {
         int    vCount;
         int    aCount;
         bool   dynamic;
+		bool   isMario;
 
-        Mesh(bool dynamic) : iBuffer(NULL), vBuffer(NULL), VAO(NULL), dynamic(dynamic) {
+		// for mario
+		GLuint position_buffer;
+		GLuint normal_buffer;
+		GLuint color_buffer;
+		GLuint uv_buffer;
+
+        Mesh(bool dynamic, bool mario=false) : iBuffer(NULL), vBuffer(NULL), VAO(NULL), dynamic(dynamic), isMario(mario) {
             ID[0] = ID[1] = 0;
         }
 
@@ -1027,13 +1055,15 @@ namespace GAPI {
 
             ASSERT(sizeof(GAPI::Vertex) == sizeof(::Vertex));
 
-            if (useVBO) {
-                glGenBuffers(2, ID);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ID[0]);
-                glBindBuffer(GL_ARRAY_BUFFER,         ID[1]);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, iCount * sizeof(Index),  indices,  dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-                glBufferData(GL_ARRAY_BUFFER,         vCount * sizeof(Vertex), vertices, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-            } else {
+			if (isMario)
+				iBuffer = indices;
+            else if (useVBO && !isMario) {
+				glGenBuffers(2, ID);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ID[0]);
+				glBindBuffer(GL_ARRAY_BUFFER,         ID[1]);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, iCount * sizeof(Index),  indices,  dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+				glBufferData(GL_ARRAY_BUFFER,         vCount * sizeof(Vertex), vertices, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+			} else if (!useVBO) {
                 iBuffer = new Index[iCount];
                 vBuffer = new GAPI::Vertex[vCount];
                 update(indices, iCount, vertices, vCount);
@@ -1044,6 +1074,28 @@ namespace GAPI {
                 glGenVertexArrays(aCount, VAO);
             }
         }
+
+		// for mario
+		void initMario(struct SM64MarioGeometryBuffers *marioGeo)
+		{
+			isMario = true;
+			glBindVertexArray(*VAO);
+
+			#define X( loc, buff, arr, type ) do { \
+				glGenBuffers( 1, &buff ); \
+				glBindBuffer( GL_ARRAY_BUFFER, buff ); \
+				glBufferData( GL_ARRAY_BUFFER, sizeof( type ) * 3 * SM64_GEO_MAX_TRIANGLES, arr, GL_DYNAMIC_DRAW ); \
+				glEnableVertexAttribArray( loc ); \
+				glVertexAttribPointer( loc, sizeof( type ) / sizeof( float ), GL_FLOAT, GL_FALSE, sizeof( type ), NULL ); \
+			} while( 0 )
+
+			X( 0, position_buffer, marioGeo->position, vec3 );
+			X( 1, normal_buffer,   marioGeo->normal,   vec3 );
+			X( 2, color_buffer,    marioGeo->color,    vec3 );
+			X( 3, uv_buffer,       marioGeo->uv,       vec2 );
+
+			#undef X
+		}
 
         void deinit() {
             if (iBuffer || vBuffer) {
@@ -1060,6 +1112,8 @@ namespace GAPI {
 
         void update(Index *indices, int iCount, ::Vertex *vertices, int vCount) {
             ASSERT(sizeof(GAPI::Vertex) == sizeof(::Vertex));
+
+			if (isMario) return;
 
             if (Core::support.VAO && Core::active.VAO != 0)
                 glBindVertexArray(Core::active.VAO = 0);
@@ -1080,6 +1134,21 @@ namespace GAPI {
                     glBufferSubData(GL_ARRAY_BUFFER, 0, vCount * sizeof(GAPI::Vertex), vertices);
                 }
             }
+        }
+
+		// for mario
+		void update(struct SM64MarioGeometryBuffers *marioGeo) {
+            if (Core::support.VAO && Core::active.VAO != 0)
+                glBindVertexArray(Core::active.VAO = 0);
+
+            glBindBuffer( GL_ARRAY_BUFFER, position_buffer );
+			glBufferData( GL_ARRAY_BUFFER, sizeof( vec3 ) * 3 * SM64_GEO_MAX_TRIANGLES, marioGeo->position, GL_DYNAMIC_DRAW );
+			glBindBuffer( GL_ARRAY_BUFFER, normal_buffer );
+			glBufferData( GL_ARRAY_BUFFER, sizeof( vec3 ) * 3 * SM64_GEO_MAX_TRIANGLES, marioGeo->normal, GL_DYNAMIC_DRAW );
+			glBindBuffer( GL_ARRAY_BUFFER, color_buffer );
+			glBufferData( GL_ARRAY_BUFFER, sizeof( vec3 ) * 3 * SM64_GEO_MAX_TRIANGLES, marioGeo->color, GL_DYNAMIC_DRAW );
+			glBindBuffer( GL_ARRAY_BUFFER, uv_buffer );
+			glBufferData( GL_ARRAY_BUFFER, sizeof( vec2 ) * 3 * SM64_GEO_MAX_TRIANGLES, marioGeo->uv, GL_DYNAMIC_DRAW );
         }
 
         void setupFVF(GAPI::Vertex *v) const {
@@ -1114,7 +1183,10 @@ namespace GAPI {
                 ASSERT(Core::support.VAO);
                 GLuint vao = VAO[range.aIndex];
                 if (Core::active.VAO != vao)
-                    glBindVertexArray(Core::active.VAO = vao);
+				{
+					Core::active.VAO = vao;
+                    glBindVertexArray(vao);
+				}
             }
         }
 
@@ -1221,9 +1293,11 @@ namespace GAPI {
                 GetProcOGL(glDeleteShader);
                 GetProcOGL(glShaderSource);
                 GetProcOGL(glAttachShader);
+                GetProcOGL(glDetachShader);
                 GetProcOGL(glCompileShader);
                 GetProcOGL(glGetShaderInfoLog);
                 GetProcOGL(glGetUniformLocation);
+                GetProcOGL(glUniform1i);
                 GetProcOGL(glUniform1iv);
                 GetProcOGL(glUniform1fv);
                 GetProcOGL(glUniform2fv);
@@ -1235,6 +1309,7 @@ namespace GAPI {
                 GetProcOGL(glDisableVertexAttribArray);
                 GetProcOGL(glVertexAttribPointer);
                 GetProcOGL(glGetProgramiv);
+                GetProcOGL(glGetShaderiv);
 
                 GetProcOGL(glGenFramebuffers);
                 GetProcOGL(glBindFramebuffer);
@@ -1745,11 +1820,19 @@ namespace GAPI {
         glMatrixMode(GL_MODELVIEW);
         glLoadMatrixf((GLfloat*)&m);
     #endif
-        if (Core::active.shader) {
+        if (Core::active.shader && !mesh->isMario) {
             Core::active.shader->validate();
         }
 
-        glDrawElements(GL_TRIANGLES, range.iCount, sizeof(Index) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, mesh->iBuffer + range.iStart);
+		if (mesh->isMario)
+		{
+			glUniformMatrix4fv( glGetUniformLocation( Core::marioShader, "view" ), 1, GL_FALSE, (GLfloat*)&Core::mView );
+			glUniformMatrix4fv( glGetUniformLocation( Core::marioShader, "projection" ), 1, GL_FALSE, (GLfloat*)&Core::mProj );
+			glUniform1i( glGetUniformLocation( Core::marioShader, "marioTex" ), 0 );
+			glDrawElements(GL_TRIANGLES, range.iCount, GL_UNSIGNED_SHORT, (uint16_t*)mesh->iBuffer);
+		}
+		else
+			glDrawElements(GL_TRIANGLES, range.iCount, (sizeof(Index) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT), mesh->iBuffer + range.iStart);
     }
 
     vec4 copyPixel(int x, int y) {

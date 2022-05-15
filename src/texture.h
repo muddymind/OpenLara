@@ -74,7 +74,7 @@ struct Texture : GAPI::Texture {
     }
 #endif
 
-    Texture(int width, int height, int depth, TexFormat format, uint32 opt = 0, void *data = NULL) : GAPI::Texture(width, height, depth, opt) {
+    Texture(int width, int height, int depth, TexFormat format, uint32 opt = 0, void *data = NULL, bool isMario=false) : GAPI::Texture(width, height, depth, opt, isMario) {
         #ifdef SPLIT_BY_TILE
             #if !defined(_GAPI_SW) && !defined(_GAPI_GU)
                 memset(this->tiles, 0, sizeof(tiles));

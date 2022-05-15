@@ -20,8 +20,12 @@ extern "C" {
     __declspec(dllexport) int NvOptimusEnablement = 1;
 // AMD
     __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+
+// and while it's still in extern C, include this
+#include <libsm64/src/libsm64.h>
 }
 
+#include <stdio.h>
 #include "game.h"
 
 #define GetProcAddr(lib, x) (x = lib ? (decltype(x))GetProcAddress(lib, #x + 1) : NULL)
@@ -1087,12 +1091,18 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     Core::defLang = checkLanguage();
 
-    Game::init((argc > 1 && strstr(argv[1], "--") != argv[1]) ? argv[1] : NULL);
+    FILE *f = fopen("baserom.us.z64", "rb");
+    if (!f)
+        MessageBoxA(hWnd, "Place baserom.us.z64 in this folder", "Mario 64 US ROM not found", MB_ICONHAND);
+    else
+    {
+        Game::init((argc > 1 && strstr(argv[1], "--") != argv[1]) ? argv[1] : NULL);
 
-    if (Core::isQuit) {
-        MessageBoxA(hWnd, "Please check the readme file first!", "Game resources not found", MB_ICONHAND);
-    } else {
-        ShowWindow(hWnd, SW_SHOWDEFAULT);
+        if (Core::isQuit) {
+            MessageBoxA(hWnd, "Please check the readme file first!", "Game resources not found", MB_ICONHAND);
+        } else {
+            ShowWindow(hWnd, SW_SHOWDEFAULT);
+        }
     }
 
     MSG msg;

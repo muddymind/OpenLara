@@ -792,7 +792,15 @@ namespace Core {
 #ifdef _GAPI_SW
     #include "gapi/sw.h"
 #elif _GAPI_GL
+
+// I'M SORRY XPROGER
+#include <GL/gl.h>
+namespace Core {
+	Texture *marioTexture;
+	GLuint marioShader; // rip any platform that doesn't use opengl
+}
     #include "gapi/gl.h"
+
 #elif _GAPI_D3D8
     #include "gapi/d3d8.h"
 #elif _GAPI_D3D9
@@ -814,7 +822,6 @@ namespace Core {
 #include "video.h"
 
 namespace Core {
-
     static const char *version = __DATE__;
     static int defLang = 0;
 

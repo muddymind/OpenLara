@@ -34,7 +34,7 @@ const Color32 COLOR_WHITE( 255, 255, 255, 255 );
 struct Mesh : GAPI::Mesh {
     int aIndex;
 
-    Mesh(Index *indices, int iCount, Vertex *vertices, int vCount, int aCount, bool dynamic) : GAPI::Mesh(dynamic), aIndex(0) {
+    Mesh(Index *indices, int iCount, Vertex *vertices, int vCount, int aCount, bool dynamic, bool mario=false) : GAPI::Mesh(dynamic, mario), aIndex(0) {
         init(indices, iCount, vertices, vCount, aCount);
     }
 

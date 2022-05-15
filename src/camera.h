@@ -353,7 +353,7 @@ struct Camera : ICamera {
         if (eye.pos.y < ceiling) eye.pos.y = ceiling;
     }
 
-    virtual void update() {
+    virtual void update(vec3 marioPos) {
         if (shake > 0.0f) {
             shake = max(0.0f, shake - Core::deltaTime);
             Input::setJoyVibration(cameraIndex,  clamp(shake, 0.0f, 1.0f), 0);
@@ -469,7 +469,7 @@ struct Camera : ICamera {
             if (mode != MODE_STATIC) {
                 if (!owner->viewTarget) {
                     if (viewTarget && !viewTarget->flags.invisible) {
-                        vec3 targetVec = (viewTarget->pos - owner->pos).normal();
+                        vec3 targetVec = (viewTarget->pos - marioPos).normal();
                         if (targetVec.dot(owner->getDir()) > 0.1f) {
                             lookAt = viewTarget;
                         }
