@@ -3,7 +3,7 @@ Classic Tomb Raider open-source engine
 
 ### Super Mario 64 in Tomb Raider by Headshotnoby
 This is still a very early work in progress. Don't try to play with this just yet.
-![openlaramario](https://user-images.githubusercontent.com/36455681/168461076-fa88911e-b97b-4284-b0fa-db719345f38a.png)
+![Mario in Tomb Raider](screenshot.png)
 
 
 [WebGL build with demo level](http://xproger.info/projects/OpenLara/)
