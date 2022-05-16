@@ -2,7 +2,7 @@
 Classic Tomb Raider open-source engine
 
 ### Super Mario 64 in Tomb Raider by Headshotnoby
-This is still a very early work in progress. Don't try to play with this just yet.
+This is still a very early work in progress. Some things may not work.
 ![Mario in Tomb Raider](screenshot.png)
 
 
