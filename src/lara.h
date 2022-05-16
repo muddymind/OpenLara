@@ -3290,7 +3290,7 @@ struct Lara : Character {
             }
         }
         
-        camera->update(pos);
+        camera->update();
 
         if (hitTimer > 0.0f) {
             hitTimer -= Core::deltaTime;

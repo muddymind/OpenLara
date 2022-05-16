@@ -2293,7 +2293,7 @@ struct Level : IGame {
                 }
             } else {
                 if (camera->spectator) {
-                    camera->update(vec3(0,0,0));
+                    camera->update();
                 }
             }
 

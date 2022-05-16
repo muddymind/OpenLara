@@ -9,6 +9,8 @@ extern "C" {
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 }
 
+#define M_PI 3.14159265358979323846f
+
 #include "core.h"
 #include "game.h"
 #include "lara.h"
@@ -133,6 +135,8 @@ struct Mario : Lara
 		if (marioId != -1) sm64_mario_delete(marioId);
 	}
 
+	vec3 getPos() {return vec3(marioState.position[0], -marioState.position[1], -marioState.position[2]);}
+
 	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
 	{
 		//Lara::render(frustum, mesh, type, caustics);
@@ -161,11 +165,64 @@ struct Mario : Lara
 		return false;
 	}
 
+	int getInput()
+	{
+        int pid = camera->cameraIndex;
+
+		float dir;
+		float spd = 0;
+		if (Input::state[pid][cUp] && Input::state[pid][cRight])
+		{
+			dir = -M_PI * 0.25f;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cUp] && Input::state[pid][cLeft])
+		{
+			dir = -M_PI * 0.75f;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cDown] && Input::state[pid][cRight])
+		{
+			dir = M_PI * 0.25f;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cDown] && Input::state[pid][cLeft])
+		{
+			dir = M_PI * 0.75f;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cUp])
+		{
+			dir = -M_PI * 0.5f;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cDown])
+		{
+			dir = M_PI * 0.5f;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cLeft])
+		{
+			dir = M_PI;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+		else if (Input::state[pid][cRight])
+		{
+			dir = 0;
+			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+		}
+
+		marioInputs.buttonA = Input::state[pid][cJump];
+		marioInputs.buttonB = Input::state[pid][cWeapon];
+		marioInputs.buttonZ = Input::state[pid][cDuck];
+		marioInputs.stickX = spd ? spd * cosf(dir) : 0;
+		marioInputs.stickY = spd ? spd * sinf(dir) : 0;
+
+		return 0;
+	}
+
 	void update()
 	{
-		if (Input::state[camera->cameraIndex][cLook] && Input::lastState[camera->cameraIndex] == cAction)
-            camera->changeView(!camera->firstPerson);
-
         if (level->isCutsceneLevel()) {
             updateAnimation(true);
 
@@ -200,13 +257,10 @@ struct Mario : Lara
 			updateState();
 			Controller::update();
 
-			marioInputs.buttonA = false;
-			marioInputs.buttonB = false;
-			marioInputs.buttonZ = false;
-			marioInputs.camLookX = 0;
-			marioInputs.camLookZ = 0;
-			marioInputs.stickX = -1;
-			marioInputs.stickY = 0;
+
+			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
+			marioInputs.camLookZ = marioState.position[2] + camera->eye.pos.z;
+			printf("%.2f %.2f - %.2f %.2f - %.2f %.2f\n", marioState.position[0], marioState.position[2], camera->eye.pos.x, camera->eye.pos.z, marioInputs.camLookX, marioInputs.camLookZ);
 
 			if (flags.active) {
 				// do mario64 tick here
@@ -244,8 +298,6 @@ struct Mario : Lara
 					TRmarioMesh->update(&marioGeometry);
 				}
 
-				updateVelocity();
-				updatePosition();
 				//sm64_mario_teleport(marioId, pos.x, pos.y, pos.z);
 				if (p != pos) {
 					if (updateZone())
@@ -253,10 +305,16 @@ struct Mario : Lara
 					else
 						pos = p;
 				}
+
+				pos.x = marioState.position[0];
+				pos.y = -marioState.position[1];
+				pos.z = -marioState.position[2];
+				angle.y = -marioState.faceAngle + M_PI;
+				checkTrigger(this, false);
 			}
         }
         
-        camera->update(vec3(marioState.position[0], marioState.position[1], marioState.position[2]));
+        camera->update();
 
         if (hitTimer > 0.0f) {
             hitTimer -= Core::deltaTime;
@@ -328,24 +386,19 @@ struct Mario : Lara
 
 	void move()
 	{
-		Lara::move();
+		//Lara::move();
 	}
 
 	void updatePosition()
 	{
-		Lara::updatePosition();
-		/*
-		pos.x = marioState.position[0];
-		pos.y = marioState.position[1];
-		pos.z = marioState.position[2];
-		*/
+		//Lara::updatePosition();
 		//printf("L %.2f %.2f %.2f\n", pos.x, pos.y, pos.z);
 		//printf("M %.2f %.2f %.2f\n", marioState.position[0], marioState.position[1], marioState.position[2]);
 	}
 
 	void updateVelocity()
 	{
-		Lara::updateVelocity();
+		//Lara::updateVelocity();
 	}
 };
 

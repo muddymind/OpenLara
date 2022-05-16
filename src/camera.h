@@ -1,6 +1,10 @@
 #ifndef H_CAMERA
 #define H_CAMERA
 
+extern "C" {
+	#include <libsm64/src/libsm64.h>
+}
+
 #include "core.h"
 #include "frustum.h"
 #include "controller.h"
@@ -353,7 +357,23 @@ struct Camera : ICamera {
         if (eye.pos.y < ceiling) eye.pos.y = ceiling;
     }
 
-    virtual void update(vec3 marioPos) {
+	virtual void update(SM64MarioState* marioState)
+	{
+		if (shake > 0.0f) {
+			shake = max(0.0f, shake - Core::deltaTime);
+			Input::setJoyVibration(cameraIndex,  clamp(shake, 0.0f, 1.0f), 0);
+		}
+
+		if (mode == MODE_FOLLOW) {
+			speed = CAM_SPEED_FOLLOW;
+		}
+
+		if (mode == MODE_COMBAT) {
+			speed = CAM_SPEED_COMBAT;
+		}
+	}
+
+    virtual void update() {
         if (shake > 0.0f) {
             shake = max(0.0f, shake - Core::deltaTime);
             Input::setJoyVibration(cameraIndex,  clamp(shake, 0.0f, 1.0f), 0);
@@ -469,7 +489,7 @@ struct Camera : ICamera {
             if (mode != MODE_STATIC) {
                 if (!owner->viewTarget) {
                     if (viewTarget && !viewTarget->flags.invisible) {
-                        vec3 targetVec = (viewTarget->pos - marioPos).normal();
+                        vec3 targetVec = (viewTarget->pos - owner->getPos()).normal();
                         if (targetVec.dot(owner->getDir()) > 0.1f) {
                             lookAt = viewTarget;
                         }
