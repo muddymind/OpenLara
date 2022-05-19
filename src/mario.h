@@ -122,6 +122,7 @@ struct Mario : Lara
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+		if (marioId >= 0) sm64_mario_set_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 	}
 	
 	virtual ~Mario()
@@ -256,7 +257,6 @@ struct Mario : Lara
 			stand = getStand();
 			updateState();
 			Controller::update();
-
 
 			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
 			marioInputs.camLookZ = marioState.position[2] + camera->eye.pos.z;
