@@ -81,14 +81,15 @@ struct Mario : Lara
 				if (f.water) continue;
 
 				surfaces_count += (f.triangle) ? 1 : 2;
-					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_SNOW,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[2]].pos.x)/1, d.vertices[f.vertices[2]].pos.y/1, (room.info.z + d.vertices[f.vertices[2]].pos.z)/1, (room.info.x + d.vertices[f.vertices[1]].pos.x)/1, d.vertices[f.vertices[1]].pos.y/1, (room.info.z + d.vertices[f.vertices[1]].pos.z)/1, (room.info.x + d.vertices[f.vertices[0]].pos.x)/1, d.vertices[f.vertices[0]].pos.y/1, (room.info.z + d.vertices[f.vertices[0]].pos.z)/1);
+					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE);
 				if (!f.triangle)
-					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_SNOW,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[0]].pos.x)/1, d.vertices[f.vertices[0]].pos.y/1, (room.info.z + d.vertices[f.vertices[0]].pos.z)/1, (room.info.x + d.vertices[f.vertices[3]].pos.x)/1, d.vertices[f.vertices[3]].pos.y/1, (room.info.z + d.vertices[f.vertices[3]].pos.z)/1, (room.info.x + d.vertices[f.vertices[2]].pos.x)/1, d.vertices[f.vertices[2]].pos.y/1, (room.info.z + d.vertices[f.vertices[2]].pos.z)/1);
+					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
 				surface_ind++;
 			}
 		}
 
-		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );");
+		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );\n");
+		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", pos.x/IMARIO_SCALE, -pos.y/IMARIO_SCALE, -pos.z/IMARIO_SCALE);
 		fclose(file);
 		printed = true;
 		surface_ind = 0;
@@ -126,6 +127,7 @@ struct Mario : Lara
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_mario_set_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 	}
 	
@@ -218,7 +220,7 @@ struct Mario : Lara
 		}
 
 		marioInputs.buttonA = Input::state[pid][cJump];
-		marioInputs.buttonB = Input::state[pid][cWeapon];
+		marioInputs.buttonB = Input::state[pid][cAction];
 		marioInputs.buttonZ = Input::state[pid][cDuck];
 		marioInputs.stickX = spd ? spd * cosf(dir) : 0;
 		marioInputs.stickY = spd ? spd * sinf(dir) : 0;
