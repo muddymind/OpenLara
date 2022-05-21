@@ -255,7 +255,9 @@ struct Mario : Lara
             }
 
             updateRoom();
-			sm64_mario_set_water_level(marioId, (getRoom().waterLevelSurface != TR::NO_WATER) ? -getRoom().waterLevelSurface/IMARIO_SCALE : -32768);
+			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_mario_set_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
+			else if (getRoom().flags.water) sm64_mario_set_water_level(marioId, 32767);
+			else sm64_mario_set_water_level(marioId, -32768);
 
 			vec3 p = pos;
 			input = getInput();
@@ -265,7 +267,7 @@ struct Mario : Lara
 
 			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
 			marioInputs.camLookZ = marioState.position[2] + camera->eye.pos.z;
-			printf("%.2f %.2f - %.2f %.2f - %.2f %.2f\n", marioState.position[0], marioState.position[2], camera->eye.pos.x, camera->eye.pos.z, marioInputs.camLookX, marioInputs.camLookZ);
+			//printf("%.2f %.2f - %.2f %.2f - %.2f %.2f\n", marioState.position[0], marioState.position[2], camera->eye.pos.x, camera->eye.pos.z, marioInputs.camLookX, marioInputs.camLookZ);
 
 			if (flags.active) {
 				// do mario64 tick here
