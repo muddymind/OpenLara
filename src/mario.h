@@ -78,6 +78,8 @@ struct Mario : Lara
 			for (int j = 0; j < d.fCount; j++)
 			{
 				TR::Face &f = d.faces[j];
+				if (room.waterLevelSurface != TR::NO_WATER && room.waterLevelSurface == d.vertices[f.vertices[0]].pos.y) continue;
+
 				surfaces_count += (f.triangle) ? 1 : 2;
 					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_SNOW,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[2]].pos.x)/1, d.vertices[f.vertices[2]].pos.y/1, (room.info.z + d.vertices[f.vertices[2]].pos.z)/1, (room.info.x + d.vertices[f.vertices[1]].pos.x)/1, d.vertices[f.vertices[1]].pos.y/1, (room.info.z + d.vertices[f.vertices[1]].pos.z)/1, (room.info.x + d.vertices[f.vertices[0]].pos.x)/1, d.vertices[f.vertices[0]].pos.y/1, (room.info.z + d.vertices[f.vertices[0]].pos.z)/1);
 				if (!f.triangle)
@@ -100,6 +102,8 @@ struct Mario : Lara
 			for (int j = 0; j < d.fCount; j++)
 			{
 				TR::Face &f = d.faces[j];
+				if (room.waterLevelSurface != TR::NO_WATER && room.waterLevelSurface == d.vertices[f.vertices[0]].pos.y) continue;
+
 				surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
 					{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
 					{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
@@ -251,6 +255,7 @@ struct Mario : Lara
             }
 
             updateRoom();
+			sm64_mario_set_water_level(marioId, (getRoom().waterLevelSurface != TR::NO_WATER) ? -getRoom().waterLevelSurface/IMARIO_SCALE : -32768);
 
 			vec3 p = pos;
 			input = getInput();
