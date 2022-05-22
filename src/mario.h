@@ -9,7 +9,7 @@ extern "C" {
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 }
 
-#define M_PI 3.14159265358979323846f
+//#define M_PI 3.14159265358979323846f
 
 #include "core.h"
 #include "game.h"
@@ -126,9 +126,9 @@ struct Mario : Lara
 		}
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
-		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
-		if (marioId >= 0) sm64_mario_set_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
+		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 	}
 	
 	virtual ~Mario()
@@ -257,9 +257,9 @@ struct Mario : Lara
             }
 
             updateRoom();
-			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_mario_set_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
-			else if (getRoom().flags.water) sm64_mario_set_water_level(marioId, 32767);
-			else sm64_mario_set_water_level(marioId, -32768);
+			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
+			else if (getRoom().flags.water) sm64_set_mario_water_level(marioId, 32767);
+			else sm64_set_mario_water_level(marioId, -32768);
 
 			vec3 p = pos;
 			input = getInput();
