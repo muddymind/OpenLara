@@ -7,6 +7,8 @@
 extern "C" {
 	#include <libsm64/src/libsm64.h>
 	#include <libsm64/src/decomp/include/surface_terrains.h>
+	#include <libsm64/src/decomp/include/PR/ultratypes.h>
+	#include <libsm64/src/decomp/include/audio_defines.h>
 }
 
 //#define M_PI 3.14159265358979323846f
@@ -181,42 +183,59 @@ struct Mario : Lara
 		if (Input::state[pid][cUp] && Input::state[pid][cRight])
 		{
 			dir = -M_PI * 0.25f;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cUp] && Input::state[pid][cLeft])
 		{
 			dir = -M_PI * 0.75f;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cDown] && Input::state[pid][cRight])
 		{
 			dir = M_PI * 0.25f;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cDown] && Input::state[pid][cLeft])
 		{
 			dir = M_PI * 0.75f;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cUp])
 		{
 			dir = -M_PI * 0.5f;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cDown])
 		{
 			dir = M_PI * 0.5f;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cLeft])
 		{
 			dir = M_PI;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
 		}
 		else if (Input::state[pid][cRight])
 		{
 			dir = 0;
-			spd = (Input::state[pid][cWalk]) ? 0.75f : 1;
+			spd = (Input::state[pid][cWalk]) ? 0.65f : 1;
+		}
+
+		static bool lookSnd = false;
+		if (Input::state[pid][cLook] && marioState.action & (1 << 26)) // ACT_FLAG_ALLOW_FIRST_PERSON
+		{
+			sm64_set_mario_action(marioId, 0x0C000227); // ACT_FIRST_PERSON
+			if (!lookSnd) sm64_play_sound_global(SOUND_MENU_CAMERA_ZOOM_IN);
+			lookSnd = true;
+			camera->mode = Camera::MODE_LOOK;
+		}
+		else if (!Input::state[pid][cLook] || !(marioState.action & (1 << 26)))
+		{
+			if (lookSnd)
+			{
+				sm64_play_sound_global(SOUND_MENU_CAMERA_ZOOM_OUT);
+				lookSnd = false;
+			}
 		}
 
 		marioInputs.buttonA = Input::state[pid][cJump];
@@ -224,6 +243,7 @@ struct Mario : Lara
 		marioInputs.buttonZ = Input::state[pid][cDuck];
 		marioInputs.stickX = spd ? spd * cosf(dir) : 0;
 		marioInputs.stickY = spd ? spd * sinf(dir) : 0;
+
 
 		return 0;
 	}

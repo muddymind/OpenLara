@@ -329,8 +329,6 @@ struct Lara : Character {
 
     int32       networkInput;
 
-	bool isMario;
-
 #ifdef _DEBUG
     //uint16      *dbgBoxes;
     //int         dbgBoxesCount;

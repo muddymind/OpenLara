@@ -153,7 +153,8 @@ struct Camera : ICamera {
         if (owner->getEntity().type == TR::Entity::LARA) {
             if (mode == MODE_LOOK) {
                 Basis b = owner->getJoint(owner->jointHead);
-                b.translate(vec3(0, -128, 0));
+                if (owner->isMario) b.translate(vec3(0, 128, -128));
+                else b.translate(vec3(0, -128, 0));
                 pos = b.pos;
             } else {
                 if (mode != MODE_STATIC)
