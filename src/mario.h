@@ -311,17 +311,10 @@ struct Mario : Lara
 					{
 						marioGeometry.position[i] *= MARIO_SCALE;
 
-						// scale up the model
-						marioGeometry.position[i] = (marioGeometry.position[i] - centerPos[i%3]) + centerPos[i%3];
-						//marioGeometry.normal[i] = (marioGeometry.normal[i] - centerPos[i%3]) * marioScale + centerPos[i%3];
-						//marioGeometry.color[i] = (marioGeometry.color[i] - centerPos[i%3]) * marioScale + centerPos[i%3];
-						//if (i<6 * SM64_GEO_MAX_TRIANGLES) marioGeometry.uv[i] = (marioGeometry.uv[i] - centerPos[i%3]) * marioScale + centerPos[i%3];
-
 						if (i%3 != 0) // flip y and z
 						{
 							marioGeometry.position[i] = -marioGeometry.position[i];
-							//marioGeometry.normal[i] = -marioGeometry.normal[i];
-							//if (i<6 * SM64_GEO_MAX_TRIANGLES) marioGeometry.uv[i] = -marioGeometry.uv[i];
+							marioGeometry.normal[i] = -marioGeometry.normal[i];
 						}
 					}
 					TRmarioMesh->update(&marioGeometry);
