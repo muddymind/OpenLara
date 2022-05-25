@@ -1108,6 +1108,14 @@ namespace GAPI {
                 }
                 glDeleteBuffers(2, ID);
             }
+
+			if (isMario)
+			{
+				glDeleteBuffers(1, &position_buffer);
+				glDeleteBuffers(1, &normal_buffer);
+				glDeleteBuffers(1, &color_buffer);
+				glDeleteBuffers(1, &uv_buffer);
+			}
         }
 
         void update(Index *indices, int iCount, ::Vertex *vertices, int vCount) {
