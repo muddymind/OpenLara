@@ -287,6 +287,40 @@ struct Mario : Lara
 		return STAND_GROUND;
 	}
 
+	Controller* marioFindTarget()
+	{
+		float dist = 512.f;
+
+		Controller* target = NULL;
+
+		vec3 from = pos - vec3(0, 650, 0);
+
+		Controller *c = Controller::first;
+		do {
+			if (!c->getEntity().isEnemy())
+				continue;
+
+			Character *enemy = (Character*)c;
+			if (!enemy->isActiveTarget())
+				continue;
+
+			Box box = enemy->getBoundingBox();
+			vec3 p = box.center();
+			p.y = box.min.y + (box.max.y - box.min.y) / 3.0f;
+			
+			vec3 v = p - pos;
+			float d = v.length();
+
+			if (d > dist || !checkOcclusion(from, p, d))
+				continue;
+
+			target = enemy;
+
+		} while ((c = c->next));
+
+		return target;
+	}
+
 	void update()
 	{
         if (level->isCutsceneLevel()) {
@@ -379,6 +413,11 @@ struct Mario : Lara
 				if (marioState.action & (1 << 23)) // ACT_FLAG_ATTACKING
 				{
 					// find an enemy close by and hurt it
+					Controller* target = marioFindTarget();
+					if (target)
+					{
+						((Character*)target)->hit(5, this);
+					}
 				}
 
 				if (marioId >= 0)
