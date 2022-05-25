@@ -139,6 +139,8 @@ struct Mario : Lara
 		free(marioGeometry.color);
 		free(marioGeometry.normal);
 		free(marioGeometry.uv);
+		TRmarioMesh->iBuffer = NULL;
+		free(marioRenderState.mario.index);
 		delete TRmarioMesh;
 
 		if (marioId != -1) sm64_mario_delete(marioId);
@@ -167,6 +169,35 @@ struct Mario : Lara
 		Core::setCullMode(cmFront);
 
 		if (dtex) dtex->bind(sDiffuse);
+	}
+
+	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
+	{
+		if (dozy || level->isCutsceneLevel()) return;
+
+		if (health <= 0.0f && hitType != TR::HIT_FALL) return;
+
+		damageTime = LARA_DAMAGE_TIME;
+
+		Character::hit(damage, enemy, hitType);
+
+		hitTimer = LARA_VIBRATE_HIT_TIME;
+
+		switch (hitType) {
+			case TR::HIT_DART      : addBlood(enemy->pos, vec3(0));
+			case TR::HIT_BLADE     : addBloodBlade(); break;
+			case TR::HIT_SPIKES    : addBloodSpikes(); break;
+			case TR::HIT_SWORD     : addBloodBlade(); break;
+			case TR::HIT_SLAM      : addBloodSlam(enemy); break;
+			case TR::HIT_LIGHTNING : lightning = (Lightning*)enemy; break;
+			default                : ;
+		}
+
+		if (health > 0.0f)
+			return;
+
+		game->stopTrack();
+		sm64_mario_kill();
 	}
 
 	bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action)
@@ -244,7 +275,6 @@ struct Mario : Lara
 		marioInputs.stickX = spd ? spd * cosf(dir) : 0;
 		marioInputs.stickY = spd ? spd * sinf(dir) : 0;
 
-
 		return 0;
 	}
 
@@ -269,7 +299,7 @@ struct Mario : Lara
                     if (health < LARA_MAX_HEALTH) {
                         damageTime = LARA_DAMAGE_TIME;
                         health = min(LARA_MAX_HEALTH, health + (usedItem == TR::Entity::INV_MEDIKIT_SMALL ? LARA_MAX_HEALTH / 2 : LARA_MAX_HEALTH));
-                        game->playSound(TR::SND_HEALTH, pos, Sound::PAN);
+                        //game->playSound(TR::SND_HEALTH, pos, Sound::PAN);
                         inventory->remove(usedItem);
                     }
                     usedItem = TR::Entity::NONE;
@@ -301,12 +331,8 @@ struct Mario : Lara
 					marioTicks -= 1./30;
 					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
 
-					for (int i=0; i<3; i++)
-					{
-						marioState.position[i] *= MARIO_SCALE;
-					}
+					for (int i=0; i<3; i++) marioState.position[i] *= MARIO_SCALE;
 
-					float* centerPos = marioState.position;
 					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 					{
 						marioGeometry.position[i] *= MARIO_SCALE;
@@ -317,6 +343,7 @@ struct Mario : Lara
 							marioGeometry.normal[i] = -marioGeometry.normal[i];
 						}
 					}
+
 					TRmarioMesh->update(&marioGeometry);
 				}
 
@@ -328,10 +355,19 @@ struct Mario : Lara
 						pos = p;
 				}
 
-				pos.x = marioState.position[0];
-				pos.y = -marioState.position[1];
-				pos.z = -marioState.position[2];
-				angle.y = -marioState.faceAngle + M_PI;
+				if (health > 0.0f)
+				{
+					// if lara is still alive, keep mario's health full
+					sm64_mario_heal(marioId, 1);
+				}
+
+				if (marioId >= 0)
+				{
+					pos.x = marioState.position[0];
+					pos.y = -marioState.position[1];
+					pos.z = -marioState.position[2];
+					angle.y = -marioState.faceAngle + M_PI;
+				}
 				checkTrigger(this, false);
 			}
         }
