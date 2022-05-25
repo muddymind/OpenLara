@@ -197,7 +197,7 @@ struct Mario : Lara
 			return;
 
 		game->stopTrack();
-		sm64_mario_kill();
+		sm64_mario_kill(marioId);
 	}
 
 	bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action)
@@ -276,6 +276,15 @@ struct Mario : Lara
 		marioInputs.stickY = spd ? spd * sinf(dir) : 0;
 
 		return 0;
+	}
+
+	Stand getStand()
+	{
+		if (marioId < 0) return STAND_GROUND;
+
+		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
+			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 140)*IMARIO_SCALE) ? STAND_WADE : STAND_UNDERWATER;
+		return STAND_GROUND;
 	}
 
 	void update()
