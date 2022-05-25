@@ -283,7 +283,7 @@ struct Mario : Lara
 		if (marioId < 0) return STAND_GROUND;
 
 		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
-			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 140)*IMARIO_SCALE) ? STAND_WADE : STAND_UNDERWATER;
+			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 140)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
 		return STAND_GROUND;
 	}
 
