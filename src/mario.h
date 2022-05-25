@@ -364,10 +364,21 @@ struct Mario : Lara
 						pos = p;
 				}
 
-				if (health > 0.0f)
+				float hp = health / float(LARA_MAX_HEALTH);
+				if (hp > 0.f && hp <= 0.2f)
 				{
-					// if lara is still alive, keep mario's health full
-					sm64_mario_heal(marioId, 1);
+					// mario panting
+					sm64_mario_set_health(marioId, 0x200);
+				}
+				else if (hp > 0.2f)
+				{
+					// keep mario's health full
+					sm64_mario_set_health(marioId, 0x880);
+				}
+
+				if (marioState.action & (1 << 23)) // ACT_FLAG_ATTACKING
+				{
+					// find an enemy close by and hurt it
 				}
 
 				if (marioId >= 0)
