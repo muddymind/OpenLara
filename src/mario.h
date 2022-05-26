@@ -301,7 +301,7 @@ struct Mario : Lara
 		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
 			state = STATE_WATER_OUT;
 		else if (stand == STAND_ONWATER)
-			state = STATE_SURF_TREAD;
+			state = (marioState.velocity[0] == 0 && marioState.velocity[2] == 0) ? STATE_SURF_TREAD : STATE_SURF_SWIM;
 		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
 			state = STATE_HANG;
 	}
