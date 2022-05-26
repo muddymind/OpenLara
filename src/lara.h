@@ -1885,7 +1885,7 @@ struct Lara : Character {
                 case 37 : 
                 case 41 : if (state != STATE_HANG) return 0; break;
                 case 42 : if (level->state.tracks[track].once && state == STATE_HANG) track = 43; break;
-                case 49 : if (state != STATE_SURF_TREAD) return 0; break;
+                case 49 : if (state != STATE_SURF_TREAD && state != STATE_SURF_SWIM) return 0; break;
                 case 50 : // end of GYM
                     if (level->state.tracks[track].once) {
                         timer += Core::deltaTime;
