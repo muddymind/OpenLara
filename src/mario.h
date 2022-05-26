@@ -283,8 +283,27 @@ struct Mario : Lara
 		if (marioId < 0) return STAND_GROUND;
 
 		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
-			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 140)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
+			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
+		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
+			return STAND_HANG;
 		return STAND_GROUND;
+	}
+
+	virtual void updateState()
+	{
+		setStateFromMario();
+		Lara::updateState();
+	}
+
+	void setStateFromMario()
+	{
+		state = STATE_STOP;
+		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
+			state = STATE_WATER_OUT;
+		else if (stand == STAND_ONWATER)
+			state = STATE_SURF_TREAD;
+		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
+			state = STATE_HANG;
 	}
 
 	Controller* marioFindTarget()
@@ -422,10 +441,10 @@ struct Mario : Lara
 
 				if (marioId >= 0)
 				{
-					pos.x = marioState.position[0];
-					pos.y = -marioState.position[1];
-					pos.z = -marioState.position[2];
 					angle.y = -marioState.faceAngle + M_PI;
+					pos.x = (stand == STAND_HANG) ? marioState.position[0] - (sin(angle.y)*64) : marioState.position[0];
+					pos.y = (stand == STAND_HANG) ? -marioState.position[1]+128 : -marioState.position[1];
+					pos.z = (stand == STAND_HANG) ? -marioState.position[2] - (cos(angle.y)*64) : -marioState.position[2];
 				}
 				checkTrigger(this, false);
 			}
