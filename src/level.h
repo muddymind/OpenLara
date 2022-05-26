@@ -1146,7 +1146,7 @@ struct Level : IGame {
 
     Controller* initController(int index) {
         if (level.entities[index].type == TR::Entity::CUT_1 && (level.version & TR::VER_TR1))
-            return new Mario(this, index);
+            return new Lara(this, index);
 
         switch (level.entities[index].type) {
             case TR::Entity::LARA                  : return new Mario(this, index);
