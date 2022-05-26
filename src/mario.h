@@ -410,12 +410,6 @@ struct Mario : Lara
 				}
 
 				//sm64_mario_teleport(marioId, pos.x, pos.y, pos.z);
-				if (p != pos) {
-					if (updateZone())
-						updateLights();
-					else
-						pos = p;
-				}
 
 				float hp = health / float(LARA_MAX_HEALTH);
 				if (hp > 0.f && hp <= 0.2f)
@@ -446,6 +440,9 @@ struct Mario : Lara
 					pos.y = (stand == STAND_HANG) ? -marioState.position[1]+128 : -marioState.position[1];
 					pos.z = (stand == STAND_HANG) ? -marioState.position[2] - (cos(angle.y)*64) : -marioState.position[2];
 				}
+				if (p != pos && updateZone())
+					updateLights();
+
 				checkTrigger(this, false);
 			}
         }
