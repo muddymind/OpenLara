@@ -5,7 +5,9 @@
 
 #if defined(_DEBUG) && defined(_OS_WIN) && defined(_GAPI_GL) && !defined(_GAPI_GLES)
     #define GEOMETRY_EXPORT
+#endif
 
+#ifdef GEOMETRY_EXPORT
     #include "animation.h"
     #include "gltf.h"
 #endif
