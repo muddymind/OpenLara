@@ -193,6 +193,9 @@ struct Mario : Lara
 			default                : ;
 		}
 
+		if (enemy)
+			sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
+
 		if (health > 0.0f)
 			return;
 
