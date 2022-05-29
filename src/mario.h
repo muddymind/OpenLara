@@ -536,15 +536,23 @@ struct Mario : Lara
 				//sm64_mario_teleport(marioId, pos.x, pos.y, pos.z);
 
 				float hp = health / float(LARA_MAX_HEALTH);
-				if (hp > 0.f && hp <= 0.2f)
+				float ox = oxygen / float(LARA_MAX_OXYGEN);
+				if (hp > 0.f)
 				{
-					// mario panting
-					sm64_mario_set_health(marioId, 0x200);
-				}
-				else if (hp > 0.2f)
-				{
-					// keep mario's health full
-					sm64_mario_set_health(marioId, 0x880);
+					switch(stand)
+					{
+						case STAND_UNDERWATER:
+							sm64_mario_set_health(marioId, (ox <= 0.2f) ? 0x200 : 0x880); // if low on oxygen, play sound
+							break;
+						
+						case STAND_ONWATER:
+							sm64_mario_set_health(marioId, 0x880); // don't play low oxygen sound on surface
+							break;
+						
+						default:
+							sm64_mario_set_health(marioId, (hp <= 0.2f) ? 0x200 : 0x880); // mario panting animation if low on health
+							break;
+					}
 				}
 
 				if (marioState.action & (1 << 23)) // ACT_FLAG_ATTACKING
