@@ -54,7 +54,7 @@ GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, 
         : "\n#version 410\n#define FRAGMENT\n#define v2f in \n";
 
     const GLchar *shaderStrings[2] = { shaderDefine, shaderContents };
-    GLint shaderStringLengths[2] = { strlen( shaderDefine ), (GLint)shaderContentsLength };
+    GLint shaderStringLengths[2] = { (GLint)strlen( shaderDefine ), (GLint)shaderContentsLength };
 
     GLuint shader = glCreateShader( shaderType );
     glShaderSource( shader, 2, shaderStrings, shaderStringLengths );
