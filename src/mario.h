@@ -42,14 +42,19 @@ struct Mario : Lara
 	struct MarioRenderState marioRenderState;
 
 	float marioTicks;
+	bool postInit;
+	uint32_t objIDs[4096];
+	int objCount;
 
 	Mesh* TRmarioMesh;
 
 	Mario(IGame *game, int entity) : Lara(game, entity)
 	{
 		isMario = true;
+		postInit = false;
 		marioId = -1;
 		marioTicks = 0;
+		objCount = 0;
 
 		marioGeometry.position = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
 		marioGeometry.color    = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
@@ -90,8 +95,34 @@ struct Mario : Lara
 			}
 		}
 
+		for (int i=0; i<level->entitiesCount; i++)
+		{
+			TR::Entity *e = &level->entities[i];
+			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
+				continue;
+
+			TR::Model *model = &level->models[e->modelIndex - 1];
+
+			for (int c = 0; c < model->mCount; c++)
+			{
+				int index = level->meshOffsets[model->mStart + c];
+				if (index || model->mStart + c <= 0)
+				{
+					TR::Mesh &d = level->meshes[index];
+					for (int j = 0; j < d.fCount; j++)
+					{
+						TR::Face &f = d.faces[j];
+
+							fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (e->x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE);
+						if (!f.triangle)
+							fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (e->x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE);
+					}
+				}
+			}
+		}
+
 		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );\n");
-		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", pos.x/IMARIO_SCALE, -pos.y/IMARIO_SCALE, -pos.z/IMARIO_SCALE);
+		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(pos.x/MARIO_SCALE), (int)(-pos.y/MARIO_SCALE), (int)(-pos.z/MARIO_SCALE));
 		fclose(file);
 		printed = true;
 		surface_ind = 0;
@@ -131,6 +162,8 @@ struct Mario : Lara
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
+
+		postInitMario();
 	}
 	
 	virtual ~Mario()
@@ -143,7 +176,95 @@ struct Mario : Lara
 		free(marioRenderState.mario.index);
 		delete TRmarioMesh;
 
+		for (int i=0; i<objCount; i++)
+			sm64_surface_object_delete(objIDs[i]);
+
 		if (marioId != -1) sm64_mario_delete(marioId);
+	}
+
+	void postInitMario()
+	{
+		if (postInit) return;
+		postInit = true;
+
+		// create collisions from entities (bridges, doors)
+		for (int i=0; i<level->entitiesCount; i++)
+		{
+			TR::Entity *e = &level->entities[i];
+			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
+				continue;
+
+			if (e->type != 68 && e->type != 69 && e->type != 70)
+				continue;
+
+			TR::Model *model = &level->models[e->modelIndex - 1];
+			if (!model)
+				continue;
+
+			struct SM64SurfaceObject obj;
+			obj.surfaceCount = 0;
+			obj.transform.position[0] = e->x / MARIO_SCALE;
+			obj.transform.position[1] = -e->y / MARIO_SCALE;
+			obj.transform.position[2] = -e->z / MARIO_SCALE;
+			for (int j=0; j<3; j++) obj.transform.eulerRotation[j] = (j == 1) ? float(e->rotation) / M_PI * 180.f : 0;
+
+			// some code taken from extension.h below
+
+			// first increment the surface count
+			for (int c = 0; c < model->mCount; c++)
+			{
+				int index = level->meshOffsets[model->mStart + c];
+				if (index || model->mStart + c <= 0)
+				{
+					TR::Mesh &d = level->meshes[index];
+					for (int j = 0; j < d.fCount; j++)
+						obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+				}
+			}
+
+			// then create the surface and add the objects
+			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+			size_t surface_ind = 0;
+			int16 topPoint = 0;
+
+			for (int c = 0; c < model->mCount; c++)
+			{
+				int index = level->meshOffsets[model->mStart + c];
+				if (index || model->mStart + c <= 0)
+				{
+					TR::Mesh &d = level->meshes[index];
+					for (int j = 0; j < d.fCount; j++)
+					{
+						TR::Face &f = d.faces[j];
+
+						topPoint = max(topPoint, d.vertices[f.vertices[0]].coord.y, max(d.vertices[f.vertices[1]].coord.y, d.vertices[f.vertices[2]].coord.y, (f.triangle) ? (int16)0 : d.vertices[f.vertices[3]].coord.y));
+
+						obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+							{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+							{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
+							{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+						}};
+
+						if (!f.triangle)
+						{
+							surface_ind++;
+							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+								{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.center.z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.center.z + d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.center.z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+							}};
+						}
+
+						surface_ind++;
+					}
+				}
+			}
+			obj.transform.position[1] -= topPoint/MARIO_SCALE;
+
+			// and finally add the object (this returns an uint32_t which is the object's ID)
+			objIDs[objCount++] = sm64_surface_object_create(&obj);
+			free(obj.surfaces);
+		}
 	}
 
 	vec3 getPos() {return vec3(marioState.position[0], -marioState.position[1], -marioState.position[2]);}
