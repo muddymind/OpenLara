@@ -1797,7 +1797,7 @@ struct Lara : Character {
         return animation.setAnim(ANIM_TO_UNDERWATER);
     }
 
-    bool doPickUp() {
+    virtual bool doPickUp() {
         if (!animation.canSetState(STATE_PICK_UP))
             return false;
 

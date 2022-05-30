@@ -332,6 +332,8 @@ struct Mario : Lara
 	int getInput()
 	{
         int pid = camera->cameraIndex;
+		int input = 0;
+		bool canMove = (state != STATE_PICK_UP);
 
 		float dir;
 		float spd = 0;
@@ -377,14 +379,14 @@ struct Mario : Lara
 		}
 
 		static bool lookSnd = false;
-		if (Input::state[pid][cLook] && marioState.action & (1 << 26)) // ACT_FLAG_ALLOW_FIRST_PERSON
+		if (canMove && Input::state[pid][cLook] && marioState.action & (1 << 26)) // ACT_FLAG_ALLOW_FIRST_PERSON
 		{
 			sm64_set_mario_action(marioId, 0x0C000227); // ACT_FIRST_PERSON
 			if (!lookSnd) sm64_play_sound_global(SOUND_MENU_CAMERA_ZOOM_IN);
 			lookSnd = true;
 			camera->mode = Camera::MODE_LOOK;
 		}
-		else if (!Input::state[pid][cLook] || !(marioState.action & (1 << 26)))
+		else if ((canMove && !Input::state[pid][cLook]) || !(marioState.action & (1 << 26)))
 		{
 			if (lookSnd)
 			{
@@ -393,13 +395,15 @@ struct Mario : Lara
 			}
 		}
 
-		marioInputs.buttonA = Input::state[pid][cJump];
-		marioInputs.buttonB = Input::state[pid][cAction];
-		marioInputs.buttonZ = Input::state[pid][cDuck];
-		marioInputs.stickX = spd ? spd * cosf(dir) : 0;
-		marioInputs.stickY = spd ? spd * sinf(dir) : 0;
+		marioInputs.buttonA = canMove && Input::state[pid][cJump];
+		marioInputs.buttonB = canMove && Input::state[pid][cAction];
+		marioInputs.buttonZ = canMove && Input::state[pid][cDuck];
+		marioInputs.stickX = canMove && spd ? spd * cosf(dir) : 0;
+		marioInputs.stickY = canMove && spd ? spd * sinf(dir) : 0;
 
-		return 0;
+        if (Input::state[pid][cAction])    input |= ACTION;
+
+		return input;
 	}
 
 	Stand getStand()
@@ -413,14 +417,8 @@ struct Mario : Lara
 		return STAND_GROUND;
 	}
 
-	virtual void updateState()
-	{
-		setStateFromMario();
-		Lara::updateState();
-	}
-
 	void setStateFromMario()
-	{
+	{	
 		state = STATE_STOP;
 		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
 			state = STATE_WATER_OUT;
@@ -428,6 +426,113 @@ struct Mario : Lara
 			state = (marioState.velocity[0] == 0 && marioState.velocity[2] == 0) ? STATE_SURF_TREAD : STATE_SURF_SWIM;
 		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
 			state = STATE_HANG;
+		else if (!(marioState.action & (1 << 22)) && stand != STAND_UNDERWATER) // !(marioState.action & ACT_FLAG_IDLE)
+			state = STATE_RUN;
+	}
+
+	virtual void updateState()
+	{
+		if (state == STATE_PICK_UP)
+		{
+			int16_t rot[3];
+			struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
+			printf("%d %d %d %d\n", marioState.action, 0x0C400201, 0x00000383, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
+
+			if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1) // anim done, pick up
+			{
+				if (marioState.action == 0x800380) // punching action
+				{
+					printf("punch done\n");
+					sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+					for (int i = 0; i < pickupListCount; i++)
+					{
+						Controller *item = pickupList[i];
+
+						if (item->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER)
+							continue;
+						item->deactivate();
+						item->flags.invisible = true;
+						game->invAdd(item->getEntity().type, 1);
+
+						vec4 p = game->projectPoint(vec4(item->pos, 1.0f));
+
+						#ifdef _OS_WP8
+							swap(p.x, p.y);
+						#endif
+
+						if (p.w != 0.0f) {
+							p.x = ( p.x / p.w * 0.5f + 0.5f) * UI::width;
+							p.y = (-p.y / p.w * 0.5f + 0.5f) * UI::height;
+							if (game->getLara(1)) {
+								p.x *= 0.5f;
+							}
+						} else
+							p = vec4(UI::width * 0.5f, UI::height * 0.5f, 0.0f, 0.0f);
+
+						UI::addPickup(item->getEntity().type, camera->cameraIndex, vec2(p.x, p.y));
+						saveStats.pickups++;
+					}
+					pickupListCount = 0;
+				}
+				else if (marioState.action == 0x00000383) // ACT_PICKING_UP
+				{
+					state = STATE_STOP;
+					sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+					printf("now idle!\n");
+				}
+			}
+
+			return;
+		}
+
+		setStateFromMario();
+		Lara::updateState();
+	}
+
+	virtual bool doPickUp()
+	{
+		if (marioState.velocity[0] != 0 || marioState.velocity[1] != 0 || marioState.velocity[2] != 0) return false;
+
+		int room = getRoomIndex();
+
+		pickupListCount = 0;
+
+		for (int i = 0; i < level->entitiesCount; i++)
+		{
+			TR::Entity &entity = level->entities[i];
+			if (!entity.controller || !entity.isPickup())
+				continue;
+
+			Controller *controller = (Controller*)entity.controller;
+
+			if (controller->getRoomIndex() != room || controller->flags.invisible)
+				continue;
+
+			if (entity.type == TR::Entity::CRYSTAL) {
+				if (Input::lastState[camera->cameraIndex] == cAction) {
+					vec3 dir = controller->pos - pos;
+					if (dir.length2() < SQR(350.0f) && getDir().dot(dir.normal()) > COS30) {
+						pickupListCount = 0;
+						game->invShow(camera->cameraIndex, Inventory::PAGE_SAVEGAME, i);
+						return true;
+					}
+				}
+			} else {
+				if (!canPickup(controller))
+					continue;
+
+				ASSERT(pickupListCount < COUNT(pickupList));
+				pickupList[pickupListCount++] = controller;
+			}
+		}
+
+		if (pickupListCount > 0)
+		{
+			state = STATE_PICK_UP;
+			return true;
+		}
+
+		return false;
 	}
 
 	Controller* marioFindTarget()
