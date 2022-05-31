@@ -178,8 +178,11 @@ struct Character : Controller {
 
         int state = getNextState();
         // try to set new state
-        if (!animation.setState(state))
-            animation.setState(getStateDefault());
+		if (!isMario)
+		{
+			if (!animation.setState(state))
+				animation.setState(getStateDefault());
+		}
     }
 
     virtual void updateTilt(float value, float tiltSpeed, float tiltMax) {

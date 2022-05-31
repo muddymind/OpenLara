@@ -401,7 +401,7 @@ struct Mario : Lara
 		marioInputs.stickX = canMove && spd ? spd * cosf(dir) : 0;
 		marioInputs.stickY = canMove && spd ? spd * sinf(dir) : 0;
 
-        if (Input::state[pid][cAction])    input |= ACTION;
+        if (canMove && Input::state[pid][cAction])    input |= ACTION;
 
 		return input;
 	}
@@ -436,14 +436,13 @@ struct Mario : Lara
 		{
 			int16_t rot[3];
 			struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
-			printf("%d %d %d %d\n", marioState.action, 0x0C400201, 0x00000383, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
 
 			if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1) // anim done, pick up
 			{
 				if (marioState.action == 0x800380) // punching action
 				{
-					printf("punch done\n");
 					sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+					camera->setup(true);
 					for (int i = 0; i < pickupListCount; i++)
 					{
 						Controller *item = pickupList[i];
@@ -478,7 +477,6 @@ struct Mario : Lara
 				{
 					state = STATE_STOP;
 					sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
-					printf("now idle!\n");
 				}
 			}
 
@@ -528,6 +526,7 @@ struct Mario : Lara
 
 		if (pickupListCount > 0)
 		{
+			sm64_set_mario_action(marioId, 0x00800380);
 			state = STATE_PICK_UP;
 			return true;
 		}
