@@ -1096,6 +1096,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         MessageBoxA(hWnd, "Place sm64.us.z64 in this folder", "Mario 64 US ROM not found", MB_ICONHAND);
     else
     {
+        fclose(f);
         Game::init((argc > 1 && strstr(argv[1], "--") != argv[1]) ? argv[1] : NULL);
 
         if (Core::isQuit) {
