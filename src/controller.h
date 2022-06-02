@@ -1134,9 +1134,10 @@ struct Controller {
     }
 
     virtual void updateAnimation(bool commands) {
-        animation.update();
+        bool actor = level->isCutsceneLevel() && getEntity().isActor();
+        if (actor || !getEntity().isLara()) animation.update();
 
-        if (level->isCutsceneLevel() && getEntity().isActor()) {
+        if (actor) {
             vec3 p = getPos();
             if ((p - lastPos).length2() > 256 * 256) {
                 game->waterDrop(p, 96.0, 0.1f);
@@ -1181,7 +1182,7 @@ struct Controller {
                                     if ((sfx & 0x4000) && waterDepth > 0.0f)
                                         break;
                                 }
-                                game->playSound(fx, pos, Sound::PAN);
+                                if (!getEntity().isLara()) game->playSound(fx, pos, Sound::PAN); // we're playing as mario, not lara
                             }
                         }
                         break;
@@ -1190,7 +1191,7 @@ struct Controller {
             }
         }
 
-        if (animation.frameIndex != animation.framePrev)
+        if (animation.frameIndex != animation.framePrev || getEntity().isLara())
             doCustomCommand(animation.frameIndex, animation.framePrev);
 
         if (animation.isEnded) { // if animation is end - switch to next
