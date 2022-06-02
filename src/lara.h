@@ -2006,7 +2006,7 @@ struct Lara : Character {
         }
     }
 
-    void checkTrigger(Controller *controller, bool heavy) {
+    virtual void checkTrigger(Controller *controller, bool heavy) {
         TR::Level::FloorInfo info;
         getFloorInfo(controller->getRoomIndex(), controller->pos, info);
 
