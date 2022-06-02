@@ -1573,6 +1573,13 @@ struct KeyHole : Controller {
     }
 
     virtual void update() {}
+
+    virtual void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
+    {
+        pos.y -= 128;
+        Controller::render(frustum, mesh, type, caustics);
+        pos.y += 128;
+    }
 };
 
 
