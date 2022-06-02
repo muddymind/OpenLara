@@ -418,7 +418,9 @@ struct Mario : Lara
 	}
 
 	void setStateFromMario()
-	{	
+	{
+		if (state == STATE_PICK_UP) return;
+
 		state = STATE_STOP;
 		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
 			state = STATE_WATER_OUT;
@@ -432,57 +434,6 @@ struct Mario : Lara
 
 	virtual void updateState()
 	{
-		if (state == STATE_PICK_UP)
-		{
-			int16_t rot[3];
-			struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
-
-			if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1) // anim done, pick up
-			{
-				if (marioState.action == 0x800380) // punching action
-				{
-					sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
-					camera->setup(true);
-					for (int i = 0; i < pickupListCount; i++)
-					{
-						Controller *item = pickupList[i];
-
-						if (item->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER)
-							continue;
-						item->deactivate();
-						item->flags.invisible = true;
-						game->invAdd(item->getEntity().type, 1);
-
-						vec4 p = game->projectPoint(vec4(item->pos, 1.0f));
-
-						#ifdef _OS_WP8
-							swap(p.x, p.y);
-						#endif
-
-						if (p.w != 0.0f) {
-							p.x = ( p.x / p.w * 0.5f + 0.5f) * UI::width;
-							p.y = (-p.y / p.w * 0.5f + 0.5f) * UI::height;
-							if (game->getLara(1)) {
-								p.x *= 0.5f;
-							}
-						} else
-							p = vec4(UI::width * 0.5f, UI::height * 0.5f, 0.0f, 0.0f);
-
-						UI::addPickup(item->getEntity().type, camera->cameraIndex, vec2(p.x, p.y));
-						saveStats.pickups++;
-					}
-					pickupListCount = 0;
-				}
-				else if (marioState.action == 0x00000383) // ACT_PICKING_UP
-				{
-					state = STATE_STOP;
-					sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
-				}
-			}
-
-			return;
-		}
-
 		setStateFromMario();
 		Lara::updateState();
 	}
@@ -566,6 +517,79 @@ struct Mario : Lara
 		} while ((c = c->next));
 
 		return target;
+	}
+
+	virtual void doCustomCommand(int curFrame, int prevFrame)
+	{
+		int16_t rot[3];
+		struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
+
+		switch (state)
+		{
+			case STATE_PICK_UP:
+				if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1) // anim done, pick up
+				{
+					if (marioState.action == 0x800380) // punching action
+					{
+						sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+						camera->setup(true);
+						for (int i = 0; i < pickupListCount; i++)
+						{
+							Controller *item = pickupList[i];
+
+							if (item->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER)
+								continue;
+							item->deactivate();
+							item->flags.invisible = true;
+							game->invAdd(item->getEntity().type, 1);
+
+							vec4 p = game->projectPoint(vec4(item->pos, 1.0f));
+
+							#ifdef _OS_WP8
+								swap(p.x, p.y);
+							#endif
+
+							if (p.w != 0.0f) {
+								p.x = ( p.x / p.w * 0.5f + 0.5f) * UI::width;
+								p.y = (-p.y / p.w * 0.5f + 0.5f) * UI::height;
+								if (game->getLara(1)) {
+									p.x *= 0.5f;
+								}
+							} else
+								p = vec4(UI::width * 0.5f, UI::height * 0.5f, 0.0f, 0.0f);
+
+							UI::addPickup(item->getEntity().type, camera->cameraIndex, vec2(p.x, p.y));
+							saveStats.pickups++;
+						}
+						pickupListCount = 0;
+					}
+					else if (marioState.action == 0x00000383) // ACT_PICKING_UP
+					{
+						state = STATE_STOP;
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+					}
+				}
+				break;
+
+			case STATE_USE_KEY    :
+			case STATE_USE_PUZZLE : {
+				if (keyHole) {
+					if (animation.isFrameActive(state == STATE_USE_PUZZLE ? PUZZLE_FRAME : KEY_FRAME)) {
+						keyHole->activate();
+						if (keyItem) {
+							if (state == STATE_USE_KEY)
+								keyItem->lockMatrix = false;
+							else
+								game->removeEntity(keyItem);
+						}
+
+						keyItem = NULL;
+						keyHole = NULL;
+					}
+				}
+				break;
+			}
+		}
 	}
 
 	void update()
