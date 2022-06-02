@@ -295,7 +295,7 @@ struct Mario : Lara
 	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
 	{
 		if (dozy || level->isCutsceneLevel()) return;
-
+		if (marioState.action & 1 << 12 || marioState.action & 1 << 17) return; // ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
 		if (health <= 0.0f && hitType != TR::HIT_FALL) return;
 
 		damageTime = LARA_DAMAGE_TIME;
@@ -324,16 +324,11 @@ struct Mario : Lara
 		sm64_mario_kill(marioId);
 	}
 
-	bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action)
-	{
-		return false;
-	}
-
 	int getInput()
 	{
         int pid = camera->cameraIndex;
 		int input = 0;
-		bool canMove = (state != STATE_PICK_UP);
+		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE);
 
 		float dir;
 		float spd = 0;
@@ -419,7 +414,7 @@ struct Mario : Lara
 
 	void setStateFromMario()
 	{
-		if (state == STATE_PICK_UP) return;
+		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE) return;
 
 		state = STATE_STOP;
 		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
@@ -519,6 +514,279 @@ struct Mario : Lara
 		return target;
 	}
 
+	virtual void checkTrigger(Controller *controller, bool heavy)
+	{
+		TR::Level::FloorInfo info;
+		getFloorInfo(controller->getRoomIndex(), controller->pos, info);
+
+		if (getEntity().isLara() && info.lava && info.floor == pos.y) {
+			hit(LARA_MAX_HEALTH + 1, NULL, TR::HIT_LAVA);
+			return;
+		}
+
+		if (!info.trigCmdCount) return; // has no trigger
+
+		if (camera->mode != Camera::MODE_HEAVY) {
+			refreshCamera(info);
+		}
+
+		TR::Limits::Limit *limit = NULL;
+		bool switchIsDown = false;
+		float timer = info.trigInfo.timer == 1 ? EPS : float(info.trigInfo.timer);
+		int cmdIndex = 0;
+		int actionState = state;
+
+		switch (info.trigger) {
+			case TR::Level::Trigger::ACTIVATE : break;
+
+			case TR::Level::Trigger::SWITCH : {
+				Switch *controller = (Switch*)level->entities[info.trigCmd[cmdIndex++].args].controller;
+
+				if (controller->flags.state != TR::Entity::asActive) {
+					limit = state == STATE_STOP ? (controller->getEntity().type == TR::Entity::SWITCH_BUTTON ? &TR::Limits::SWITCH_BUTTON : &TR::Limits::SWITCH) : &TR::Limits::SWITCH_UNDERWATER;
+					if (checkInteraction(controller, limit, Input::state[camera->cameraIndex][cAction])) {
+						actionState = (controller->state == Switch::STATE_DOWN && stand == STAND_GROUND) ? STATE_SWITCH_UP : STATE_SWITCH_DOWN;
+
+						int animIndex;
+						switch (controller->getEntity().type) {
+							case TR::Entity::SWITCH_BUTTON : animIndex = ANIM_PUSH_BUTTON; break;
+							case TR::Entity::SWITCH_BIG    : animIndex = controller->state == Switch::STATE_DOWN ? ANIM_SWITCH_BIG_UP : ANIM_SWITCH_BIG_DOWN; break;
+							default : animIndex = -1;
+						}
+
+						if (animation.setState(actionState, animIndex)) 
+							controller->activate();
+					}
+				}
+
+				if (!controller->setTimer(timer))
+					return;
+
+				switchIsDown = controller->state == Switch::STATE_DOWN;
+				break;
+			}
+
+			case TR::Level::Trigger::KEY : {
+				TR::Entity &entity = level->entities[info.trigCmd[cmdIndex++].args];
+				KeyHole *controller = (KeyHole*)entity.controller;
+
+				if (controller->flags.state == TR::Entity::asNone) {
+					if (controller->flags.active == TR::ACTIVE || state != STATE_STOP)
+						return;
+
+					actionState = entity.isPuzzleHole() ? STATE_USE_PUZZLE : STATE_USE_KEY;
+					//if (!animation.canSetState(actionState))
+						//return;
+
+					limit = actionState == STATE_USE_PUZZLE ? &TR::Limits::PUZZLE_HOLE : &TR::Limits::KEY_HOLE;
+					if (!checkInteraction(controller, limit, isPressed(ACTION) || usedItem != TR::Entity::NONE))
+						return;
+
+					if (usedItem == TR::Entity::NONE) {
+						if (isPressed(ACTION) && !game->invChooseKey(camera->cameraIndex, entity.type))
+							//game->playSound(TR::SND_NO, pos, Sound::PAN); // no compatible items in inventory
+							sm64_play_sound_global(SOUND_MENU_CAMERA_BUZZ);
+						return;
+					}
+
+					if (TR::Level::convToInv(TR::Entity::getItemForHole(entity.type)) != usedItem) { // check compatibility if user select other
+						//game->playSound(TR::SND_NO, pos, Sound::PAN); // uncompatible item
+						sm64_play_sound_global(SOUND_MENU_CAMERA_BUZZ);
+						return;
+					}
+
+					keyHole = controller;
+
+					if (game->invUse(camera->cameraIndex, usedItem)) {
+						/*
+						keyItem = game->addEntity(usedItem, getRoomIndex(), pos, 0);
+						keyItem->lockMatrix = true;
+						keyItem->pos     = keyHole->pos + vec3(0, -590, 484).rotateY(-keyHole->angle.y);
+						keyItem->angle.x = PI * 0.5f;
+						keyItem->angle.y = keyHole->angle.y;
+						*/
+					}
+
+					animation.setState(actionState);
+					sm64_set_mario_action(marioId, 0x0000132E); // ACT_UNLOCKING_KEY_DOOR
+				}
+
+				if (controller->flags.state != TR::Entity::asInactive)
+					return;
+
+				break;
+			}
+
+			case TR::Level::Trigger::PICKUP : {
+				Controller *controller = (Controller*)level->entities[info.trigCmd[cmdIndex++].args].controller;
+				if (!controller->flags.invisible)
+					return;
+				break;
+			}
+
+			case TR::Level::Trigger::COMBAT :
+				if (wpnReady() && !emptyHands())
+					return;
+				break;
+
+			case TR::Level::Trigger::PAD :
+			case TR::Level::Trigger::ANTIPAD :
+				if (pos.y != info.floor) return;
+				break;
+
+			case TR::Level::Trigger::HEAVY :
+				if (!heavy) return;
+				break;
+			case TR::Level::Trigger::DUMMY :
+				return;
+		}
+
+		bool needFlip = false;
+		TR::Effect::Type effect = TR::Effect::NONE;
+
+		while (cmdIndex < info.trigCmdCount) {
+			TR::FloorData::TriggerCommand &cmd = info.trigCmd[cmdIndex++];
+
+			switch (cmd.action) {
+				case TR::Action::ACTIVATE : {
+					if (cmd.args >= level->entitiesBaseCount) {
+						break;
+					}
+					TR::Entity &e = level->entities[cmd.args];
+					Controller *controller = (Controller*)e.controller;
+					ASSERT(controller);
+					TR::Entity::Flags &flags = controller->flags;
+
+					if (flags.once)
+						break;
+					controller->timer = timer;
+
+					if (info.trigger == TR::Level::Trigger::SWITCH)
+						flags.active ^= info.trigInfo.mask;
+					else if (info.trigger == TR::Level::Trigger::ANTIPAD)
+						flags.active &= ~info.trigInfo.mask;
+					else
+						flags.active |= info.trigInfo.mask;
+
+					if (flags.active != TR::ACTIVE)
+						break;
+
+					flags.once |= info.trigInfo.once;
+					
+					controller->activate();
+					break;
+				}
+				case TR::Action::CAMERA_SWITCH : {
+					TR::FloorData::TriggerCommand &cam = info.trigCmd[cmdIndex++];
+
+					if (!level->cameras[cmd.args].flags.once) {
+						camera->viewIndex = cmd.args;
+
+						if (!(info.trigger == TR::Level::Trigger::COMBAT) &&
+							!(info.trigger == TR::Level::Trigger::SWITCH && info.trigInfo.timer && !switchIsDown) &&
+							 (info.trigger == TR::Level::Trigger::SWITCH || camera->viewIndex != camera->viewIndexLast))
+						{
+							camera->smooth = cam.speed > 0;
+							camera->mode   = heavy ? Camera::MODE_HEAVY : Camera::MODE_STATIC;
+							camera->timer  = cam.timer == 1 ? EPS : float(cam.timer);
+							camera->speed  = cam.speed * 8;
+
+							level->cameras[camera->viewIndex].flags.once |= cam.once;
+						}
+					}
+					break;
+				}
+				case TR::Action::FLOW :
+					applyFlow(level->cameras[cmd.args]);
+					break;
+				case TR::Action::FLIP : {
+					SaveState::ByteFlags &flip = level->state.flipmaps[cmd.args];
+
+					if (flip.once)
+						break;
+
+					if (info.trigger == TR::Level::Trigger::SWITCH)
+						flip.active ^= info.trigInfo.mask;
+					else
+						flip.active |= info.trigInfo.mask;
+
+					if (flip.active == TR::ACTIVE)
+						flip.once |= info.trigInfo.once;
+
+					if ((flip.active == TR::ACTIVE) ^ level->state.flags.flipped)
+						 needFlip = true;
+
+					break;
+				}
+				case TR::Action::FLIP_ON :
+					if (level->state.flipmaps[cmd.args].active == TR::ACTIVE && !level->state.flags.flipped)
+						needFlip = true;
+					break;
+				case TR::Action::FLIP_OFF :
+					if (level->state.flipmaps[cmd.args].active == TR::ACTIVE && level->state.flags.flipped)
+						needFlip = true;
+					break;
+				case TR::Action::CAMERA_TARGET :
+					if (camera->mode == Camera::MODE_STATIC || camera->mode == Camera::MODE_HEAVY) {
+						camera->viewTarget = (Controller*)level->entities[cmd.args].controller;
+					}
+					break;
+				case TR::Action::END :
+					game->loadNextLevel();
+					break;
+				case TR::Action::SOUNDTRACK : {
+					int track = doTutorial(cmd.args);
+
+					if (track == 0) break;
+
+				// check trigger
+					SaveState::ByteFlags &flags = level->state.tracks[track];
+
+					if (flags.once)
+						break;
+
+					if (info.trigger == TR::Level::Trigger::SWITCH)
+						flags.active ^= info.trigInfo.mask;
+					else if (info.trigger == TR::Level::Trigger::ANTIPAD)
+						flags.active &= ~info.trigInfo.mask;
+					else
+						flags.active |= info.trigInfo.mask;
+
+					if ( (flags.active == TR::ACTIVE) || (((level->version & (TR::VER_TR2 | TR::VER_TR3))) && flags.active) ) {
+						flags.once |= info.trigInfo.once;
+						game->playTrack(track);
+					} else
+						game->stopTrack();
+
+					break;
+				}
+				case TR::Action::EFFECT :
+					effect = TR::Effect::Type(cmd.args);
+					break;
+				case TR::Action::SECRET :
+					if (!(saveStats.secrets & (1 << cmd.args))) {
+						saveStats.secrets |= 1 << cmd.args;
+						if (!game->playSound(TR::SND_SECRET, pos))
+							game->playTrack(TR::TRACK_TR1_SECRET, true);
+					}
+					break;
+				case TR::Action::CLEAR_BODIES :
+					break;
+				case TR::Action::FLYBY :
+					cmdIndex++; // TODO
+					break;
+				case TR::Action::CUTSCENE :
+					cmdIndex++; // TODO
+					break;
+			}
+		}
+
+		if (needFlip) {
+			game->flipMap();
+			game->setEffect(this, effect);
+		}
+	}
+
 	virtual void doCustomCommand(int curFrame, int prevFrame)
 	{
 		int16_t rot[3];
@@ -571,7 +839,22 @@ struct Mario : Lara
 				}
 				break;
 
-			case STATE_USE_KEY    :
+			case STATE_USE_KEY:
+			{
+				if (keyHole)
+				{
+					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-15)
+					{
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						state = STATE_STOP;
+						keyHole->activate();
+						keyHole = NULL;
+					}
+				}
+				break;
+			}
+			break;
+
 			case STATE_USE_PUZZLE : {
 				if (keyHole) {
 					if (animation.isFrameActive(state == STATE_USE_PUZZLE ? PUZZLE_FRAME : KEY_FRAME)) {
