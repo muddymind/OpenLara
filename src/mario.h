@@ -841,6 +841,7 @@ struct Mario : Lara
 				break;
 
 			case STATE_USE_KEY:
+			case STATE_USE_PUZZLE:
 			{
 				if (keyHole)
 				{
@@ -855,24 +856,6 @@ struct Mario : Lara
 				break;
 			}
 			break;
-
-			case STATE_USE_PUZZLE : {
-				if (keyHole) {
-					if (animation.isFrameActive(state == STATE_USE_PUZZLE ? PUZZLE_FRAME : KEY_FRAME)) {
-						keyHole->activate();
-						if (keyItem) {
-							if (state == STATE_USE_KEY)
-								keyItem->lockMatrix = false;
-							else
-								game->removeEntity(keyItem);
-						}
-
-						keyItem = NULL;
-						keyHole = NULL;
-					}
-				}
-				break;
-			}
 		}
 	}
 
