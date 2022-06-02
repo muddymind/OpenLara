@@ -674,6 +674,7 @@ struct Mario : Lara
 					flags.once |= info.trigInfo.once;
 					
 					controller->activate();
+					animation.playNext();
 					break;
 				}
 				case TR::Action::CAMERA_SWITCH : {
