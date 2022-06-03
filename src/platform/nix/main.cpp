@@ -449,7 +449,21 @@ int main(int argc, char **argv) {
 
     joyInit();
     sndInit();
-    Game::init(argc > 1 ? argv[1] : NULL);
+
+    FILE *f = fopen("sm64.us.z64", "rb");
+    if (!f)
+    {
+        printf("Super Mario 64 US ROM not found\nPlace sm64.us.z64 in this folder\n");
+        Core::isQuit = true;
+    }
+    else
+    {
+        fclose(f);
+        Game::init(argc > 1 ? argv[1] : NULL);
+
+        if (Core::isQuit)
+            printf("Tomb Raider game data not found\nPlease copy game data from:\n - Tomb Raider 1 PSX/PC/Saturn\n - Tomb Raider 2/3/4 PSX/PC\n");
+    }
 
     while (!Core::isQuit) {
         if (XPending(dpy)) {
