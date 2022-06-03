@@ -314,7 +314,7 @@ struct Mario : Lara
 			default                : ;
 		}
 
-		if (enemy)
+		if (enemy && !(marioState.action & 1 << 23)) // ACT_FLAG_ATTACKING (don't knockback mario if he is attacking)
 			sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
 
 		if (health > 0.0f)
