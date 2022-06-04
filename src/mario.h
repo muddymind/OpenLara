@@ -808,7 +808,8 @@ struct Mario : Lara
 			{
 				if (keyHole)
 				{
-					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-15)
+					int end = (state == STATE_USE_KEY) ? 15 : 40;
+					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-end)
 					{
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
 						state = STATE_STOP;
@@ -866,6 +867,21 @@ struct Mario : Lara
 					if (f.water) continue;
 
 					surfaces_count += (f.triangle) ? 1 : 2;
+				}
+
+				for (int k = 0; k < room3.portalsCount; k++)
+				{
+					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
+					TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
+					TR::Room::Data &d4 = room4.data;
+
+					for (int l = 0; l < d4.fCount; l++)
+					{
+						TR::Face &f = d4.faces[l];
+						if (f.water) continue;
+
+						surfaces_count += (f.triangle) ? 1 : 2;
+					}
 				}
 			}
 		}
@@ -942,6 +958,34 @@ struct Mario : Lara
 							{(room3.info.x + d3.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
 							{(room3.info.x + d3.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
 						}};
+					}
+				}
+
+				for (int k = 0; k < room3.portalsCount; k++)
+				{
+					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
+					TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
+					TR::Room::Data &d4 = room4.data;
+
+					for (int l = 0; l < d4.fCount; l++)
+					{
+						TR::Face &f = d4.faces[l];
+						if (f.water) continue;
+
+						surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+							{(room4.info.x + d4.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+							{(room4.info.x + d4.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
+							{(room4.info.x + d4.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+						}};
+
+						if (!f.triangle)
+						{
+							surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+								{(room4.info.x + d4.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+								{(room4.info.x + d4.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
+								{(room4.info.x + d4.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+							}};
+						}
 					}
 				}
 			}
