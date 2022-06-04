@@ -1930,7 +1930,7 @@ struct Lara : Character {
         if (limit->box.contains(deltaRel)) {
             float deltaAngY = shortAngle(angle.y, ctrlAngle.y);
 
-            if (stand == STAND_UNDERWATER) {
+            if (stand == STAND_UNDERWATER && !isMario) {
                 float deltaAngX = shortAngle(angle.x, ctrlAngle.x);
 
                 if (deltaAbs.length() > 64.0f || max(fabs(deltaAngX), fabs(deltaAngY)) > (10.0f * DEG2RAD)) {

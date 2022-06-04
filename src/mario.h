@@ -384,6 +384,8 @@ struct Mario : Lara
 			state = STATE_WATER_OUT;
 		else if (stand == STAND_ONWATER)
 			state = (marioState.velocity[0] == 0 && marioState.velocity[2] == 0) ? STATE_SURF_TREAD : STATE_SURF_SWIM;
+		else if (stand == STAND_UNDERWATER)
+			state = STATE_TREAD;
 		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
 			state = STATE_HANG;
 		else if (!(marioState.action & (1 << 22)) && stand != STAND_UNDERWATER) // !(marioState.action & ACT_FLAG_IDLE)
@@ -398,7 +400,7 @@ struct Mario : Lara
 
 	virtual bool doPickUp()
 	{
-		if (marioState.velocity[0] != 0 || marioState.velocity[1] != 0 || marioState.velocity[2] != 0) return false;
+		if ((marioState.velocity[0] != 0 || marioState.velocity[1] != 0 || marioState.velocity[2] != 0) && state != STATE_TREAD) return false;
 
 		int room = getRoomIndex();
 
@@ -435,7 +437,7 @@ struct Mario : Lara
 
 		if (pickupListCount > 0)
 		{
-			sm64_set_mario_action(marioId, 0x00800380);
+			if (stand != STAND_UNDERWATER) sm64_set_mario_action(marioId, 0x00800380);
 			state = STATE_PICK_UP;
 			return true;
 		}
@@ -761,9 +763,12 @@ struct Mario : Lara
 			case STATE_PICK_UP:
 				if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1) // anim done, pick up
 				{
-					if (marioState.action == 0x800380) // punching action
+					if (marioState.action == 0x800380 || marioState.action == 0x300024E1) // punching action || ACT_WATER_PUNCH
 					{
-						sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+						if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+						else
+							state = STATE_STOP;
+
 						camera->setup(true);
 						for (int i = 0; i < pickupListCount; i++)
 						{
