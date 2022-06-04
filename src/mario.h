@@ -808,7 +808,7 @@ struct Mario : Lara
 			{
 				if (keyHole)
 				{
-					int end = (state == STATE_USE_KEY) ? 15 : 40;
+					int end = (state == STATE_USE_KEY) ? 15 : 57;
 					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-end)
 					{
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
