@@ -50,8 +50,8 @@ const char *MARIO_SHADER =
 GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, GLenum shaderType )
 {
     const GLchar *shaderDefine = shaderType == GL_VERTEX_SHADER 
-        ? "\n#version 410\n#define VERTEX  \n#define v2f out\n" 
-        : "\n#version 410\n#define FRAGMENT\n#define v2f in \n";
+        ? "\n#version 330\n#define VERTEX  \n#define v2f out\n" 
+        : "\n#version 330\n#define FRAGMENT\n#define v2f in \n";
 
     const GLchar *shaderStrings[2] = { shaderDefine, shaderContents };
     GLint shaderStringLengths[2] = { (GLint)strlen( shaderDefine ), (GLint)shaderContentsLength };
