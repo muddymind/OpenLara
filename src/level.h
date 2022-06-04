@@ -258,7 +258,11 @@ struct Level : IGame {
                     if (lara->camera)
                         lara->camera->reset();
                     if (lara->isMario)
+					{
                         sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
+						sm64_set_mario_faceangle( ((Mario*)lara)->marioId, (int16_t)((-lara->angle.y + M_PI) / M_PI * 32768.0f));
+                        ((Mario*)lara)->marioUpdateRoom();
+					}
                 }
 
                 ptr += (sizeof(SaveEntity) - sizeof(SaveEntity::Extra)) + entity->extraSize;
