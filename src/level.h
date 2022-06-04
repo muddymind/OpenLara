@@ -254,9 +254,11 @@ struct Level : IGame {
                 }
 
                 if (controller->getEntity().isLara()) {
-                    Mario *lara = (Mario*)controller;
+                    Lara *lara = (Lara*)controller;
                     if (lara->camera)
                         lara->camera->reset();
+                    if (lara->isMario)
+                        sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
                 }
 
                 ptr += (sizeof(SaveEntity) - sizeof(SaveEntity::Extra)) + entity->extraSize;
