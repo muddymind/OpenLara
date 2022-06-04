@@ -70,12 +70,11 @@ struct Mario : Lara
 		TRmarioMesh = new Mesh((Index*)marioRenderState.mario.index, marioRenderState.mario.num_vertices, NULL, 0, 1, true, true);
 		TRmarioMesh->initMario(&marioGeometry);
 
-		// load sm64surfaces
+		// export a level.c file for use in the libsm64 test program
 		FILE* file = fopen("level.c", "w");
 		fprintf(file, "#include \"level.h\"\n#include \"../src/decomp/include/surface_terrains.h\"\nconst struct SM64Surface surfaces[] = {\n");
 		size_t surfaces_count = 0;
 		size_t surface_ind = 0;
-		static bool printed = false;
 
 		for (int i = 0; i < level->roomsCount; i++)
 		{
@@ -124,41 +123,8 @@ struct Mario : Lara
 		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );\n");
 		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(pos.x/MARIO_SCALE), (int)(-pos.y/MARIO_SCALE), (int)(-pos.z/MARIO_SCALE));
 		fclose(file);
-		printed = true;
-		surface_ind = 0;
 
-		struct SM64Surface surfaces[surfaces_count];
-		for (int i = 0; i < level->roomsCount; i++)
-		{
-			TR::Room &room = level->rooms[i];
-			TR::Room::Data &d = room.data;
-
-			for (int j = 0; j < d.fCount; j++)
-			{
-				TR::Face &f = d.faces[j];
-				if (f.water) continue;
-
-				surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-					{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-					{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
-					{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-				}};
-
-				if (!f.triangle)
-				{
-					surface_ind++;
-					surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-						{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-						{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
-						{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-					}};
-				}
-
-				surface_ind++;
-			}
-		}
-
-		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
+		marioUpdateRoom();
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
@@ -859,35 +825,123 @@ struct Mario : Lara
 		}
 	}
 
+	void marioUpdateRoom()
+	{
+		// load sm64surfaces
+		size_t surfaces_count = 0;
+		size_t surface_ind = 0;
+
+		// get meshes from this room
+		TR::Room &room = getRoom();
+		TR::Room::Data &d = room.data;
+
+		for (int i = 0; i < d.fCount; i++)
+		{
+			TR::Face &f = d.faces[i];
+			if (f.water) continue;
+
+			surfaces_count += (f.triangle) ? 1 : 2;
+		}
+
+		// get meshes from this room's portals to adjacent rooms
+		for (int i = 0; i < room.portalsCount; i++)
+		{
+			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+			TR::Room::Data &d2 = room2.data;
+
+			for (int j = 0; j < d2.fCount; j++)
+			{
+				TR::Face &f = d2.faces[j];
+				if (f.water) continue;
+
+				surfaces_count += (f.triangle) ? 1 : 2;
+			}
+		}
+
+		struct SM64Surface surfaces[surfaces_count];
+		for (int i = 0; i < d.fCount; i++)
+		{
+			TR::Face &f = d.faces[i];
+			if (f.water) continue;
+
+			surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+				{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+				{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
+				{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+			}};
+
+			if (!f.triangle)
+			{
+				surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+					{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+					{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
+					{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+				}};
+			}
+		}
+
+		for (int i = 0; i < room.portalsCount; i++)
+		{
+			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+			TR::Room::Data &d2 = room2.data;
+
+			for (int j = 0; j < d2.fCount; j++)
+			{
+				TR::Face &f = d2.faces[j];
+				if (f.water) continue;
+
+				surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+					{(room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+					{(room2.info.x + d2.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
+					{(room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+				}};
+
+				if (!f.triangle)
+				{
+					surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+						{(room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
+						{(room2.info.x + d2.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
+						{(room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
+					}};
+				}
+			}
+		}
+
+		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
+	}
+
 	void update()
 	{
-        if (level->isCutsceneLevel()) {
-            updateAnimation(true);
+		if (level->isCutsceneLevel()) {
+			updateAnimation(true);
 
-            updateLights();
+			updateLights();
 
-            if (fixRoomIndex()) {
-                for (int i = 0; i < COUNT(braid); i++) {
-                    if (braid[i]) {
-                        braid[i]->update();
-                    }
-                }
-            }
-        } else {
-            switch (usedItem) {
-                case TR::Entity::INV_MEDIKIT_SMALL :
-                case TR::Entity::INV_MEDIKIT_BIG   :
-                    if (health < LARA_MAX_HEALTH) {
-                        damageTime = LARA_DAMAGE_TIME;
-                        health = min(LARA_MAX_HEALTH, health + (usedItem == TR::Entity::INV_MEDIKIT_SMALL ? LARA_MAX_HEALTH / 2 : LARA_MAX_HEALTH));
-                        //game->playSound(TR::SND_HEALTH, pos, Sound::PAN);
-                        inventory->remove(usedItem);
-                    }
-                    usedItem = TR::Entity::NONE;
-                default : ;
-            }
+			if (fixRoomIndex()) {
+				for (int i = 0; i < COUNT(braid); i++) {
+					if (braid[i]) {
+						braid[i]->update();
+					}
+				}
+			}
+		} else {
+			switch (usedItem) {
+				case TR::Entity::INV_MEDIKIT_SMALL :
+				case TR::Entity::INV_MEDIKIT_BIG   :
+					if (health < LARA_MAX_HEALTH) {
+						damageTime = LARA_DAMAGE_TIME;
+						health = min(LARA_MAX_HEALTH, health + (usedItem == TR::Entity::INV_MEDIKIT_SMALL ? LARA_MAX_HEALTH / 2 : LARA_MAX_HEALTH));
+						//game->playSound(TR::SND_HEALTH, pos, Sound::PAN);
+						inventory->remove(usedItem);
+					}
+					usedItem = TR::Entity::NONE;
+				default : ;
+			}
 
-            updateRoom();
+			int oldRoom = getRoomIndex();
+			updateRoom();
+			if (getRoomIndex() != oldRoom) marioUpdateRoom();
+
 			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
 			else if (getRoom().flags.water) sm64_set_mario_water_level(marioId, 32767);
 			else sm64_set_mario_water_level(marioId, -32768);
@@ -927,8 +981,6 @@ struct Mario : Lara
 
 					TRmarioMesh->update(&marioGeometry);
 				}
-
-				//sm64_mario_teleport(marioId, pos.x, pos.y, pos.z);
 
 				float hp = health / float(LARA_MAX_HEALTH);
 				float ox = oxygen / float(LARA_MAX_OXYGEN);
