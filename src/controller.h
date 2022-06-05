@@ -157,7 +157,11 @@ struct Controller {
 
     float waterLevel, waterDepth;
 
+    bool isMario;
+
     Controller(IGame *game, int entity) : next(NULL), game(game), level(game->getLevel()), entity(entity), animation(level, getModel(), level->entities[entity].flags.smooth), state(animation.state), invertAim(false), layers(0), explodeMask(0), explodeParts(0), lastPos(0) {
+        isMario = false;
+
         const TR::Entity &e = getEntity();
         lockMatrix  = false;
         matrix.identity();
@@ -1135,7 +1139,7 @@ struct Controller {
 
     virtual void updateAnimation(bool commands) {
         bool actor = level->isCutsceneLevel() && getEntity().isActor();
-        if (actor || !getEntity().isLara()) animation.update();
+        if (actor || !isMario) animation.update();
 
         if (actor) {
             vec3 p = getPos();
@@ -1182,7 +1186,7 @@ struct Controller {
                                     if ((sfx & 0x4000) && waterDepth > 0.0f)
                                         break;
                                 }
-                                if (!getEntity().isLara()) game->playSound(fx, pos, Sound::PAN); // we're playing as mario, not lara
+                                if (!isMario) game->playSound(fx, pos, Sound::PAN); // we're playing as mario, not lara
                             }
                         }
                         break;
