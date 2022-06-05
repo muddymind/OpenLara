@@ -1582,6 +1582,10 @@ namespace TR {
             0, 292, 30,     ::Box(vec3(-200, 0, 250), vec3(200, 0, 512)), true, true
         };
 
+        Limit SWITCH_MARIO = {
+            0, 376, 30,     ::Box(vec3(-200, 0, 290), vec3(200, 0, 512)), true, false
+        };
+
         Limit PICKUP = {
             0, -100, 180,   ::Box(vec3(-256, -100, -256), vec3(256, 100, 100)), false, true
         };
@@ -1596,6 +1600,14 @@ namespace TR {
 
         Limit PUZZLE_HOLE = { 
             0, 327, 30,     ::Box(vec3(-200, 0, 312), vec3(200, 0, 512)), true, true
+        };
+
+        Limit KEY_HOLE_MARIO = { 
+            0, 362, 30,     ::Box(vec3(-200, 0, 290), vec3(200, 0, 512)), true, true
+        };
+
+        Limit PUZZLE_HOLE_MARIO = { 
+            0, 327, 30,     ::Box(vec3(-200, 0, 290), vec3(200, 0, 512)), true, true
         };
 
         Limit BLOCK = { 
