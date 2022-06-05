@@ -388,7 +388,7 @@ struct Mario : Lara
 			state = STATE_TREAD;
 		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
 			state = STATE_HANG;
-		else if (!(marioState.action & (1 << 22)) && stand != STAND_UNDERWATER) // !(marioState.action & ACT_FLAG_IDLE)
+		else if (!(marioState.action & (1 << 22)) && marioState.action != 0x800380 && stand != STAND_UNDERWATER) // !(marioState.action & ACT_FLAG_IDLE)
 			state = STATE_RUN;
 	}
 
@@ -508,7 +508,7 @@ struct Mario : Lara
 				Switch *controller = (Switch*)level->entities[info.trigCmd[cmdIndex++].args].controller;
 
 				if (controller->flags.state != TR::Entity::asActive) {
-					limit = state == STATE_STOP ? (controller->getEntity().type == TR::Entity::SWITCH_BUTTON ? &TR::Limits::SWITCH_BUTTON : &TR::Limits::SWITCH) : &TR::Limits::SWITCH_UNDERWATER;
+					limit = state == STATE_STOP ? (controller->getEntity().type == TR::Entity::SWITCH_BUTTON ? &TR::Limits::SWITCH_BUTTON : &TR::Limits::SWITCH_MARIO) : &TR::Limits::SWITCH_UNDERWATER;
 					if (checkInteraction(controller, limit, Input::state[camera->cameraIndex][cAction])) {
 						actionState = (controller->state == Switch::STATE_DOWN && stand == STAND_GROUND) ? STATE_SWITCH_UP : STATE_SWITCH_DOWN;
 
@@ -537,28 +537,40 @@ struct Mario : Lara
 
 				if (controller->flags.state == TR::Entity::asNone) {
 					if (controller->flags.active == TR::ACTIVE || state != STATE_STOP)
+					{
+						//printf("is active: %s, state != state_stop: %s\n", controller->flags.active == TR::ACTIVE ? "y":"n", state != STATE_STOP ? "y":"n");
 						return;
+					}
 
 					actionState = entity.isPuzzleHole() ? STATE_USE_PUZZLE : STATE_USE_KEY;
 					//if (!animation.canSetState(actionState))
 						//return;
 
-					limit = actionState == STATE_USE_PUZZLE ? &TR::Limits::PUZZLE_HOLE : &TR::Limits::KEY_HOLE;
+					limit = actionState == STATE_USE_PUZZLE ? &TR::Limits::PUZZLE_HOLE_MARIO : &TR::Limits::KEY_HOLE_MARIO;
+					//printf("check return 1 limit %d: %s, %s (%d %d)\n", limit, isPressed(ACTION) ? "y":"n", usedItem != TR::Entity::NONE ? "y":"n", usedItem, TR::Entity::NONE);
 					if (!checkInteraction(controller, limit, isPressed(ACTION) || usedItem != TR::Entity::NONE))
-						return;
-
-					if (usedItem == TR::Entity::NONE) {
-						if (isPressed(ACTION) && !game->invChooseKey(camera->cameraIndex, entity.type))
-							//game->playSound(TR::SND_NO, pos, Sound::PAN); // no compatible items in inventory
-							sm64_play_sound_global(SOUND_MENU_CAMERA_BUZZ);
+					{
+						//printf("returned 1\n");
 						return;
 					}
+
+					//printf("past 1\n");
+					if (usedItem == TR::Entity::NONE) {
+						if (isPressed(ACTION) && !game->invChooseKey(camera->cameraIndex, entity.type))
+							sm64_play_sound_global(SOUND_MENU_CAMERA_BUZZ);
+							//game->playSound(TR::SND_NO, pos, Sound::PAN); // no compatible items in inventory
+						//printf("return 2\n");
+						return;
+					}
+					//printf("past 2\n");
 
 					if (TR::Level::convToInv(TR::Entity::getItemForHole(entity.type)) != usedItem) { // check compatibility if user select other
 						//game->playSound(TR::SND_NO, pos, Sound::PAN); // uncompatible item
+						//printf("return 3\n");
 						sm64_play_sound_global(SOUND_MENU_CAMERA_BUZZ);
 						return;
 					}
+					//printf("past 3\n");
 
 					keyHole = controller;
 
@@ -572,12 +584,16 @@ struct Mario : Lara
 						*/
 					}
 
+					//printf("yup\n");
 					animation.setState(actionState);
 					sm64_set_mario_action(marioId, 0x0000132E); // ACT_UNLOCKING_KEY_DOOR
 				}
 
 				if (controller->flags.state != TR::Entity::asInactive)
+				{
+					//printf("as inactive\n");
 					return;
+				}
 
 				break;
 			}
@@ -802,6 +818,7 @@ struct Mario : Lara
 					}
 					else if (marioState.action == 0x00000383) // ACT_PICKING_UP
 					{
+						animation.playNext();
 						state = STATE_STOP;
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
 					}
@@ -817,6 +834,7 @@ struct Mario : Lara
 					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-end)
 					{
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						animation.playNext();
 						state = STATE_STOP;
 						keyHole->activate();
 						keyHole = NULL;

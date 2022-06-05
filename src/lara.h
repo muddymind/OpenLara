@@ -502,7 +502,6 @@ struct Lara : Character {
 
     Lara(IGame *game, int entity) : Character(game, entity, LARA_MAX_HEALTH), wpnCurrent(TR::Entity::NONE), wpnNext(TR::Entity::NONE) {
         camera = new Camera(game, this);
-		isMario = false;
 
         braid[0] = braid[1] = NULL;
 
@@ -1925,6 +1924,7 @@ struct Lara : Character {
         vec3 deltaAbs = pos - targetPos;
 
         vec3 deltaRel = (m.transpose() * vec4(pos - controller->pos, 0.0f)).xyz(); // inverse transform
+		printf("%.2f %.2f %.2f in (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", deltaRel.x, deltaRel.y, deltaRel.z, limit->box.min.x, limit->box.min.y, limit->box.min.z, limit->box.max.x, limit->box.max.y, limit->box.max.z);
         
         // set item orientation to hack limits check
         if (limit->box.contains(deltaRel)) {
