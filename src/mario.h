@@ -9,6 +9,7 @@ extern "C" {
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 	#include <libsm64/src/decomp/include/PR/ultratypes.h>
 	#include <libsm64/src/decomp/include/audio_defines.h>
+	#include <libsm64/src/decomp/include/mario_animation_ids.h>
 }
 
 //#define M_PI 3.14159265358979323846f
@@ -773,54 +774,72 @@ struct Mario : Lara
 	{
 		int16_t rot[3];
 		struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
+		//if (marioAnim && marioAnim->curAnim && marioState.action) printf("%d %x %d %d\n", state, marioState.action, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
 
 		switch (state)
 		{
 			case STATE_PICK_UP:
-				if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1) // anim done, pick up
 				{
-					if (marioState.action == 0x800380 || marioState.action == 0x300024E1) // punching action || ACT_WATER_PUNCH
+					int end = (marioState.action == 0x00001319) ? 60 : marioAnim->curAnim->loopEnd-1;
+					if (marioAnim->animFrame == end) // anim done, pick up
 					{
-						if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
-						else
-							state = STATE_STOP;
-
-						camera->setup(true);
-						for (int i = 0; i < pickupListCount; i++)
+						if (marioState.action == 0x800380 || marioState.action == 0x300024E1) // punching action || ACT_WATER_PUNCH
 						{
-							Controller *item = pickupList[i];
+							if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+							else
+								state = STATE_STOP;
 
-							if (item->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER)
-								continue;
-							item->deactivate();
-							item->flags.invisible = true;
-							game->invAdd(item->getEntity().type, 1);
+							camera->setup(true);
+							for (int i = 0; i < pickupListCount; i++)
+							{
+								Controller *item = pickupList[i];
 
-							vec4 p = game->projectPoint(vec4(item->pos, 1.0f));
+								if (item->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER)
+									continue;
+								item->deactivate();
+								item->flags.invisible = true;
+								game->invAdd(item->getEntity().type, 1);
 
-							#ifdef _OS_WP8
-								swap(p.x, p.y);
-							#endif
+								vec4 p = game->projectPoint(vec4(item->pos, 1.0f));
 
-							if (p.w != 0.0f) {
-								p.x = ( p.x / p.w * 0.5f + 0.5f) * UI::width;
-								p.y = (-p.y / p.w * 0.5f + 0.5f) * UI::height;
-								if (game->getLara(1)) {
-									p.x *= 0.5f;
-								}
-							} else
-								p = vec4(UI::width * 0.5f, UI::height * 0.5f, 0.0f, 0.0f);
+								#ifdef _OS_WP8
+									swap(p.x, p.y);
+								#endif
 
-							UI::addPickup(item->getEntity().type, camera->cameraIndex, vec2(p.x, p.y));
-							saveStats.pickups++;
+								if (p.w != 0.0f) {
+									p.x = ( p.x / p.w * 0.5f + 0.5f) * UI::width;
+									p.y = (-p.y / p.w * 0.5f + 0.5f) * UI::height;
+									if (game->getLara(1)) {
+										p.x *= 0.5f;
+									}
+								} else
+									p = vec4(UI::width * 0.5f, UI::height * 0.5f, 0.0f, 0.0f);
+
+								UI::addPickup(item->getEntity().type, camera->cameraIndex, vec2(p.x, p.y));
+								saveStats.pickups++;
+							}
+							pickupListCount = 0;
 						}
-						pickupListCount = 0;
-					}
-					else if (marioState.action == 0x00000383) // ACT_PICKING_UP
-					{
-						animation.playNext();
-						state = STATE_STOP;
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						else if (marioState.action == 0x00000383) // ACT_PICKING_UP
+						{
+							if (pickupList[0] && pickupList[0]->getEntity().type == TR::Entity::SCION_PICKUP_QUALOPEC)
+							{
+								sm64_set_mario_action(marioId, 0x00001319); // ACT_CREDITS_CUTSCENE
+								sm64_set_mario_animation(marioId, MARIO_ANIM_CREDITS_RAISE_HAND);
+							}
+							else
+							{
+								animation.playNext();
+								state = STATE_STOP;
+								sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+							}
+						}
+						else if (marioState.action == 0x00001319) // ACT_CREDITS_CUTSCENE
+						{
+							animation.setAnim(ANIM_STAND);
+							state = STATE_STOP;
+							sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						}
 					}
 				}
 				break;

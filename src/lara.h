@@ -1846,7 +1846,7 @@ struct Lara : Character {
         // get limits
         TR::Limits::Limit *limit;
         switch (type) {
-            case TR::Entity::SCION_PICKUP_QUALOPEC : limit = &TR::Limits::SCION; break;
+            case TR::Entity::SCION_PICKUP_QUALOPEC : limit = (isMario) ? &TR::Limits::SCION_MARIO : &TR::Limits::SCION; break;
             case TR::Entity::SCION_PICKUP_HOLDER   : limit = &TR::Limits::SCION_HOLDER; break;
             default : limit = level->rooms[getRoomIndex()].flags.water ? &TR::Limits::PICKUP_UNDERWATER : &TR::Limits::PICKUP;
         }
