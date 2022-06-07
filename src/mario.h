@@ -41,6 +41,8 @@ struct Mario : Lara
     struct SM64MarioState marioState;
     struct SM64MarioGeometryBuffers marioGeometry;
 	struct MarioRenderState marioRenderState;
+	float lastPos[3], currPos[3];
+	float lastGeom[9 * SM64_GEO_MAX_TRIANGLES], currGeom[9 * SM64_GEO_MAX_TRIANGLES];
 
 	float marioTicks;
 	bool postInit;
@@ -56,6 +58,17 @@ struct Mario : Lara
 		marioId = -1;
 		marioTicks = 0;
 		objCount = 0;
+
+		for (int i=0; i<3; i++)
+		{
+			lastPos[i] = 0;
+			currPos[i] = 0;
+		}
+		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
+		{
+			lastGeom[i] = 0;
+			currGeom[i] = 0;
+		}
 
 		marioGeometry.position = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
 		marioGeometry.color    = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
@@ -1088,25 +1101,33 @@ struct Mario : Lara
 
 				while (marioTicks > 1./30)
 				{
+					for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
+					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++) lastGeom[i] = marioGeometry.position[i];
+
 					sm64_mario_tick(marioId, &marioInputs, &marioState, &marioGeometry);
+					for (int i=0; i<3; i++) currPos[i] = marioState.position[i];
+					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++) currGeom[i] = marioGeometry.position[i];
+
 					marioTicks -= 1./30;
 					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
 
-					for (int i=0; i<3; i++) marioState.position[i] *= MARIO_SCALE;
+					for (int i=0; i<3; i++) currPos[i] *= MARIO_SCALE;
 
 					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 					{
-						marioGeometry.position[i] *= MARIO_SCALE;
+						currGeom[i] *= MARIO_SCALE;
 
 						if (i%3 != 0) // flip y and z
 						{
-							marioGeometry.position[i] = -marioGeometry.position[i];
+							currGeom[i] = -currGeom[i];
 							marioGeometry.normal[i] = -marioGeometry.normal[i];
 						}
 					}
-
-					TRmarioMesh->update(&marioGeometry);
 				}
+
+				for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
+				for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
+				TRmarioMesh->update(&marioGeometry);
 
 				float hp = health / float(LARA_MAX_HEALTH);
 				float ox = oxygen / float(LARA_MAX_OXYGEN);
