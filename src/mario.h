@@ -291,7 +291,11 @@ struct Mario : Lara
 			default                : ;
 		}
 
-		if (enemy && !(marioState.action & 1 << 23)) // ACT_FLAG_ATTACKING (don't knockback mario if he is attacking)
+		if (enemy &&
+		    (!(marioState.action & 1 << 23) || // ACT_FLAG_ATTACKING (mario is not attacking, or
+		     (!(marioState.action & 1 << 11) && (enemy->getEntity().type == TR::Entity::ENEMY_BEAR || enemy->getEntity().type == TR::Entity::ENEMY_REX)) // 1<<11 == ACT_FLAG_AIR (mario is not in the air, and the enemy is one of these)
+			)
+		   )
 			sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
 
 		if (health > 0.0f)
@@ -461,7 +465,7 @@ struct Mario : Lara
 
 	Controller* marioFindTarget()
 	{
-		float dist = 512.f;
+		/*float dist = 512+32;
 
 		Controller* target = NULL;
 
@@ -487,6 +491,22 @@ struct Mario : Lara
 				continue;
 
 			target = enemy;
+
+		} while ((c = c->next));
+*/
+		Controller* target = NULL;
+
+		Controller *c = Controller::first;
+		do {
+			if (!c->getEntity().isEnemy())
+				continue;
+
+			Character *enemy = (Character*)c;
+			if (!enemy->isActiveTarget())
+				continue;
+
+			if (collide(enemy))
+				target = enemy;
 
 		} while ((c = c->next));
 
@@ -1149,15 +1169,38 @@ struct Mario : Lara
 					}
 				}
 
-				if (marioState.action & (1 << 23)) // ACT_FLAG_ATTACKING
+				// find an enemy close by
+				Controller* target = marioFindTarget();
+				if (target)
 				{
-					// find an enemy close by and hurt it
-					Controller* target = marioFindTarget();
-					if (target)
+					Sphere spheres[MAX_JOINTS];
+					int count = target->getSpheres(spheres);
+					for (int i=0; i<count; i++)
 					{
-						((Character*)target)->hit(5, this);
+						if (collide(spheres[i]) && (sm64_mario_attack(marioId, spheres[i].center.x, spheres[i].center.y, spheres[i].center.z, target->getBoundingBox().max.y - target->getBoundingBox().min.y) ||
+						    sm64_mario_attack(marioId, spheres[i].center.x, -spheres[i].center.y, -spheres[i].center.z, target->getBoundingBox().max.y - target->getBoundingBox().min.y)))
+						{
+							float damage = 5.f;
+							if (marioState.action == 0x018008AC) // ACT_JUMP_KICK
+							{
+								damage += 5;
+								printf("jump kick\n");
+							}
+							else if (marioState.action == 0x008008A9) // ACT_GROUND_POUND
+							{
+								damage += 15;
+								sm64_set_mario_action(marioId, 0x01000882); // ACT_TRIPLE_JUMP
+								sm64_play_sound_global(SOUND_ACTION_HIT);
+							}
+							printf("attacked sphere %d/%d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, count, marioState.position[0], -marioState.position[1], -marioState.position[2], spheres[i].center.x, spheres[i].center.y, spheres[i].center.z);
+							((Character*)target)->hit(damage, this);
+							break;
+						}
 					}
 				}
+				//if (marioState.action & (1 << 23)) // ACT_FLAG_ATTACKING
+				//{
+				//}
 
 				if (marioId >= 0)
 				{
