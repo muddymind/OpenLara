@@ -1182,10 +1182,7 @@ struct Mario : Lara
 						{
 							float damage = 5.f;
 							if (marioState.action == 0x018008AC) // ACT_JUMP_KICK
-							{
 								damage += 5;
-								printf("jump kick\n");
-							}
 							else if (marioState.action == 0x008008A9) // ACT_GROUND_POUND
 							{
 								damage += 15;
