@@ -291,12 +291,15 @@ struct Mario : Lara
 			default                : ;
 		}
 
-		if (enemy &&
-		    (!(marioState.action & 1 << 23) || // ACT_FLAG_ATTACKING (mario is not attacking, or
+		if (enemy && 
+		    (
+		     (!(marioState.action & 1 << 23) && (enemy->getEntity().type != TR::Entity::ENEMY_BEAR && enemy->getEntity().type != TR::Entity::ENEMY_REX)) || // 1<<23 == ACT_FLAG_ATTACKING (mario is not attacking and the enemy is not one of these, or...)
 		     (!(marioState.action & 1 << 11) && (enemy->getEntity().type == TR::Entity::ENEMY_BEAR || enemy->getEntity().type == TR::Entity::ENEMY_REX)) // 1<<11 == ACT_FLAG_AIR (mario is not in the air, and the enemy is one of these)
 			)
 		   )
+		{
 			sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
+		}
 
 		if (health > 0.0f)
 			return;
