@@ -34,6 +34,16 @@ struct MarioRenderState
 	MarioMesh mario;
 };
 
+struct MarioControllerObj
+{
+	MarioControllerObj() : ID(0), entity(NULL), topPoint(0), topPointSign(1) {}
+
+	uint32_t ID;
+	struct SM64ObjectTransform transform;
+	TR::Entity* entity;
+	int16 topPoint, topPointSign;
+};
+
 struct Mario : Lara
 {
 	uint32_t marioId;
@@ -46,10 +56,12 @@ struct Mario : Lara
 
 	float marioTicks;
 	bool postInit;
-	uint32_t objIDs[4096];
+	struct MarioControllerObj objs[4096];
 	int objCount;
 
 	Mesh* TRmarioMesh;
+
+	Block* movingBlock; // hack
 
 	Mario(IGame *game, int entity) : Lara(game, entity)
 	{
@@ -58,6 +70,7 @@ struct Mario : Lara
 		marioId = -1;
 		marioTicks = 0;
 		objCount = 0;
+		movingBlock = NULL;
 
 		for (int i=0; i<3; i++)
 		{
@@ -154,7 +167,7 @@ struct Mario : Lara
 		delete TRmarioMesh;
 
 		for (int i=0; i<objCount; i++)
-			sm64_surface_object_delete(objIDs[i]);
+			sm64_surface_object_delete(objs[i].ID);
 
 		if (marioId != -1) sm64_mario_delete(marioId);
 	}
@@ -171,7 +184,7 @@ struct Mario : Lara
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (e->type != 68 && e->type != 69 && e->type != 70)
+			if (!(e->type >= 68 && e->type <= 70) && !(e->type >= 48 && e->type <= 51))
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -203,6 +216,7 @@ struct Mario : Lara
 			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
 			int16 topPoint = 0;
+			int16 topPointSign = 1;
 
 			for (int c = 0; c < model->mCount; c++)
 			{
@@ -226,9 +240,9 @@ struct Mario : Lara
 						{
 							surface_ind++;
 							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-								{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.center.z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
-								{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.center.z + d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
-								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.center.z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
 							}};
 						}
 
@@ -236,10 +250,19 @@ struct Mario : Lara
 					}
 				}
 			}
-			obj.transform.position[1] -= topPoint/MARIO_SCALE;
+			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
+			//else obj.transform.position[1] += topPoint/MARIO_SCALE;
+			obj.transform.position[1] += topPoint/MARIO_SCALE * topPointSign;
 
 			// and finally add the object (this returns an uint32_t which is the object's ID)
-			objIDs[objCount++] = sm64_surface_object_create(&obj);
+			struct MarioControllerObj cObj;
+			cObj.ID = sm64_surface_object_create(&obj);
+			cObj.transform = obj.transform;
+			cObj.entity = e;
+			cObj.topPoint = topPoint;
+			cObj.topPointSign = topPointSign;
+
+			objs[objCount++] = cObj;
 			free(obj.surfaces);
 		}
 	}
@@ -312,7 +335,7 @@ struct Mario : Lara
 	{
         int pid = camera->cameraIndex;
 		int input = 0;
-		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE);
+		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY);
 
 		float dir;
 		float spd = 0;
@@ -380,7 +403,9 @@ struct Mario : Lara
 		marioInputs.stickX = canMove && spd ? spd * cosf(dir) : 0;
 		marioInputs.stickY = canMove && spd ? spd * sinf(dir) : 0;
 
-        if (canMove && Input::state[pid][cAction])    input |= ACTION;
+        if (Input::state[pid][cUp])        input |= FORTH;
+        if (Input::state[pid][cDown])      input |= BACK;
+        if (Input::state[pid][cAction])    input |= ACTION;
 
 		return input;
 	}
@@ -398,7 +423,29 @@ struct Mario : Lara
 
 	void setStateFromMario()
 	{
-		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE) return;
+		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK) return;
+
+		if (state != STATE_PUSH_PULL_READY && input & ACTION && getBlock())
+		{
+			marioInputs.buttonB = false;
+			state = STATE_PUSH_PULL_READY;
+			return;
+		}
+		else if (state == STATE_PUSH_PULL_READY && input & ACTION)
+		{
+			if (input & (FORTH | BACK))
+			{
+				int pushState = (input & FORTH) ? STATE_PUSH_BLOCK : STATE_PULL_BLOCK;
+                Block *block = getBlock();
+                if (block && (pushState == STATE_PUSH_BLOCK || block->doMarioMove(input & FORTH != 0)))
+				{
+					movingBlock = block;
+					sm64_set_mario_action(marioId, (pushState == STATE_PUSH_BLOCK) ? 0x00800380 : 0x00000390);
+					state = pushState;
+				}
+			}
+			return;
+		}
 
 		state = STATE_STOP;
 		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
@@ -814,6 +861,38 @@ struct Mario : Lara
 
 		switch (state)
 		{
+			case STATE_PUSH_BLOCK:
+				{
+					static bool moved = false;
+					if (!movingBlock)
+						state = STATE_STOP;
+					else if (marioState.flags & 0x00100000 && !movingBlock->marioAnim && !moved) // MARIO_PUNCHING
+					{
+						movingBlock->doMarioMove(true);
+						moved = true;
+					}
+					else if (!movingBlock->marioAnim && moved)
+					{
+						movingBlock = NULL;
+						state = STATE_STOP;
+						moved = false;
+					}
+				}
+				break;
+				
+			case STATE_PULL_BLOCK:
+				if (!movingBlock) state = STATE_STOP;
+				else if (!movingBlock->marioAnim)
+				{
+					if (marioState.action != 0x00000392) sm64_set_mario_action(marioId, 0x00000392);
+					else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+					{
+						movingBlock = NULL;
+						state = STATE_STOP;
+					}
+				}
+				break;
+
 			case STATE_PICK_UP:
 				{
 					int end = (marioState.action == 0x00001319) ? 60 : marioAnim->curAnim->loopEnd-1;
@@ -1094,6 +1173,7 @@ struct Mario : Lara
 						damageTime = LARA_DAMAGE_TIME;
 						health = min(LARA_MAX_HEALTH, health + (usedItem == TR::Entity::INV_MEDIKIT_SMALL ? LARA_MAX_HEALTH / 2 : LARA_MAX_HEALTH));
 						//game->playSound(TR::SND_HEALTH, pos, Sound::PAN);
+						sm64_play_sound_global(SOUND_MENU_POWER_METER);
 						inventory->remove(usedItem);
 					}
 					usedItem = TR::Entity::NONE;
@@ -1113,6 +1193,24 @@ struct Mario : Lara
 			stand = getStand();
 			updateState();
 			Controller::update();
+
+			for (int i=0; i<objCount; i++)
+			{
+				struct MarioControllerObj *obj = &objs[i];
+				if (obj->entity->controller)
+				{
+					Controller *c = (Controller*)obj->entity->controller;
+					if ((c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y != obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE) &&
+					    (c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y != -obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE))
+					{
+						printf("moving %d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, c->pos.x, c->pos.y, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
+						obj->transform.position[0] = c->pos.x/MARIO_SCALE;
+						obj->transform.position[1] = -c->pos.y/MARIO_SCALE;
+						obj->transform.position[2] = -c->pos.z/MARIO_SCALE;
+						sm64_surface_object_move(obj->ID, &obj->transform);
+					}
+				}
+			}
 
 			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
 			marioInputs.camLookZ = marioState.position[2] + camera->eye.pos.z;

@@ -1925,6 +1925,8 @@ struct Lara : Character {
 
         vec3 deltaRel = (m.transpose() * vec4(pos - controller->pos, 0.0f)).xyz(); // inverse transform
         
+        //printf("%.2f %.2f %.2f - %.2f %.2f %.2f - %.2f %.2f %.2f\n", deltaRel.x, deltaRel.y, deltaRel.z, limit->box.min.x, limit->box.min.y, limit->box.min.z, limit->box.max.x, limit->box.max.y, limit->box.max.z);
+        
         // set item orientation to hack limits check
         if (limit->box.contains(deltaRel)) {
             float deltaAngY = shortAngle(angle.y, ctrlAngle.y);
@@ -2512,7 +2514,7 @@ struct Lara : Character {
             float oldAngle = block->angle.y;
             block->angle.y = angleQuadrant(angle.y, 0.25f) * (PI * 0.5f);
 
-            if (!checkInteraction(block, &TR::Limits::BLOCK, (input & ACTION) != 0)) {
+            if (!checkInteraction(block, (isMario) ? &TR::Limits::BLOCK_MARIO : &TR::Limits::BLOCK, (input & ACTION) != 0)) {
                 block->angle.y = oldAngle;
                 continue;
             }

@@ -1614,6 +1614,10 @@ namespace TR {
             0, -612, 30,    ::Box(vec3(-300, 0, -692), vec3(300, 0, -512)), true, false
         };
 
+        Limit BLOCK_MARIO = { 
+            0, -612, 30,    ::Box(vec3(-300, 0, -712), vec3(300, 0, -512)), true, false
+        };
+
         Limit MIDAS = { 
             512, -612, 30,  ::Box(vec3(-700, 284, -700), vec3(700, 996, 700)), true, false
         };

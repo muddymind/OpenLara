@@ -516,8 +516,12 @@ struct Block : Controller {
     };
 
     float velocity;
+    bool marioAnim;
+    float transition;
+    vec3 from;
+    vec3 to;
 
-    Block(IGame *game, int entity) : Controller(game, entity), velocity(0.0f) {
+    Block(IGame *game, int entity) : Controller(game, entity), velocity(0.0f), marioAnim(false), transition(0.f) {
         updateFloor(true);
     }
 
@@ -577,6 +581,48 @@ struct Block : Controller {
         return true;
     }
 
+    bool doMarioMove(bool push)
+    {
+        // check floor height of next floor
+        vec3 dir = getDir() * (push ? 1024.0f : -1024.0f);
+        TR::Level::FloorInfo info;
+
+        vec3 p = pos + dir;
+        getFloorInfo(getRoomIndex(), p, info);
+
+        if ((info.slantX | info.slantZ) || info.floor != pos.y || info.floor - info.ceiling < 1024)
+            return false;
+
+        // check for trapdoor
+        int px = int(p.x) / 1024;
+        int pz = int(p.z) / 1024;
+        for (int i = 0; i < info.trigCmdCount; i++) {
+            if (info.trigCmd[i].action == TR::Action::ACTIVATE) {
+                TR::Entity &e = level->entities[info.trigCmd[i].args];
+                vec3 objPos = ((Controller*)e.controller)->pos;
+                if ((e.type == TR::Entity::TRAP_DOOR_1 || e.type == TR::Entity::TRAP_DOOR_2) && px == int(objPos.x) / 1024 && pz == int(objPos.z) / 1024)
+                    return false;
+            } else if (info.trigCmd[i].action == TR::Action::CAMERA_SWITCH)
+                i++; // skip camera switch delay info
+        }
+
+        // check Laras destination position
+        if (!push) {
+            dir = getDir() * (-2048.0f);
+            getFloorInfo(getRoomIndex(), pos + dir, info);
+            if ((info.slantX | info.slantZ) || info.floor != pos.y || info.floor - info.ceiling < 1024)
+                return false;
+        }
+
+        from = pos;
+        to = p;
+        transition = 0;
+        marioAnim = true;
+        updateFloor(false);
+        activate();
+        return true;
+    }
+
     virtual void update() {
         TR::Level::FloorInfo info;        
         getFloorInfo(getRoomIndex(), pos, info);
@@ -597,6 +643,22 @@ struct Block : Controller {
                 updateFloor(true);
             }
         } else {
+            if (marioAnim)
+            {
+                transition += Core::deltaTime;
+				pos.x = from.x + (sinf(transition * M_PI/2.f) * (to.x - from.x));
+				pos.z = from.z + (sinf(transition * M_PI/2.f) * (to.z - from.z));
+				if (transition >= 1)
+				{
+					pos = to;
+					marioAnim = false;
+					updateFloor(true);
+					deactivate();
+					game->checkTrigger(this, true);
+				}
+                return;
+            }
+
             if (state == STATE_STAND) return;
             updateAnimation(true);
             if (state == STATE_STAND) {
