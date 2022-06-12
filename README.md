@@ -2,8 +2,25 @@
 Classic Tomb Raider open-source engine
 
 ### Super Mario 64 in Tomb Raider by Headshotnoby
-This is still a very early work in progress. Some things may not work.
+This is still a work in progress.
 ![Mario in Tomb Raider](screenshot.png)
+
+Levels tested and finished as Mario:
+- [x] The Caves
+- [x] City of Vilcabamba
+- [x] The Lost Valley
+- [x] Tomb of Qualopec
+- [ ] St Francis' Folly *(around 90%)*
+- [ ] Colosseum
+- [ ] Palace Midas
+- [ ] Cistern
+- [ ] Tomb of Tihocan
+- [ ] City of Khamoon
+- [ ] Obelisk of Khamoon
+- [ ] Sanctuary of the Scion
+- [ ] Natla's Mines
+- [ ] Atlantis
+- [ ] The Great Pyramid
 
 
 [WebGL build with demo level](http://xproger.info/projects/OpenLara/)
