@@ -12,7 +12,116 @@ extern "C" {
 	#include <libsm64/src/decomp/include/mario_animation_ids.h>
 }
 
-//#define M_PI 3.14159265358979323846f
+#define ADD_FACE(surfaces, surface_ind, room, d, f) \
+	surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
+		{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
+		{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE}, \
+		{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
+	}}; \
+	if (!f.triangle) \
+	{ \
+		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
+			{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
+			{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE}, \
+			{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
+		}}; \
+	}
+
+#define COUNT_ROOM_SECTORS(level, surfaces_count, room) \
+	COUNT_ROOM_SECTORS_UP(level, surfaces_count, room);\
+	COUNT_ROOM_SECTORS_DOWN(level, surfaces_count, room);
+
+#define ADD_ROOM_SECTORS(level, surfaces, surface_ind, room) \
+	ADD_ROOM_SECTORS_UP(level, surfaces, surface_ind, room);\
+	ADD_ROOM_SECTORS_DOWN(level, surfaces, surface_ind, room);
+
+void COUNT_ROOM_SECTORS_UP(TR::Level* level, size_t& surfaces_count, TR::Room& room)
+{
+	for (int i=0; i<room.xSectors * room.zSectors; i++)
+	{
+		if (room.sectors[i].roomAbove == TR::NO_ROOM) continue;
+		
+		TR::Room &roomUp = level->rooms[room.sectors[i].roomAbove];
+		TR::Room::Data &dUp = roomUp.data;
+		
+		for (int j = 0; j < dUp.fCount; j++)
+		{
+			TR::Face &f = dUp.faces[j];
+			if (f.water) continue;
+			
+			surfaces_count += (f.triangle) ? 1 : 2;
+		}
+		
+		COUNT_ROOM_SECTORS_UP(level, surfaces_count, roomUp);
+		break;
+	}
+}
+
+void COUNT_ROOM_SECTORS_DOWN(TR::Level* level, size_t& surfaces_count, TR::Room& room)
+{
+	for (int i=0; i<room.xSectors * room.zSectors; i++)
+	{
+		if (room.sectors[i].roomBelow == TR::NO_ROOM) continue;
+		
+		TR::Room &roomDown = level->rooms[room.sectors[i].roomBelow];
+		TR::Room::Data &dDown = roomDown.data;
+		
+		for (int j = 0; j < dDown.fCount; j++)
+		{
+			TR::Face &f = dDown.faces[j];
+			if (f.water) continue;
+			
+			surfaces_count += (f.triangle) ? 1 : 2;
+		}
+		
+		COUNT_ROOM_SECTORS_DOWN(level, surfaces_count, roomDown);
+		break;
+	}
+}
+
+void ADD_ROOM_SECTORS_UP(TR::Level* level, struct SM64Surface* surfaces, size_t& surface_ind, TR::Room& room)
+{
+	for (int i=0; i<room.xSectors * room.zSectors; i++)
+	{
+		if (room.sectors[i].roomAbove == TR::NO_ROOM) continue;
+		
+		TR::Room &roomUp = level->rooms[room.sectors[i].roomAbove];
+		TR::Room::Data &dUp = roomUp.data;
+		
+		for (int j = 0; j < dUp.fCount; j++)
+		{
+			TR::Face &f = dUp.faces[j];
+			if (f.water) continue;
+			
+			ADD_FACE(surfaces, surface_ind, roomUp, dUp, f);
+		}
+		
+		ADD_ROOM_SECTORS_UP(level, surfaces, surface_ind, roomUp);
+		break;
+	}
+}
+
+void ADD_ROOM_SECTORS_DOWN(TR::Level* level, struct SM64Surface* surfaces, size_t& surface_ind, TR::Room& room)
+{
+	for (int i=0; i<room.xSectors * room.zSectors; i++)
+	{
+		if (room.sectors[i].roomBelow == TR::NO_ROOM) continue;
+		
+		TR::Room &roomDown = level->rooms[room.sectors[i].roomBelow];
+		TR::Room::Data &dDown = roomDown.data;
+		
+		for (int j = 0; j < dDown.fCount; j++)
+		{
+			TR::Face &f = dDown.faces[j];
+			if (f.water) continue;
+			
+			ADD_FACE(surfaces, surface_ind, roomDown, dDown, f);
+		}
+		
+		ADD_ROOM_SECTORS_DOWN(level, surfaces, surface_ind, roomDown);
+		break;
+	}
+}
 
 #include "core.h"
 #include "game.h"
@@ -998,6 +1107,8 @@ struct Mario : Lara
 			surfaces_count += (f.triangle) ? 1 : 2;
 		}
 
+		COUNT_ROOM_SECTORS(level, surfaces_count, room);
+
 		// get meshes from this room's portals to adjacent rooms
 		for (int i = 0; i < room.portalsCount; i++)
 		{
@@ -1011,6 +1122,8 @@ struct Mario : Lara
 
 				surfaces_count += (f.triangle) ? 1 : 2;
 			}
+
+			COUNT_ROOM_SECTORS(level, surfaces_count, room2);
 
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
@@ -1026,6 +1139,9 @@ struct Mario : Lara
 					surfaces_count += (f.triangle) ? 1 : 2;
 				}
 
+				COUNT_ROOM_SECTORS(level, surfaces_count, room3);
+
+				/*
 				for (int k = 0; k < room3.portalsCount; k++)
 				{
 					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
@@ -1040,6 +1156,7 @@ struct Mario : Lara
 						surfaces_count += (f.triangle) ? 1 : 2;
 					}
 				}
+				*/
 			}
 		}
 
@@ -1049,21 +1166,10 @@ struct Mario : Lara
 			TR::Face &f = d.faces[i];
 			if (f.water) continue;
 
-			surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-				{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-				{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
-				{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-			}};
-
-			if (!f.triangle)
-			{
-				surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-					{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-					{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
-					{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-				}};
-			}
+			ADD_FACE(surfaces, surface_ind, room, d, f);
 		}
+
+		ADD_ROOM_SECTORS(level, surfaces, surface_ind, room);
 
 		for (int i = 0; i < room.portalsCount; i++)
 		{
@@ -1075,21 +1181,10 @@ struct Mario : Lara
 				TR::Face &f = d2.faces[j];
 				if (f.water) continue;
 
-				surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-					{(room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-					{(room2.info.x + d2.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
-					{(room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-				}};
-
-				if (!f.triangle)
-				{
-					surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-						{(room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-						{(room2.info.x + d2.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
-						{(room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-					}};
-				}
+				ADD_FACE(surfaces, surface_ind, room2, d2, f);
 			}
+
+			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
 
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
@@ -1102,22 +1197,12 @@ struct Mario : Lara
 					TR::Face &f = d3.faces[k];
 					if (f.water) continue;
 
-					surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-						{(room3.info.x + d3.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-						{(room3.info.x + d3.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
-						{(room3.info.x + d3.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-					}};
-
-					if (!f.triangle)
-					{
-						surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-							{(room3.info.x + d3.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-							{(room3.info.x + d3.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
-							{(room3.info.x + d3.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d3.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room3.info.z + d3.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-						}};
-					}
+					ADD_FACE(surfaces, surface_ind, room3, d3, f);
 				}
 
+				ADD_ROOM_SECTORS(level, surfaces, surface_ind, room3);
+
+				/*
 				for (int k = 0; k < room3.portalsCount; k++)
 				{
 					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
@@ -1129,22 +1214,10 @@ struct Mario : Lara
 						TR::Face &f = d4.faces[l];
 						if (f.water) continue;
 
-						surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-							{(room4.info.x + d4.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-							{(room4.info.x + d4.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE},
-							{(room4.info.x + d4.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-						}};
-
-						if (!f.triangle)
-						{
-							surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-								{(room4.info.x + d4.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE},
-								{(room4.info.x + d4.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE},
-								{(room4.info.x + d4.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d4.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room4.info.z + d4.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE},
-							}};
-						}
+						ADD_FACE(surfaces, surface_ind, room4, d4, f);
 					}
 				}
+				*/
 			}
 		}
 
