@@ -672,6 +672,13 @@ struct Mario : Lara
 		return target;
 	}
 
+	virtual void applyFlow(TR::Camera &sink)
+	{
+		if (stand != STAND_UNDERWATER) return;
+		Lara::applyFlow(sink);
+		sm64_add_mario_position(marioId, flowVelocity.x/MARIO_SCALE, -flowVelocity.y/MARIO_SCALE, -flowVelocity.z/MARIO_SCALE);
+	}
+
 	virtual void checkTrigger(Controller *controller, bool heavy)
 	{
 		TR::Level::FloorInfo info;
