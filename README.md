@@ -10,8 +10,8 @@ Levels tested and finished as Mario:
 - [x] City of Vilcabamba
 - [x] The Lost Valley
 - [x] Tomb of Qualopec
-- [ ] St Francis' Folly *(around 90%)*
-- [ ] Colosseum
+- [x] St Francis' Folly
+- [ ] Colosseum *(just started)*
 - [ ] Palace Midas
 - [ ] Cistern
 - [ ] Tomb of Tihocan
