@@ -11,7 +11,7 @@ Levels tested and finished as Mario:
 - [x] The Lost Valley
 - [x] Tomb of Qualopec
 - [x] St Francis' Folly
-- [ ] Colosseum *(just started)*
+- [x] Colosseum
 - [ ] Palace Midas
 - [ ] Cistern
 - [ ] Tomb of Tihocan
