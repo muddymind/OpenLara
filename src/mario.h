@@ -1303,18 +1303,19 @@ struct Mario : Lara
 				while (marioTicks > 1./30)
 				{
 					for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
-					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++) lastGeom[i] = marioGeometry.position[i];
+					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
 
 					sm64_mario_tick(marioId, &marioInputs, &marioState, &marioGeometry);
-					for (int i=0; i<3; i++) currPos[i] = marioState.position[i];
-					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++) currGeom[i] = marioGeometry.position[i];
-
 					marioTicks -= 1./30;
 					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
 
+					for (int i=0; i<3; i++) currPos[i] = marioState.position[i];
+					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) currGeom[i] = marioGeometry.position[i];
+
+
 					for (int i=0; i<3; i++) currPos[i] *= MARIO_SCALE;
 
-					for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
+					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++)
 					{
 						currGeom[i] *= MARIO_SCALE;
 
@@ -1327,7 +1328,7 @@ struct Mario : Lara
 				}
 
 				for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
-				for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
+				for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
 				TRmarioMesh->update(&marioGeometry);
 
 				float hp = health / float(LARA_MAX_HEALTH);
