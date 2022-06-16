@@ -262,6 +262,8 @@ struct Mario : Lara
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 
+		animation.setAnim(ANIM_STAND);
+
 		postInitMario();
 	}
 	

@@ -1793,7 +1793,7 @@ struct Lara : Character {
         angle.x = -PI * 0.25f;
         game->waterDrop(pos, 256.0f, 0.2f);
         stand = STAND_UNDERWATER;
-        return animation.setAnim(ANIM_TO_UNDERWATER);
+        return (isMario) ? 0 : animation.setAnim(ANIM_TO_UNDERWATER);
     }
 
     virtual bool doPickUp() {
