@@ -385,10 +385,20 @@ struct Mario : Lara
 		//Lara::render(frustum, mesh, type, caustics);
 
 		Core::setCullMode(cmBack);
-		glUseProgram(Core::marioShader);
+		glUseProgram(marioState.flags & 0x00000004 ? Core::metalMarioShader : Core::marioShader);
 
 		GAPI::Texture *dtex = Core::active.textures[sDiffuse];
-		Core::marioTexture->bind(sDiffuse);
+
+		if (marioState.flags & 0x00000004)
+		{
+			game->setRoomParams(getRoomIndex(), Shader::MIRROR, 1.2f, 1.0f, 0.2f, 1.0f, false);
+			//environment->bind(sDiffuse);
+			//Core::marioTexture->bind(sDiffuse);
+			//Core::setBlendMode(BlendMode::bmAdd);
+			visibleMask ^= 0xFFFFFFFF;
+		}
+		else
+			Core::marioTexture->bind(sDiffuse);
 
 		MeshRange range;
 		range.aIndex = 0;
@@ -399,6 +409,10 @@ struct Mario : Lara
 		TRmarioMesh->render(range);
 
 		Core::setCullMode(cmFront);
+		if (marioState.flags & 0x00000004)
+		{
+			visibleMask ^= 0xFFFFFFFF;
+		}
 
 		if (dtex) dtex->bind(sDiffuse);
 	}
@@ -408,6 +422,17 @@ struct Mario : Lara
 		if (dozy || level->isCutsceneLevel()) return;
 		if (marioState.action & 1 << 12 || marioState.action & 1 << 17) return; // ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
 		if (health <= 0.0f && hitType != TR::HIT_FALL) return;
+
+		if (hitType == TR::HIT_MIDAS)
+		{
+			if (!(marioState.flags & 0x00000004))
+			{
+				// it's a secret... ;)
+				bakeEnvironment(environment);
+				sm64_mario_interact_cap(marioId, 0x00000004, 0, true);
+			}
+			return;
+		}
 
 		damageTime = LARA_DAMAGE_TIME;
 
@@ -1311,15 +1336,10 @@ struct Mario : Lara
 					marioTicks -= 1./30;
 					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
 
-					for (int i=0; i<3; i++) currPos[i] = marioState.position[i];
-					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) currGeom[i] = marioGeometry.position[i];
-
-
-					for (int i=0; i<3; i++) currPos[i] *= MARIO_SCALE;
-
+					for (int i=0; i<3; i++) currPos[i] = marioState.position[i] * MARIO_SCALE;
 					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++)
 					{
-						currGeom[i] *= MARIO_SCALE;
+						currGeom[i] = marioGeometry.position[i] * MARIO_SCALE;
 
 						if (i%3 != 0) // flip y and z
 						{
@@ -1373,6 +1393,10 @@ struct Mario : Lara
 								sm64_set_mario_action(marioId, 0x01000882); // ACT_TRIPLE_JUMP
 								sm64_play_sound_global(SOUND_ACTION_HIT);
 							}
+
+							if (marioState.flags & 0x00000004)
+								damage += 25;
+
 							printf("attacked sphere %d/%d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, count, marioState.position[0], -marioState.position[1], -marioState.position[2], spheres[i].center.x, spheres[i].center.y, spheres[i].center.z);
 							((Character*)target)->hit(damage, this);
 							break;

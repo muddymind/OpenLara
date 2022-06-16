@@ -47,6 +47,46 @@ const char *MARIO_SHADER =
 "\n "
 "\n #endif";
 
+const char *METAL_MARIO_SHADER =
+"\n uniform mat4 view;"
+"\n uniform mat4 projection;"
+"\n uniform sampler2D marioTex;"
+"\n "
+"\n v2f vec3 v_color;"
+"\n v2f vec3 v_normal;"
+"\n v2f vec3 v_light;"
+"\n v2f vec2 v_uv;"
+"\n "
+"\n #ifdef VERTEX"
+"\n "
+"\n     layout(location = 0) in vec3 position;"
+"\n     layout(location = 1) in vec3 normal;"
+"\n     layout(location = 2) in vec3 color;"
+"\n     layout(location = 3) in vec2 uv;"
+"\n "
+"\n     void main()"
+"\n     {"
+"\n         v_color = color;"
+"\n         v_normal = normal;"
+"\n         v_light = transpose( mat3( view )) * normalize( vec3( 1 ));"
+"\n         v_uv = uv;"
+"\n "
+"\n         gl_Position = projection * view * vec4( position, 1. );"
+"\n     }"
+"\n "
+"\n #endif"
+"\n #ifdef FRAGMENT"
+"\n "
+"\n     out vec4 color;"
+"\n "
+"\n     void main() "
+"\n     {"
+"\n         float light = .5 + .5 * clamp( dot( v_normal, v_light ), 0., 1. );"
+"\n         color = texture2D(marioTex, v_uv);"
+"\n     }"
+"\n "
+"\n #endif";
+
 GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, GLenum shaderType )
 {
     const GLchar *shaderDefine = shaderType == GL_VERTEX_SHADER 
@@ -283,10 +323,11 @@ namespace Game {
         marioTextureUint8 = (uint8_t*)malloc(4 * SM64_TEXTURE_WIDTH * SM64_TEXTURE_HEIGHT);
 
         sm64_global_terminate();
-        sm64_global_init(romBuffer, Game::marioTextureUint8, NULL);
+        sm64_global_init(romBuffer, marioTextureUint8, NULL);
 
         // Put Mario texture in OpenLara
         Core::marioShader = shader_load( MARIO_SHADER );
+        Core::metalMarioShader = shader_load( METAL_MARIO_SHADER );
         Core::marioTexture = new Texture(SM64_TEXTURE_WIDTH, SM64_TEXTURE_HEIGHT, 1, FMT_RGBA, 0, marioTextureUint8, true);
     }
 
