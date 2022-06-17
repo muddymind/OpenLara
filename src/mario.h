@@ -471,7 +471,7 @@ struct Mario : Lara
 	{
         int pid = camera->cameraIndex;
 		int input = 0;
-		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY);
+		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY && state != STATE_SWITCH_DOWN && state != STATE_SWITCH_UP);
 
 		float dir;
 		float spd = 0;
@@ -559,7 +559,7 @@ struct Mario : Lara
 
 	void setStateFromMario()
 	{
-		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK) return;
+		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK || state == STATE_SWITCH_DOWN || state == STATE_SWITCH_UP) return;
 
 		if (state != STATE_PUSH_PULL_READY && input & ACTION && getBlock())
 		{
@@ -641,7 +641,7 @@ struct Mario : Lara
 
 		if (pickupListCount > 0)
 		{
-			if (stand != STAND_UNDERWATER) sm64_set_mario_action(marioId, 0x00800380);
+			sm64_set_mario_action(marioId, stand != STAND_UNDERWATER ? 0x00800380 : 0x300024E1); // ACT_PUNCHING or ACT_WATER_PUNCH
 			state = STATE_PICK_UP;
 			return true;
 		}
@@ -706,6 +706,13 @@ struct Mario : Lara
 		sm64_add_mario_position(marioId, flowVelocity.x/MARIO_SCALE, -flowVelocity.y/MARIO_SCALE, -flowVelocity.z/MARIO_SCALE);
 	}
 
+	virtual bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action)
+	{
+		bool result = Lara::checkInteraction(controller, limit, action);
+		if (result) marioInputs.buttonB = false;
+		return result;
+	}
+
 	virtual void checkTrigger(Controller *controller, bool heavy)
 	{
 		TR::Level::FloorInfo info;
@@ -755,6 +762,7 @@ struct Mario : Lara
 					return;
 
 				switchIsDown = controller->state == Switch::STATE_DOWN;
+				animation.playNext();
 				break;
 			}
 
@@ -1337,6 +1345,7 @@ struct Mario : Lara
 			if (flags.active) {
 				// do mario64 tick here
 				marioTicks += Core::deltaTime;
+				checkTrigger(this, false);
 
 				while (marioTicks > 1./30)
 				{
@@ -1427,8 +1436,6 @@ struct Mario : Lara
 				}
 				if (p != pos && updateZone())
 					updateLights();
-
-				checkTrigger(this, false);
 			}
         }
         

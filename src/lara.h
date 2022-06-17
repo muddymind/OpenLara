@@ -1901,7 +1901,7 @@ struct Lara : Character {
     }
 
 
-    bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action) {
+    virtual bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action) {
         if ((state != STATE_STOP && state != STATE_TREAD && state != STATE_PUSH_PULL_READY) || !action || !emptyHands())
             return false;
 
