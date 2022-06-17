@@ -190,11 +190,11 @@ struct Flame : Sprite {
                     sleepTime = max(0.0f, sleepTime - Core::deltaTime);
 
                 if (sleepTime == 0.0f && !lara->burn && lara->collide(Sphere(pos, 600.0f))) {
-                    lara->hit(FLAME_HEAT_DAMAGE * Core::deltaTime, this);
+                    if (!lara->isMario) lara->hit(FLAME_HEAT_DAMAGE * Core::deltaTime, this);
 
                     if (lara->collide(Sphere(pos, 300.0f))) {
                         Flame::add(game, lara, 0);
-                        sleepTime = 3.0f; // stay inactive for 3 seconds
+                        sleepTime = (lara->isMario) ? 0 : 3.0f; // stay inactive for 3 seconds
                     }
                 }
             }

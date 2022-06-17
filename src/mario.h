@@ -420,7 +420,7 @@ struct Mario : Lara
 	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
 	{
 		if (dozy || level->isCutsceneLevel()) return;
-		if (marioState.action & 1 << 12 || marioState.action & 1 << 17) return; // ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
+		if (!burn && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
 		if (health <= 0.0f && hitType != TR::HIT_FALL) return;
 
 		if (hitType == TR::HIT_MIDAS)
@@ -1317,6 +1317,17 @@ struct Mario : Lara
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 				}
+			}
+
+			if (burn)
+			{
+				if (marioState.action != 0x010208B4 && marioState.action != 0x010208B5 && marioState.action != 0x010208B7 && marioState.action != 0x00020449)
+				{
+					sm64_set_mario_action_arg(marioId, 0x010208B4, 1);
+					sm64_play_sound_global(SOUND_MARIO_ON_FIRE);
+				}
+				else if (marioState.burnTimer <= 0)
+					burn = false;
 			}
 
 			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
