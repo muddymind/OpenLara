@@ -550,11 +550,14 @@ struct Mario : Lara
 	{
 		if (marioId < 0) return STAND_GROUND;
 
+		TR::Level::FloorInfo info;
+		getFloorInfo(getRoomIndex(), pos, info);
+
 		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
 			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
 		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
 			return STAND_HANG;
-		return STAND_GROUND;
+		return (floor(pos.y) >= info.floor-2 && floor(pos.y) <= info.floor) ? STAND_GROUND : STAND_AIR;
 	}
 
 	void setStateFromMario()
