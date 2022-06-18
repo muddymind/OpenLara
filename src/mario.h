@@ -753,8 +753,8 @@ struct Mario : Lara
 							default : animIndex = -1;
 						}
 
-						if (animation.setState(actionState, animIndex)) 
-							controller->activate();
+						state = actionState;
+						controller->activate();
 					}
 				}
 
@@ -762,7 +762,7 @@ struct Mario : Lara
 					return;
 
 				switchIsDown = controller->state == Switch::STATE_DOWN;
-				animation.playNext();
+				state = STATE_STOP;
 				break;
 			}
 
@@ -820,7 +820,7 @@ struct Mario : Lara
 					}
 
 					//printf("yup\n");
-					animation.setState(actionState);
+					state = actionState;
 					sm64_set_mario_action(marioId, 0x0000132E); // ACT_UNLOCKING_KEY_DOOR
 				}
 
@@ -890,7 +890,6 @@ struct Mario : Lara
 					flags.once |= info.trigInfo.once;
 					
 					controller->activate();
-					animation.playNext();
 					break;
 				}
 				case TR::Action::CAMERA_SWITCH : {
@@ -1095,14 +1094,12 @@ struct Mario : Lara
 							}
 							else
 							{
-								animation.playNext();
 								state = STATE_STOP;
 								sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
 							}
 						}
 						else if (marioState.action == 0x00001319) // ACT_CREDITS_CUTSCENE
 						{
-							animation.setAnim(ANIM_STAND);
 							state = STATE_STOP;
 							sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
 						}
@@ -1119,7 +1116,6 @@ struct Mario : Lara
 					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-end)
 					{
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
-						animation.playNext();
 						state = STATE_STOP;
 						keyHole->activate();
 						keyHole = NULL;
