@@ -379,6 +379,12 @@ struct Mario : Lara
 	}
 
 	vec3 getPos() {return vec3(marioState.position[0], -marioState.position[1], -marioState.position[2]);}
+	void marioInteracting(TR::Entity::Type type) // hack
+	{
+		marioInputs.buttonB = false;
+		if (type == TR::Entity::MIDAS_HAND)
+			sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
+	}
 
 	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
 	{
@@ -471,7 +477,7 @@ struct Mario : Lara
 	{
         int pid = camera->cameraIndex;
 		int input = 0;
-		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY && state != STATE_SWITCH_DOWN && state != STATE_SWITCH_UP);
+		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY && state != STATE_SWITCH_DOWN && state != STATE_SWITCH_UP && state != STATE_MIDAS_USE);
 
 		float dir;
 		float spd = 0;
@@ -562,7 +568,7 @@ struct Mario : Lara
 
 	void setStateFromMario()
 	{
-		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK || state == STATE_SWITCH_DOWN || state == STATE_SWITCH_UP) return;
+		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK || state == STATE_SWITCH_DOWN || state == STATE_SWITCH_UP || state == STATE_MIDAS_USE) return;
 
 		if (state != STATE_PUSH_PULL_READY && input & ACTION && getBlock())
 		{
@@ -1014,6 +1020,40 @@ struct Mario : Lara
 
 		switch (state)
 		{
+			case STATE_MIDAS_USE:
+				if (marioAnim->animID == MARIO_ANIM_CREDITS_RAISE_HAND && marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+				{
+					timer += Core::deltaTime;
+					if (timer >= 1.0f / 30.0f)
+					{
+						timer -= 1.0f / 30.0f;
+						vec3 sprPos(pos.x - (cos(angle.y)*128) + (-64 + (rand() % 128)), pos.y - 512-64 + (-64 + (rand() % 128)), pos.z - (sin(angle.y)*128) + (-64 + (rand() % 128)));
+						game->addEntity(TR::Entity::SPARKLES, getRoomIndex(), sprPos);
+					}
+				}
+				else if (marioAnim->animID == MARIO_ANIM_CREDITS_LOWER_HAND)
+				{
+					timer += Core::deltaTime;
+					if (timer >= 1.0f / 30.0f)
+					{
+						timer -= 1.0f / 30.0f;
+						for (int i=0; i<3; i++)
+						{
+							vec3 sprPos(pos.x - (cos(angle.y) * (128 + (-96 + (i*96))) + (-128 + (rand() % 256))),
+										pos.y - 768 + (marioAnim->animFrame*12),
+										pos.z - (sin(angle.y) * (128 + (-96 + (i*96))) + (-128 + (rand() % 256))));
+
+							game->addEntity(TR::Entity::SPARKLES, getRoomIndex(), sprPos);
+						}
+					}
+					if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+					{
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						state = STATE_STOP;
+					}
+				}
+				break;
+
 			case STATE_PUSH_BLOCK:
 				{
 					static bool moved = false;

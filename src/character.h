@@ -75,6 +75,8 @@ struct Character : Controller {
         updateZone();
     }
 
+    virtual void marioInteracting(TR::Entity::Type type = (TR::Entity::Type)0) {} // hack
+
     bool isActiveTarget() {
         return flags.state == TR::Entity::asActive && !flags.invisible && health > 0.0f;
     }

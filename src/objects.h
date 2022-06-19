@@ -1427,20 +1427,34 @@ struct MidasHand : Controller {
             return;
         }
 
-        interaction = (d.x < 700.0f && d.z < 700.0f) && lara->state == 2; // 2 = Lara::STATE_STOP
+        float limit = (lara->isMario) ? 720.f : 700.f;
+        interaction = (d.x < limit && d.z < limit) && lara->state == 2; // 2 = Lara::STATE_STOP
 
-        if (interaction) {
-            if (invItem != TR::Entity::NONE) {
+        if (interaction)
+        {
+            if (invItem != TR::Entity::NONE)
+            {
                 if (invItem == TR::Entity::INV_LEADBAR) {
                     lara->angle.y = PI * 0.5f;
                     lara->pos.x   = pos.x - 612.0f;
-                    lara->animation.setAnim(level->models[TR::MODEL_LARA_SPEC].animation);
+                    if (lara->isMario)
+                    {
+                        lara->state = 50; // 50 = Lara::STATE_MIDAS_USE
+                        lara->marioInteracting(getEntity().type); // hack
+                    }
+                    else
+                        lara->animation.setAnim(level->models[TR::MODEL_LARA_SPEC].animation);
                     game->invAdd(TR::Entity::PUZZLE_1);
                 } else
                     game->playSound(TR::SND_NO, pos, Sound::PAN); // uncompatible item
                 invItem = TR::Entity::NONE;
-            } else if (Input::state[0][cAction] && !game->invChooseKey(0, getEntity().type)) // TODO: add callback for useItem // TODO: player[1]
-                game->playSound(TR::SND_NO, pos, Sound::PAN); // no compatible items in inventory
+            }
+            else if (Input::state[0][cAction])
+            {
+                lara->marioInteracting(); // hack
+                if (!game->invChooseKey(0, getEntity().type)) // TODO: add callback for useItem // TODO: player[1]
+                    game->playSound(TR::SND_NO, pos, Sound::PAN); // no compatible items in inventory
+            }
         }
     }
 };

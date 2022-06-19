@@ -3369,7 +3369,7 @@ struct Lara : Character {
             if (specular > LARA_MIN_SPECULAR)
                 specular = max(LARA_MIN_SPECULAR, specular - LARA_WET_TIMER * Core::deltaTime);
 
-        if (state == STATE_MIDAS_DEATH || state == STATE_MIDAS_USE) {
+        if (!isMario && (state == STATE_MIDAS_DEATH || state == STATE_MIDAS_USE)) {
             uint32 sparklesMask = getMidasMask();
 
             if (state == STATE_MIDAS_DEATH)
