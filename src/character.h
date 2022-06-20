@@ -174,13 +174,13 @@ struct Character : Controller {
         if (stand == STAND_UNDERWATER || stand == STAND_ONWATER)
             burn = false;
 
-        int state = getNextState();
-        // try to set new state
-		if (!isMario)
-		{
-			if (!animation.setState(state))
-				animation.setState(getStateDefault());
-		}
+        if (!isMario)
+        {
+            // try to set new state
+            int state = getNextState();
+            if (!animation.setState(state))
+                animation.setState(getStateDefault());
+        }
     }
 
     virtual void updateTilt(float value, float tiltSpeed, float tiltMax) {
