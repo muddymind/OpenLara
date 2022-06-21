@@ -174,10 +174,10 @@ struct Character : Controller {
         if (stand == STAND_UNDERWATER || stand == STAND_ONWATER)
             burn = false;
 
+        int state = getNextState();
         if (!isMario)
         {
             // try to set new state
-            int state = getNextState();
             if (!animation.setState(state))
                 animation.setState(getStateDefault());
         }

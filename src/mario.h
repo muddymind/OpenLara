@@ -608,7 +608,7 @@ struct Mario : Lara
 	virtual void updateState()
 	{
 		setStateFromMario();
-		Lara::updateState();
+		if (state != STATE_WATER_OUT) Lara::updateState();
 	}
 
 	virtual bool doPickUp()
