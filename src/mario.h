@@ -145,12 +145,12 @@ struct MarioRenderState
 
 struct MarioControllerObj
 {
-	MarioControllerObj() : ID(0), entity(NULL), topPoint(0), topPointSign(1) {}
+	MarioControllerObj() : ID(0), entity(NULL), topPoint(0) {}
 
 	uint32_t ID;
 	struct SM64ObjectTransform transform;
 	TR::Entity* entity;
-	int16 topPoint, topPointSign;
+	int16 topPoint;
 };
 
 struct Mario : Lara
@@ -295,7 +295,7 @@ struct Mario : Lara
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !(e->type >= 48 && e->type <= 51))
+			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock())
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -370,8 +370,7 @@ struct Mario : Lara
 			cObj.ID = sm64_surface_object_create(&obj);
 			cObj.transform = obj.transform;
 			cObj.entity = e;
-			cObj.topPoint = topPoint;
-			cObj.topPointSign = topPointSign;
+			cObj.topPoint = topPoint * topPointSign;
 
 			objs[objCount++] = cObj;
 			free(obj.surfaces);
@@ -1018,6 +1017,7 @@ struct Mario : Lara
 	{
 		int16_t rot[3];
 		struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
+		if (!marioAnim || !marioAnim->curAnim) return;
 		//if (marioAnim && marioAnim->curAnim && marioState.action) printf("%d %x %d %d\n", state, marioState.action, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
 
 		switch (state)
@@ -1353,15 +1353,17 @@ struct Mario : Lara
 			for (int i=0; i<objCount; i++)
 			{
 				struct MarioControllerObj *obj = &objs[i];
+				if (obj->entity->type >= 68 && obj->entity->type <= 70) continue;
+
 				if (obj->entity->controller)
 				{
 					Controller *c = (Controller*)obj->entity->controller;
-					if ((c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y != obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE) &&
-					    (c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y != -obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE))
+					if ((c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->topPoint != obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE) &&
+					    (c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->topPoint != -obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE))
 					{
-						printf("moving %d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, c->pos.x, c->pos.y, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
+						printf("moving %d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, c->pos.x, c->pos.y - obj->topPoint, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
 						obj->transform.position[0] = c->pos.x/MARIO_SCALE;
-						obj->transform.position[1] = -c->pos.y/MARIO_SCALE;
+						obj->transform.position[1] = -(c->pos.y - obj->topPoint)/MARIO_SCALE;
 						obj->transform.position[2] = -c->pos.z/MARIO_SCALE;
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
