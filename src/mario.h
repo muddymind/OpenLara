@@ -311,7 +311,7 @@ struct Mario : Lara
 			{
 				TR::Room::Mesh &m  = room->meshes[j];
 				TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
-				if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) continue;
+				if (!level->meshOffsets[sm->mesh]) continue;
 
 				// define the surface object
 				struct SM64SurfaceObject obj;
@@ -1456,7 +1456,6 @@ struct Mario : Lara
 
 			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
 			marioInputs.camLookZ = marioState.position[2] + camera->eye.pos.z;
-			//printf("%.2f %.2f - %.2f %.2f - %.2f %.2f\n", marioState.position[0], marioState.position[2], camera->eye.pos.x, camera->eye.pos.z, marioInputs.camLookX, marioInputs.camLookZ);
 
 			if (flags.active) {
 				// do mario64 tick here
