@@ -27,6 +27,21 @@ extern "C" {
 		}}; \
 	}
 
+#define ADD_FACE_COORD_ROOM_MESH(surfaces, surface_ind, m, d, f) \
+	surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
+		{(m.x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
+		{(m.x + d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
+		{(m.x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
+	}}; \
+	if (!f.triangle) \
+	{ \
+		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
+			{(m.x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
+			{(m.x + d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
+			{(m.x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
+		}}; \
+	}
+
 #define COUNT_ROOM_SECTORS(level, surfaces_count, room) \
 	COUNT_ROOM_SECTORS_UP(level, surfaces_count, room);\
 	COUNT_ROOM_SECTORS_DOWN(level, surfaces_count, room);
@@ -287,6 +302,65 @@ struct Mario : Lara
 	{
 		if (postInit) return;
 		postInit = true;
+
+		// create collisions from static meshes (objects like the fence at lara's home, the chairs/table, the music instruments etc.)
+		for (int i = 0; i < level->roomsCount; i++)
+		{
+			TR::Room *room = &level->rooms[i];
+			for (int j = 0; j < room->meshesCount; j++)
+			{
+				TR::Room::Mesh &m  = room->meshes[j];
+				TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
+				if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) continue;
+
+				// define the surface object
+				struct SM64SurfaceObject obj;
+				obj.surfaceCount = 0;
+				obj.transform.position[0] = m.x / MARIO_SCALE;
+				obj.transform.position[1] = -m.y / MARIO_SCALE;
+				obj.transform.position[2] = -m.z / MARIO_SCALE;
+				for (int k=0; k<3; k++) obj.transform.eulerRotation[k] = (k == 1) ? float(m.rotation) / M_PI * 180.f : 0;
+
+				TR::Mesh &d = level->meshes[level->meshOffsets[sm->mesh]];
+
+				// increment the surface count for this
+				for (int k = 0; k < d.fCount; k++)
+					obj.surfaceCount += (d.faces[k].triangle) ? 1 : 2;
+
+				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+				size_t surface_ind = 0;
+
+				// add the faces
+				for (int k = 0; k < d.fCount; k++)
+				{
+					TR::Face &f = d.faces[k];
+
+					obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+						{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+						{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
+						{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+					}};
+
+					if (!f.triangle)
+					{
+						obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+							{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+							{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
+							{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+						}};
+					}
+				}
+
+				// create the final object and put it in the objs[] array
+				struct MarioControllerObj cObj;
+				cObj.ID = sm64_surface_object_create(&obj);
+				cObj.transform = obj.transform;
+				cObj.entity = NULL;
+
+				objs[objCount++] = cObj;
+				free(obj.surfaces);
+			}
+		}
 
 		// create collisions from entities (bridges, doors)
 		for (int i=0; i<level->entitiesCount; i++)
@@ -1177,11 +1251,10 @@ struct Mario : Lara
 		// load sm64surfaces
 		size_t surfaces_count = 0;
 		size_t surface_ind = 0;
+		TR::Room &room = getRoom();
 
 		// get meshes from this room
-		TR::Room &room = getRoom();
 		TR::Room::Data &d = room.data;
-
 		for (int i = 0; i < d.fCount; i++)
 		{
 			TR::Face &f = d.faces[i];
@@ -1353,7 +1426,7 @@ struct Mario : Lara
 			for (int i=0; i<objCount; i++)
 			{
 				struct MarioControllerObj *obj = &objs[i];
-				if (obj->entity->type >= 68 && obj->entity->type <= 70) continue;
+				if (!obj->entity || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
 
 				if (obj->entity->controller)
 				{
