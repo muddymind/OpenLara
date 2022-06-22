@@ -311,7 +311,7 @@ struct Mario : Lara
 			{
 				TR::Room::Mesh &m  = room->meshes[j];
 				TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
-				if (!level->meshOffsets[sm->mesh]) continue;
+				if (sm->flags < 2 || !level->meshOffsets[sm->mesh]) continue;
 
 				// define the surface object
 				struct SM64SurfaceObject obj;
