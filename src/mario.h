@@ -1454,8 +1454,8 @@ struct Mario : Lara
 					burn = false;
 			}
 
-			marioInputs.camLookX = marioState.position[0] - camera->eye.pos.x;
-			marioInputs.camLookZ = marioState.position[2] + camera->eye.pos.z;
+			marioInputs.camLookX = marioState.position[0] - (camera->spectator ? camera->specPosSmooth.x : camera->eye.pos.x);
+			marioInputs.camLookZ = marioState.position[2] + (camera->spectator ? camera->specPosSmooth.z : camera->eye.pos.z);
 
 			if (flags.active) {
 				// do mario64 tick here
