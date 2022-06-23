@@ -1417,6 +1417,8 @@ struct Mario : Lara
 			else if (getRoom().flags.water) sm64_set_mario_water_level(marioId, 32767);
 			else sm64_set_mario_water_level(marioId, -32768);
 
+			if (animation.index != ANIM_STAND) animation.setAnim(ANIM_STAND);
+
 			vec3 p = pos;
 			input = getInput();
 			stand = getStand();
