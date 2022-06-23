@@ -261,7 +261,7 @@ struct Level : IGame {
 					{
                         sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
 						sm64_set_mario_faceangle( ((Mario*)lara)->marioId, (int16_t)((-lara->angle.y + M_PI) / M_PI * 32768.0f));
-                        ((Mario*)lara)->marioUpdateRoom();
+                        ((Mario*)lara)->marioUpdateRoom(TR::NO_ROOM);
 					}
                 }
 

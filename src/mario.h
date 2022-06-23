@@ -170,7 +170,7 @@ struct MarioControllerObj
 
 struct Mario : Lara
 {
-	uint32_t marioId;
+	int32_t marioId;
 	struct SM64MarioInputs marioInputs;
     struct SM64MarioState marioState;
     struct SM64MarioGeometryBuffers marioGeometry;
@@ -272,7 +272,7 @@ struct Mario : Lara
 		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(pos.x/MARIO_SCALE), (int)(-pos.y/MARIO_SCALE), (int)(-pos.z/MARIO_SCALE));
 		fclose(file);
 
-		marioUpdateRoom();
+		marioUpdateRoom(TR::NO_ROOM);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
@@ -1093,7 +1093,7 @@ struct Mario : Lara
 		int16_t rot[3];
 		struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
 		if (!marioAnim || !marioAnim->curAnim) return;
-		//if (marioAnim && marioAnim->curAnim && marioState.action) printf("%d %x %d %d\n", state, marioState.action, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
+		//if (marioState.action) printf("%d %x %d %d\n", state, marioState.action, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
 
 		switch (state)
 		{
@@ -1247,12 +1247,20 @@ struct Mario : Lara
 		}
 	}
 
-	void marioUpdateRoom()
+	void marioUpdateRoom(int oldRoom)
 	{
+		TR::Room &room = getRoom();
+
+		if (marioId >= 0)
+		{
+			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
+			else if (getRoom().flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
+			else sm64_set_mario_water_level(marioId, -32768);
+		}
+
 		// load sm64surfaces
 		size_t surfaces_count = 0;
 		size_t surface_ind = 0;
-		TR::Room &room = getRoom();
 
 		// get meshes from this room
 		TR::Room::Data &d = room.data;
@@ -1413,11 +1421,7 @@ struct Mario : Lara
 
 			int oldRoom = getRoomIndex();
 			updateRoom();
-			if (getRoomIndex() != oldRoom) marioUpdateRoom();
-
-			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
-			else if (getRoom().flags.water) sm64_set_mario_water_level(marioId, 32767);
-			else sm64_set_mario_water_level(marioId, -32768);
+			if (getRoomIndex() != oldRoom) marioUpdateRoom(oldRoom);
 
 			if (animation.index != ANIM_STAND) animation.setAnim(ANIM_STAND);
 
@@ -1542,9 +1546,6 @@ struct Mario : Lara
 						}
 					}
 				}
-				//if (marioState.action & (1 << 23)) // ACT_FLAG_ATTACKING
-				//{
-				//}
 
 				if (marioId >= 0)
 				{
