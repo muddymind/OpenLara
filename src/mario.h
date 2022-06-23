@@ -322,6 +322,7 @@ struct Mario : Lara
 				for (int k=0; k<3; k++) obj.transform.eulerRotation[k] = (k == 1) ? float(m.rotation) / M_PI * 180.f : 0;
 
 				TR::Mesh &d = level->meshes[level->meshOffsets[sm->mesh]];
+				if (d.fCount <= 4) continue;
 
 				// increment the surface count for this
 				for (int k = 0; k < d.fCount; k++)
