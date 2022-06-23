@@ -1891,7 +1891,7 @@ struct Bullet : Controller {
         switch (getEntity().type) {
             case TR::Entity::CENTAUR_BULLET :
                 if (directHit) {
-                    lara->hit(CENTAUR_BULLET_DAMAGE);
+                    lara->hit(CENTAUR_BULLET_DAMAGE, (lara->isMario) ? this : NULL);
                 } else {
                     for (int i = 0; i < 2; i++) {
                         Controller *lara = game->getLara(i);
@@ -1899,7 +1899,7 @@ struct Bullet : Controller {
 
                         float dist = (pos - lara->pos).length2();
                         if (dist < CENTAUR_BULLET_DIST)
-                            lara->hit(CENTAUR_BULLET_DAMAGE * (CENTAUR_BULLET_DIST - dist) / CENTAUR_BULLET_DIST);
+                            lara->hit(CENTAUR_BULLET_DAMAGE * (CENTAUR_BULLET_DIST - dist) / CENTAUR_BULLET_DIST, (lara->isMario) ? this : NULL);
                     }
                 }
 
@@ -1907,7 +1907,7 @@ struct Bullet : Controller {
                 break;
             case TR::Entity::MUTANT_BULLET  :
                 if (directHit)
-                    lara->hit(MUTANT_BULLET_DAMAGE);
+                    lara->hit(MUTANT_BULLET_DAMAGE, (lara->isMario) ? this : NULL);
                 else
                     game->getLara()->addRicochet(pos - getDir() * 64.0f, true);
                 break;
