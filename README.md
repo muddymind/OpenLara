@@ -13,7 +13,7 @@ Levels tested and finished as Mario:
 - [x] St Francis' Folly
 - [x] Colosseum
 - [x] Palace Midas
-- [ ] Cistern
+- [x] Cistern
 - [ ] Tomb of Tihocan
 - [ ] City of Khamoon
 - [ ] Obelisk of Khamoon
