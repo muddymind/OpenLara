@@ -1253,9 +1253,10 @@ struct Mario : Lara
 
 		if (marioId >= 0)
 		{
-			if (getRoom().waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -getRoom().waterLevelSurface/IMARIO_SCALE);
-			else if (getRoom().flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
-			else sm64_set_mario_water_level(marioId, -32768);
+			sm64_set_mario_water_level(marioId, (room.flags.water) ? ((room.waterLevelSurface != TR::NO_WATER) ? -room.waterLevelSurface/IMARIO_SCALE : 32767) : -32768);
+			/*if (room.waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -room.waterLevelSurface/IMARIO_SCALE);
+			else if (room.flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
+			else sm64_set_mario_water_level(marioId, -32768);*/
 		}
 
 		// load sm64surfaces
@@ -1290,7 +1291,6 @@ struct Mario : Lara
 
 			COUNT_ROOM_SECTORS(level, surfaces_count, room2);
 
-			/*
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
 				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
@@ -1305,9 +1305,9 @@ struct Mario : Lara
 					surfaces_count += (f.triangle) ? 1 : 2;
 				}
 
+				/*
 				COUNT_ROOM_SECTORS(level, surfaces_count, room3);
 
-				/*
 				for (int k = 0; k < room3.portalsCount; k++)
 				{
 					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
@@ -1322,8 +1322,8 @@ struct Mario : Lara
 						surfaces_count += (f.triangle) ? 1 : 2;
 					}
 				}
+				*/
 			}
-			*/
 		}
 
 		struct SM64Surface surfaces[surfaces_count];
@@ -1352,7 +1352,6 @@ struct Mario : Lara
 
 			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
 
-			/*
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
 				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
@@ -1367,6 +1366,7 @@ struct Mario : Lara
 					ADD_FACE(surfaces, surface_ind, room3, d3, f);
 				}
 
+				/*
 				ADD_ROOM_SECTORS(level, surfaces, surface_ind, room3);
 
 				for (int k = 0; k < room3.portalsCount; k++)
@@ -1383,8 +1383,8 @@ struct Mario : Lara
 						ADD_FACE(surfaces, surface_ind, room4, d4, f);
 					}
 				}
+				*/
 			}
-			*/
 		}
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
