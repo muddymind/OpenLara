@@ -15,7 +15,7 @@ Levels tested and finished as Mario:
 - [x] Palace Midas
 - [x] Cistern
 - [x] Tomb of Tihocan
-- [ ] City of Khamoon
+- [x] City of Khamoon
 - [ ] Obelisk of Khamoon
 - [ ] Sanctuary of the Scion
 - [ ] Natla's Mines
