@@ -2,6 +2,7 @@
 #define _H_EXTENSION
 
 #include "mesh.h"
+#include "mario.h"
 
 #if defined(_DEBUG) && defined(_OS_WIN) && defined(_GAPI_GL) && !defined(_GAPI_GLES)
     #define GEOMETRY_EXPORT
@@ -11,6 +12,58 @@
     #include "animation.h"
     #include "gltf.h"
 #endif
+
+#define LIBSM64_ROOM_SECTORS(file, level, room) \
+	LIBSM64_ROOM_SECTORS_UP(file, level, room);\
+	LIBSM64_ROOM_SECTORS_DOWN(file, level, room);
+
+void LIBSM64_ROOM_SECTORS_UP(FILE* file, TR::Level* level, TR::Room& room)
+{
+	for (int i=0; i<room.xSectors * room.zSectors; i++)
+	{
+		if (room.sectors[i].roomAbove == TR::NO_ROOM) continue;
+		
+		TR::Room &roomUp = level->rooms[room.sectors[i].roomAbove];
+		TR::Room::Data &d = roomUp.data;
+		
+		for (int j = 0; j < d.fCount; j++)
+		{
+			TR::Face &f = d.faces[j];
+			if (f.water) continue;
+			
+				fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (roomUp.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(roomUp.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE, (roomUp.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(roomUp.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE, (roomUp.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(roomUp.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE);
+			if (!f.triangle)
+				fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (roomUp.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(roomUp.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (roomUp.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(roomUp.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (roomUp.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(roomUp.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
+		}
+		
+		LIBSM64_ROOM_SECTORS_UP(file, level, roomUp);
+		break;
+	}
+}
+
+void LIBSM64_ROOM_SECTORS_DOWN(FILE* file, TR::Level* level, TR::Room& room)
+{
+	for (int i=0; i<room.xSectors * room.zSectors; i++)
+	{
+		if (room.sectors[i].roomBelow == TR::NO_ROOM) continue;
+		
+		TR::Room &roomDown = level->rooms[room.sectors[i].roomBelow];
+		TR::Room::Data &d = roomDown.data;
+		
+		for (int j = 0; j < d.fCount; j++)
+		{
+			TR::Face &f = d.faces[j];
+			if (f.water) continue;
+			
+				fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (roomDown.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(roomDown.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE, (roomDown.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(roomDown.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE, (roomDown.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(roomDown.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE);
+			if (!f.triangle)
+				fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (roomDown.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(roomDown.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (roomDown.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(roomDown.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (roomDown.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(roomDown.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
+		}
+		
+		LIBSM64_ROOM_SECTORS_DOWN(file, level, roomDown);
+		break;
+	}
+}
 
 namespace Extension {
 
@@ -516,6 +569,51 @@ namespace Extension {
             exportModel(game, dir, level->models[i]);
         }
     }
+
+	/*
+	void exportLibSM64(IGame* level)
+	{
+		FILE* file = fopen("level.c", "w");
+		fprintf(file, "#include \"level.h\"\n#include \"../src/decomp/include/surface_terrains.h\"\nconst struct SM64Surface surfaces[] = {\n");
+
+		TR::Room &room = level->getLara(0)->getRoom();
+
+		TR::Room::Data &d = room.data;
+		for (int i = 0; i < d.fCount; i++)
+		{
+			TR::Face &f = d.faces[i];
+			if (f.water) continue;
+
+				fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE);
+			if (!f.triangle)
+				fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
+		}
+
+		LIBSM64_ROOM_SECTORS(file, level, room);
+
+		for (int i = 0; i < room.portalsCount; i++)
+		{
+			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+			TR::Room::Data &d2 = room2.data;
+
+			for (int j = 0; j < d2.fCount; j++)
+			{
+				TR::Face &f = d2.faces[j];
+				if (f.water) continue;
+
+					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE, (room2.info.x + d2.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE, (room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE);
+				if (!f.triangle)
+					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (room2.info.x + d2.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
+			}
+
+			LIBSM64_ROOM_SECTORS(file, level, room2);
+		}
+
+		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );\n");
+		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(level->getLara(0)->pos.x/MARIO_SCALE), (int)(-level->getLara(0)->pos.y/MARIO_SCALE), (int)(-level->getLara(0)->pos.z/MARIO_SCALE));
+		fclose(file);
+	}
+	*/
 #endif
 
 }
