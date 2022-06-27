@@ -221,57 +221,6 @@ struct Mario : Lara
 		TRmarioMesh = new Mesh((Index*)marioRenderState.mario.index, marioRenderState.mario.num_vertices, NULL, 0, 1, true, true);
 		TRmarioMesh->initMario(&marioGeometry);
 
-		// export a level.c file for use in the libsm64 test program
-		
-		FILE* file = fopen("level.c", "w");
-		fprintf(file, "#include \"level.h\"\n#include \"../src/decomp/include/surface_terrains.h\"\nconst struct SM64Surface surfaces[] = {\n");
-
-		for (int i = 0; i < level->roomsCount; i++)
-		{
-			TR::Room &room = level->rooms[i];
-			TR::Room::Data &d = room.data;
-
-			for (int j = 0; j < d.fCount; j++)
-			{
-				TR::Face &f = d.faces[j];
-				if (f.water) continue;
-
-					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE);
-				if (!f.triangle)
-					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
-			}
-		}
-
-		for (int i=0; i<level->entitiesCount; i++)
-		{
-			TR::Entity *e = &level->entities[i];
-			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
-				continue;
-
-			TR::Model *model = &level->models[e->modelIndex - 1];
-
-			for (int c = 0; c < model->mCount; c++)
-			{
-				int index = level->meshOffsets[model->mStart + c];
-				if (index || model->mStart + c <= 0)
-				{
-					TR::Mesh &d = level->meshes[index];
-					for (int j = 0; j < d.fCount; j++)
-					{
-						TR::Face &f = d.faces[j];
-
-							fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (e->x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE);
-						if (!f.triangle)
-							fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (e->x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE, (e->x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(e->y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(e->z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE);
-					}
-				}
-			}
-		}
-
-		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );\n");
-		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(pos.x/MARIO_SCALE), (int)(-pos.y/MARIO_SCALE), (int)(-pos.z/MARIO_SCALE));
-		fclose(file);
-
 		marioUpdateRoom(TR::NO_ROOM);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
@@ -549,7 +498,7 @@ struct Mario : Lara
 
 	int getInput()
 	{
-        int pid = camera->cameraIndex;
+		int pid = camera->cameraIndex;
 		int input = 0;
 		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY && state != STATE_SWITCH_DOWN && state != STATE_SWITCH_UP && state != STATE_MIDAS_USE);
 
@@ -1259,6 +1208,8 @@ struct Mario : Lara
 			else sm64_set_mario_water_level(marioId, -32768);*/
 		}
 
+		//printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
+
 		// load sm64surfaces
 		size_t surfaces_count = 0;
 		size_t surface_ind = 0;
@@ -1291,6 +1242,7 @@ struct Mario : Lara
 
 			COUNT_ROOM_SECTORS(level, surfaces_count, room2);
 
+			/*
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
 				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
@@ -1305,7 +1257,6 @@ struct Mario : Lara
 					surfaces_count += (f.triangle) ? 1 : 2;
 				}
 
-				/*
 				COUNT_ROOM_SECTORS(level, surfaces_count, room3);
 
 				for (int k = 0; k < room3.portalsCount; k++)
@@ -1322,11 +1273,27 @@ struct Mario : Lara
 						surfaces_count += (f.triangle) ? 1 : 2;
 					}
 				}
-				*/
 			}
+			*/
 		}
 
+		// HACK: create a big floor surface so that mario doesn't hit invisible walls
+		surfaces_count += 2;
+		vec3 center = room.getCenter();
+
 		struct SM64Surface surfaces[surfaces_count];
+
+		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
+			{(int(center.x) - 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
+			{(int(center.x) - 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
+		}};
+		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+			{(int(center.x) - 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
+			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
+			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
+		}};
+
 		for (int i = 0; i < d.fCount; i++)
 		{
 			TR::Face &f = d.faces[i];
@@ -1352,6 +1319,7 @@ struct Mario : Lara
 
 			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
 
+			/*
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
 				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
@@ -1366,7 +1334,6 @@ struct Mario : Lara
 					ADD_FACE(surfaces, surface_ind, room3, d3, f);
 				}
 
-				/*
 				ADD_ROOM_SECTORS(level, surfaces, surface_ind, room3);
 
 				for (int k = 0; k < room3.portalsCount; k++)
@@ -1383,8 +1350,8 @@ struct Mario : Lara
 						ADD_FACE(surfaces, surface_ind, room4, d4, f);
 					}
 				}
-				*/
 			}
+			*/
 		}
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
