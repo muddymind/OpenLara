@@ -9,6 +9,7 @@ extern "C" {
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 	#include <libsm64/src/decomp/include/PR/ultratypes.h>
 	#include <libsm64/src/decomp/include/audio_defines.h>
+	#include <libsm64/src/decomp/include/seq_ids.h>
 	#include <libsm64/src/decomp/include/mario_animation_ids.h>
 }
 
@@ -1240,9 +1241,9 @@ struct Mario : Lara
 				surfaces_count += (f.triangle) ? 1 : 2;
 			}
 
+			/*
 			COUNT_ROOM_SECTORS(level, surfaces_count, room2);
 
-			/*
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
 				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
@@ -1304,6 +1305,39 @@ struct Mario : Lara
 
 		ADD_ROOM_SECTORS(level, surfaces, surface_ind, room);
 
+		/*
+		for (int i=0; i<room.portalsCount; i++)
+		{
+			vec3 portalCenter = room.portals[i].getCenter();
+			printf("room %d, your pos %.2f %.2f %.2f, portal %d: %.2f %.2f %.2f\n", getRoomIndex(), pos.x, pos.y, pos.z, room.portals[i].roomIndex, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
+
+			int sx = portalCenter.x/1024;
+			int sz = portalCenter.z/1024;
+
+			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+			//printf("%d %d - %d %d\n", sx, sz, room2.xSectors, room2.zSectors);
+
+			TR::Room::Data &d2 = room2.data;
+
+			int addFaces[d2.fCount] = {-1};
+			int addFaceInd = 0;
+
+			for (int j = 0; j < d2.fCount; j++)
+			{
+				TR::Face &f = d2.faces[j];
+				int vertices = (f.triangle) ? 3 : 4;
+				if (d2.vertices[f.vertices[0]].pos.y == portalCenter.y + room.portals[i].getSize().y &&
+					(room2.info.x + d2.vertices[f.vertices[0]].pos.x) - (room.info.x + portalCenter.x) == 512 &&
+					((room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == -1023 || (room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == 0)
+					)
+				{
+					printf("face %d: %.2f %.2f %.2f - ", j, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
+					for (int k=0; k<vertices; k++)
+						printf("%d %d %d%s", room2.info.x + d2.vertices[f.vertices[k]].pos.x, d2.vertices[f.vertices[k]].pos.y, room2.info.z + d2.vertices[f.vertices[k]].pos.z, (k==vertices-1) ? "\n" : " - ");
+				}
+			}
+		}*/
+
 		for (int i = 0; i < room.portalsCount; i++)
 		{
 			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
@@ -1317,9 +1351,9 @@ struct Mario : Lara
 				ADD_FACE(surfaces, surface_ind, room2, d2, f);
 			}
 
+			/*
 			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
 
-			/*
 			for (int j = 0; j < room2.portalsCount; j++)
 			{
 				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
@@ -1409,7 +1443,7 @@ struct Mario : Lara
 					if ((c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->topPoint != obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE) &&
 					    (c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->topPoint != -obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE))
 					{
-						printf("moving %d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, c->pos.x, c->pos.y - obj->topPoint, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
+						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, c->pos.x, c->pos.y - obj->topPoint, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
 						obj->transform.position[0] = c->pos.x/MARIO_SCALE;
 						obj->transform.position[1] = -(c->pos.y - obj->topPoint)/MARIO_SCALE;
 						obj->transform.position[2] = -c->pos.z/MARIO_SCALE;
@@ -1425,7 +1459,7 @@ struct Mario : Lara
 					sm64_set_mario_action_arg(marioId, 0x010208B4, 1);
 					sm64_play_sound_global(SOUND_MARIO_ON_FIRE);
 				}
-				else if (marioState.burnTimer <= 0)
+				else if (marioState.burnTimer <= 2)
 					burn = false;
 			}
 
