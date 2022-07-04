@@ -1627,7 +1627,7 @@ namespace TR {
         };
 
         Limit SCION_MARIO = { 
-            640, -202, 30,  ::Box(vec3(-512, 540, -350*2), vec3(512, 740, -200*2)), false, false
+            640, -202, 30,  ::Box(vec3(-256, 100, -100), vec3(256, 125, 100)), false, false
         };
 
         Limit SCION_HOLDER = { 
