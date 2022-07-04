@@ -161,12 +161,12 @@ struct MarioRenderState
 
 struct MarioControllerObj
 {
-	MarioControllerObj() : ID(0), entity(NULL), topPoint(0) {}
+	MarioControllerObj() : ID(0), entity(NULL) {}
 
 	uint32_t ID;
 	struct SM64ObjectTransform transform;
 	TR::Entity* entity;
-	int16 topPoint;
+	vec3 offset;
 };
 
 struct Mario : Lara
@@ -320,7 +320,7 @@ struct Mario : Lara
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock())
+			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock() && e->type != TR::Entity::DRAWBRIDGE)
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -351,8 +351,15 @@ struct Mario : Lara
 			// then create the surface and add the objects
 			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
-			int16 topPoint = 0;
+			vec3 offset;
 			int16 topPointSign = 1;
+			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
+			else if (e->type == TR::Entity::DRAWBRIDGE)
+			{
+				offset.x = -128;
+				offset.y = -16;
+				offset.z = -128;
+			}
 
 			for (int c = 0; c < model->mCount; c++)
 			{
@@ -364,7 +371,7 @@ struct Mario : Lara
 					{
 						TR::Face &f = d.faces[j];
 
-						topPoint = max(topPoint, d.vertices[f.vertices[0]].coord.y, max(d.vertices[f.vertices[1]].coord.y, d.vertices[f.vertices[2]].coord.y, (f.triangle) ? (int16)0 : d.vertices[f.vertices[3]].coord.y));
+						offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
 
 						obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
 							{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
@@ -386,16 +393,16 @@ struct Mario : Lara
 					}
 				}
 			}
-			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
-			//else obj.transform.position[1] += topPoint/MARIO_SCALE;
-			obj.transform.position[1] += topPoint/MARIO_SCALE * topPointSign;
+			obj.transform.position[0] += offset.x/MARIO_SCALE;
+			obj.transform.position[1] += offset.y/MARIO_SCALE;
+			obj.transform.position[2] += offset.z/MARIO_SCALE;
 
 			// and finally add the object (this returns an uint32_t which is the object's ID)
 			struct MarioControllerObj cObj;
 			cObj.ID = sm64_surface_object_create(&obj);
 			cObj.transform = obj.transform;
 			cObj.entity = e;
-			cObj.topPoint = topPoint * topPointSign;
+			cObj.offset = offset;
 
 			objs[objCount++] = cObj;
 			free(obj.surfaces);
@@ -580,14 +587,11 @@ struct Mario : Lara
 	{
 		if (marioId < 0) return STAND_GROUND;
 
-		TR::Level::FloorInfo info;
-		getFloorInfo(getRoomIndex(), pos, info);
-
 		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
 			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
 		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
 			return STAND_HANG;
-		return (floor(pos.y) >= info.floor-2 && floor(pos.y) <= info.floor) ? STAND_GROUND : STAND_AIR;
+		return (!(marioState.action & 1<<11)) ? STAND_GROUND : STAND_AIR; // 1<<11 = ACT_FLAG_AIR
 	}
 
 	void setStateFromMario()
@@ -1424,7 +1428,7 @@ struct Mario : Lara
 			updateRoom();
 			if (getRoomIndex() != oldRoom) marioUpdateRoom(oldRoom);
 
-			if (animation.index != ANIM_STAND) animation.setAnim(ANIM_STAND);
+			if (animation.index != ANIM_STAND && state != STATE_PICK_UP) animation.setAnim(ANIM_STAND);
 
 			vec3 p = pos;
 			input = getInput();
@@ -1440,13 +1444,21 @@ struct Mario : Lara
 				if (obj->entity->controller)
 				{
 					Controller *c = (Controller*)obj->entity->controller;
-					if ((c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->topPoint != obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE) &&
-					    (c->pos.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->topPoint != -obj->transform.position[1]*MARIO_SCALE || c->pos.z != -obj->transform.position[2]*MARIO_SCALE))
+					if ((c->pos.x + obj->offset.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->offset.y != obj->transform.position[1]*MARIO_SCALE || c->pos.z + obj->offset.z != -obj->transform.position[2]*MARIO_SCALE) &&
+					    (c->pos.x + obj->offset.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->offset.y != -obj->transform.position[1]*MARIO_SCALE || c->pos.z + obj->offset.z != -obj->transform.position[2]*MARIO_SCALE))
 					{
-						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, c->pos.x, c->pos.y - obj->topPoint, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
-						obj->transform.position[0] = c->pos.x/MARIO_SCALE;
-						obj->transform.position[1] = -(c->pos.y - obj->topPoint)/MARIO_SCALE;
-						obj->transform.position[2] = -c->pos.z/MARIO_SCALE;
+						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, c->pos.x, c->pos.y - obj->offset.y, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
+						obj->transform.position[0] = (c->pos.x + obj->offset.x)/MARIO_SCALE;
+						obj->transform.position[1] = -(c->pos.y - obj->offset.y)/MARIO_SCALE;
+						obj->transform.position[2] = -(c->pos.z + obj->offset.z)/MARIO_SCALE;
+						sm64_surface_object_move(obj->ID, &obj->transform);
+					}
+					if ((c->angle.x-(M_PI/2))/M_PI*180.f != obj->transform.eulerRotation[0] || (-c->angle.y+M_PI)/M_PI*180.f != obj->transform.eulerRotation[1] || c->angle.z/M_PI*180.f != obj->transform.eulerRotation[2])
+					{
+						//printf("rotating %d (%d): %.8f %.8f %.8f - %.8f %.8f %.8f\n", i, obj->entity->type, -c->angle.x/M_PI*180.f, (-c->angle.y+M_PI)/M_PI*180.f, -c->angle.z/M_PI*180.f, obj->transform.eulerRotation[0], obj->transform.eulerRotation[1], obj->transform.eulerRotation[2]);
+						obj->transform.eulerRotation[0] = (c->angle.x-(M_PI/2))/M_PI*180.f;
+						obj->transform.eulerRotation[1] = (-c->angle.y+M_PI)/M_PI*180.f;
+						obj->transform.eulerRotation[2] = c->angle.z/M_PI*180.f;
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 				}
