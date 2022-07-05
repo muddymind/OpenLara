@@ -41,7 +41,7 @@ struct Level : IGame {
     Texture     *atlasGlyphs;
     MeshBuilder *mesh;
 
-    Mario        *players[2], *player;
+    Lara        *players[2], *player;
     Camera      *camera;
     Texture     *shadow[2];
     Texture     *scaleTex;
@@ -1095,7 +1095,7 @@ struct Level : IGame {
             TR::Entity &e = level.entities[i];
             e.controller = initController(i);
             if (e.type == TR::Entity::LARA || ((level.version & TR::VER_TR1) && e.type == TR::Entity::CUT_1))
-                players[0] = (Mario*)e.controller;
+                players[0] = (Lara*)e.controller;
         }
 
         Sound::listenersCount = 1;
@@ -1124,7 +1124,7 @@ struct Level : IGame {
         }
 
         if (!players[index]) {
-            players[index] = (Mario*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f);
+            players[index] = (Lara*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f);
             players[index]->camera->cameraIndex = index;
             Sound::listenersCount = 2;
         } else if (index == 1) {
@@ -1133,7 +1133,7 @@ struct Level : IGame {
             return;
         }
 
-        Mario *lead = players[index ^ 1];
+        Lara *lead = players[index ^ 1];
         if (!lead) return;
 
         players[index]->reset(lead->getRoomIndex(), lead->pos, lead->angle.y, lead->stand);
@@ -1158,7 +1158,7 @@ struct Level : IGame {
             return new Lara(this, index);
 
         switch (level.entities[index].type) {
-            case TR::Entity::LARA                  : return new Mario(this, index);
+            case TR::Entity::LARA                  : return (players[0]) ? new Lara(this, index) : new Mario(this, index);
             case TR::Entity::ENEMY_DOPPELGANGER    : return new Doppelganger(this, index);
             case TR::Entity::ENEMY_WOLF            : return new Wolf(this, index);
             case TR::Entity::ENEMY_BEAR            : return new Bear(this, index);
