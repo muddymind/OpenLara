@@ -351,14 +351,34 @@ struct Mario : Lara
 			// then create the surface and add the objects
 			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
-			vec3 offset;
+			vec3 offset(0,0,0);
 			int16 topPointSign = 1;
 			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
 			else if (e->type == TR::Entity::DRAWBRIDGE)
 			{
-				offset.x = -128;
-				offset.y = -16;
-				offset.z = -128;
+				offset.y = -128;
+				// before you go "yanderedev code":
+				// can't use switch() here because eulerRotation isn't an integer
+				if (obj.transform.eulerRotation[1] == 90)
+				{
+					offset.x = -384-128;
+					offset.z = -384-128;
+				}
+				else if (obj.transform.eulerRotation[1] == 270)
+				{
+					offset.x = 512;
+					offset.z = 384;
+				}
+				else if (obj.transform.eulerRotation[1] == 180)
+				{
+					offset.x = -384;
+					offset.z = 512;
+				}
+				else
+				{
+					offset.x = 384+128;
+					offset.z = -384-128;
+				}
 			}
 
 			for (int c = 0; c < model->mCount; c++)
@@ -1444,21 +1464,23 @@ struct Mario : Lara
 				if (obj->entity->controller)
 				{
 					Controller *c = (Controller*)obj->entity->controller;
-					if ((c->pos.x + obj->offset.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->offset.y != obj->transform.position[1]*MARIO_SCALE || c->pos.z + obj->offset.z != -obj->transform.position[2]*MARIO_SCALE) &&
-					    (c->pos.x + obj->offset.x != obj->transform.position[0]*MARIO_SCALE || c->pos.y - obj->offset.y != -obj->transform.position[1]*MARIO_SCALE || c->pos.z + obj->offset.z != -obj->transform.position[2]*MARIO_SCALE))
+					float x = (c->pos.x + obj->offset.x);
+					float y = (c->pos.y - obj->offset.y);
+					float z = (c->pos.z + obj->offset.z);
+
+					if ((x != obj->transform.position[0]*MARIO_SCALE || y != obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE) &&
+					    (x != obj->transform.position[0]*MARIO_SCALE || y != -obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE))
 					{
-						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, c->pos.x, c->pos.y - obj->offset.y, c->pos.z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
-						obj->transform.position[0] = (c->pos.x + obj->offset.x)/MARIO_SCALE;
-						obj->transform.position[1] = -(c->pos.y - obj->offset.y)/MARIO_SCALE;
-						obj->transform.position[2] = -(c->pos.z + obj->offset.z)/MARIO_SCALE;
+						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, x, y, z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
+						obj->transform.position[0] = x/MARIO_SCALE;
+						obj->transform.position[1] = -y/MARIO_SCALE;
+						obj->transform.position[2] = -z/MARIO_SCALE;
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
-					if ((c->angle.x-(M_PI/2))/M_PI*180.f != obj->transform.eulerRotation[0] || (-c->angle.y+M_PI)/M_PI*180.f != obj->transform.eulerRotation[1] || c->angle.z/M_PI*180.f != obj->transform.eulerRotation[2])
+
+					if (obj->entity->type == TR::Entity::DRAWBRIDGE)
 					{
-						//printf("rotating %d (%d): %.8f %.8f %.8f - %.8f %.8f %.8f\n", i, obj->entity->type, -c->angle.x/M_PI*180.f, (-c->angle.y+M_PI)/M_PI*180.f, -c->angle.z/M_PI*180.f, obj->transform.eulerRotation[0], obj->transform.eulerRotation[1], obj->transform.eulerRotation[2]);
-						obj->transform.eulerRotation[0] = (c->angle.x-(M_PI/2))/M_PI*180.f;
-						obj->transform.eulerRotation[1] = (-c->angle.y+M_PI)/M_PI*180.f;
-						obj->transform.eulerRotation[2] = c->angle.z/M_PI*180.f;
+						obj->transform.eulerRotation[0] = (!c->isCollider()) ? -90 : 0;
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 				}
