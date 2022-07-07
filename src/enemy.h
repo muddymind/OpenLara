@@ -1923,7 +1923,7 @@ struct Mutant : Enemy {
 
         if (health <= 0.0f && !exploded) {
             game->playSound(TR::SND_MUTANT_DEATH, pos, Sound::PAN);
-            explode(0xffffffff, MUTANT_PART_DAMAGE);
+            explode(0xffffffff, (game->getLara(0)->isMario) ? 0 : MUTANT_PART_DAMAGE);
         }
 
         Enemy::update();
