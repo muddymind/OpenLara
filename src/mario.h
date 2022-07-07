@@ -197,11 +197,6 @@ struct Mario : Lara
 		objCount = 0;
 		movingBlock = NULL;
 
-		for (int i=0; i<3; i++)
-		{
-			lastPos[i] = 0;
-			currPos[i] = 0;
-		}
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 		{
 			lastGeom[i] = 0;
@@ -226,6 +221,10 @@ struct Mario : Lara
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
+
+		lastPos[0] = currPos[0] = pos.x;
+		lastPos[1] = currPos[1] = -pos.y;
+		lastPos[2] = currPos[2] = -pos.z;
 
 		animation.setAnim(ANIM_STAND);
 
@@ -1233,7 +1232,7 @@ struct Mario : Lara
 			else sm64_set_mario_water_level(marioId, -32768);*/
 		}
 
-		//printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
+		printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
 
 		// load sm64surfaces
 		size_t surfaces_count = 0;
