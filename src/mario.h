@@ -1232,7 +1232,7 @@ struct Mario : Lara
 			else sm64_set_mario_water_level(marioId, -32768);*/
 		}
 
-		printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
+		//printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
 
 		// load sm64surfaces
 		size_t surfaces_count = 0;
@@ -1584,9 +1584,9 @@ struct Mario : Lara
 				if (marioId >= 0)
 				{
 					angle.y = -marioState.faceAngle + M_PI;
-					pos.x = (stand == STAND_HANG) ? marioState.position[0] - (sin(angle.y)*64) : marioState.position[0];
-					pos.y = (stand == STAND_HANG) ? -marioState.position[1]+128 : -marioState.position[1];
-					pos.z = (stand == STAND_HANG) ? -marioState.position[2] - (cos(angle.y)*64) : -marioState.position[2];
+					pos.x = (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? marioState.position[0] - (sin(angle.y)*128) : marioState.position[0]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+					pos.y = (marioState.action == 0x0800034B) ? -marioState.position[1]+384 : (marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F) ? -marioState.position[1]-128 : -marioState.position[1]; // ACT_LEDGE_GRAB or ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
+					pos.z = (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? -marioState.position[2] - (cos(angle.y)*128) : -marioState.position[2]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
 				}
 				if (p != pos && updateZone())
 					updateLights();
