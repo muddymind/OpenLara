@@ -1195,6 +1195,8 @@ struct Mario : Lara
 						{
 							state = STATE_STOP;
 							sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+							if (level->id == 16 && level->version & TR::VER_TR1) // hack for ending at Sanctuary of the Scion
+								game->loadNextLevel();
 						}
 					}
 				}
