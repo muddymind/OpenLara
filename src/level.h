@@ -1058,6 +1058,8 @@ struct Level : IGame {
         Network::start(this);
 
         Core::resetTime();
+
+        if (player && player->isMario) ((Mario*)player)->marioUpdateRoom(TR::NO_ROOM);
     }
 
     virtual ~Level() {
