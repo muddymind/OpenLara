@@ -476,8 +476,8 @@ struct Mario : Lara
 	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
 	{
 		if (dozy || level->isCutsceneLevel()) return;
-		if (!burn && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
-		if (health <= 0.0f && hitType != TR::HIT_FALL) return;
+		if (!burn && marioState.action != 0x010208B7 && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_LAVA_BOOST, ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
+		if (health <= 0.0f && hitType != TR::HIT_FALL && hitType != TR::HIT_LAVA) return;
 
 		if (hitType == TR::HIT_MIDAS)
 		{
@@ -488,6 +488,12 @@ struct Mario : Lara
 				sm64_mario_interact_cap(marioId, 0x00000004, 0, true);
 			}
 			return;
+		}
+		else if (hitType == TR::HIT_LAVA)
+		{
+			if (damageTime > 0) return;
+			sm64_set_mario_action(marioId, 0x010208B7); // ACT_LAVA_BOOST
+			if (health <= 0) return;
 		}
 
 		damageTime = LARA_DAMAGE_TIME;
@@ -776,8 +782,8 @@ struct Mario : Lara
 		TR::Level::FloorInfo info;
 		getFloorInfo(controller->getRoomIndex(), controller->pos, info);
 
-		if (getEntity().isLara() && info.lava && info.floor == pos.y) {
-			hit(LARA_MAX_HEALTH + 1, NULL, TR::HIT_LAVA);
+		if (info.lava && (!(marioState.action & 1<<11) || pos.y >= info.floor-144.f)) { // 1<<11 == ACT_FLAG_AIR
+			hit(LARA_MAX_HEALTH/3., NULL, TR::HIT_LAVA);
 			return;
 		}
 
@@ -1590,6 +1596,9 @@ struct Mario : Lara
 					pos.x = (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? marioState.position[0] - (sin(angle.y)*128) : marioState.position[0]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
 					pos.y = (marioState.action == 0x0800034B) ? -marioState.position[1]+384 : (marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F) ? -marioState.position[1]-128 : -marioState.position[1]; // ACT_LEDGE_GRAB or ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
 					pos.z = (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? -marioState.position[2] - (cos(angle.y)*128) : -marioState.position[2]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+
+					if (marioState.particleFlags & (1 << 11)) // PARTICLE_FIRE
+						game->addEntity(TR::Entity::SMOKE, getRoomIndex(), pos);
 				}
 				if (p != pos && updateZone())
 					updateLights();
