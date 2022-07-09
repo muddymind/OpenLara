@@ -22,7 +22,12 @@ Levels tested and finished as Mario:
 - [ ] Atlantis
 - [ ] The Great Pyramid
 
+Final quality of life improvements:
+- [ ] Collisions with all entities (doors, trapdoors, trap floors)
+And some more I will remember later on...
 
+
+## OpenLara project
 [WebGL build with demo level](http://xproger.info/projects/OpenLara/)
 
 [Standalone version](https://github.com/XProger/OpenLara/releases/tag/latest)
