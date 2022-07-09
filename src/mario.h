@@ -464,6 +464,8 @@ struct Mario : Lara
 
 		TRmarioMesh->render(range);
 
+		if (Core::active.shader) glUseProgram(Core::active.shader->ID);
+
 		Core::setCullMode(cmFront);
 		if (marioState.flags & 0x00000004)
 		{
