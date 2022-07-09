@@ -782,7 +782,7 @@ struct Mario : Lara
 		TR::Level::FloorInfo info;
 		getFloorInfo(controller->getRoomIndex(), controller->pos, info);
 
-		if (info.lava && (!(marioState.action & 1<<11) || pos.y >= info.floor-144.f)) { // 1<<11 == ACT_FLAG_AIR
+		if (info.lava && pos.y >= info.floor-144.f) {
 			hit(LARA_MAX_HEALTH/3., NULL, TR::HIT_LAVA);
 			return;
 		}
