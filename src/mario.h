@@ -531,11 +531,26 @@ struct Mario : Lara
 		sm64_mario_kill(marioId);
 	}
 
+	void setDozy(bool enable)
+	{
+		dozy = enable;
+		marioUpdateRoom(TR::NO_ROOM);
+	}
+
 	int getInput()
 	{
 		int pid = camera->cameraIndex;
 		int input = 0;
 		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY && state != STATE_SWITCH_DOWN && state != STATE_SWITCH_UP && state != STATE_MIDAS_USE);
+
+		if (!dozy && Input::down[ikO]) {
+            setDozy(true);
+            return input;
+        }
+        else if (dozy && Input::state[pid][cWalk]) {
+            setDozy(false);
+            return input;
+        }
 
 		float dir;
 		float spd = 0;
@@ -613,6 +628,8 @@ struct Mario : Lara
 	Stand getStand()
 	{
 		if (marioId < 0) return STAND_GROUND;
+
+		if (dozy) return STAND_UNDERWATER;
 
 		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
 			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
@@ -1236,7 +1253,7 @@ struct Mario : Lara
 
 		if (marioId >= 0)
 		{
-			sm64_set_mario_water_level(marioId, (room.flags.water) ? ((room.waterLevelSurface != TR::NO_WATER) ? -room.waterLevelSurface/IMARIO_SCALE : 32767) : -32768);
+			sm64_set_mario_water_level(marioId, (room.flags.water || dozy) ? ((room.waterLevelSurface != TR::NO_WATER) ? -room.waterLevelSurface/IMARIO_SCALE : 32767) : -32768);
 			/*if (room.waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -room.waterLevelSurface/IMARIO_SCALE);
 			else if (room.flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
 			else sm64_set_mario_water_level(marioId, -32768);*/
