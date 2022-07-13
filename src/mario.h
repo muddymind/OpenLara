@@ -543,14 +543,16 @@ struct Mario : Lara
 		int input = 0;
 		bool canMove = (state != STATE_PICK_UP && state != STATE_USE_KEY && state != STATE_USE_PUZZLE && state != STATE_PUSH_BLOCK && state != STATE_PULL_BLOCK && state != STATE_PUSH_PULL_READY && state != STATE_SWITCH_DOWN && state != STATE_SWITCH_UP && state != STATE_MIDAS_USE);
 
-		if (!dozy && Input::down[ikO]) {
-            setDozy(true);
-            return input;
-        }
-        else if (dozy && Input::state[pid][cWalk]) {
-            setDozy(false);
-            return input;
-        }
+		if (!dozy && Input::down[ikO])
+		{
+			setDozy(true);
+			return input;
+		}
+		else if (dozy && Input::state[pid][cWalk])
+		{
+			setDozy(false);
+			return input;
+		}
 
 		float dir;
 		float spd = 0;
