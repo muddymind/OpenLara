@@ -570,13 +570,14 @@ namespace Extension {
         }
     }
 
-	/*
-	void exportLibSM64(IGame* level)
+	void exportLibSM64(IGame* game, TR::Level* level)
 	{
+		printf("Exporting level.c for libsm64 test program...\n");
+
 		FILE* file = fopen("level.c", "w");
 		fprintf(file, "#include \"level.h\"\n#include \"../src/decomp/include/surface_terrains.h\"\nconst struct SM64Surface surfaces[] = {\n");
 
-		TR::Room &room = level->getLara(0)->getRoom();
+		TR::Room &room = game->getLara(0)->getRoom();
 
 		TR::Room::Data &d = room.data;
 		for (int i = 0; i < d.fCount; i++)
@@ -605,15 +606,14 @@ namespace Extension {
 				if (!f.triangle)
 					fprintf(file, "{SURFACE_DEFAULT,0,TERRAIN_STONE,{{%d,%d,%d},{%d,%d,%d},{%d,%d,%d}}},\n", (room2.info.x + d2.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE, (room2.info.x + d2.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE, (room2.info.x + d2.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d2.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room2.info.z + d2.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE);
 			}
-
-			LIBSM64_ROOM_SECTORS(file, level, room2);
 		}
 
 		fprintf(file, "};\nconst size_t surfaces_count = sizeof( surfaces ) / sizeof( surfaces[0] );\n");
-		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(level->getLara(0)->pos.x/MARIO_SCALE), (int)(-level->getLara(0)->pos.y/MARIO_SCALE), (int)(-level->getLara(0)->pos.z/MARIO_SCALE));
+		fprintf(file, "const int32_t spawn[] = {%d, %d, %d};\n", (int)(game->getLara(0)->pos.x/MARIO_SCALE), (int)(-game->getLara(0)->pos.y/MARIO_SCALE), (int)(-game->getLara(0)->pos.z/MARIO_SCALE));
 		fclose(file);
+
+		printf("Export complete\n");
 	}
-	*/
 #endif
 
 }

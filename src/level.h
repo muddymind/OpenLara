@@ -2359,12 +2359,10 @@ struct Level : IGame {
             Extension::exportGeometry(this, atlasRooms, atlasObjects, atlasSprites);
             Input::down[ikF1] = false;
         }
-        /*
         if (Input::down[ikF2]) {
-            Extension::exportLibSM64(this);
+            Extension::exportLibSM64(this, &level);
             Input::down[ikF2] = false;
         }
-        */
     #endif
     }
 
