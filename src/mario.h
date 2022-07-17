@@ -1172,6 +1172,7 @@ struct Mario : Lara
 		COUNT_ROOM_SECTORS(level, surfaces_count, room);
 
 		// get meshes from this room's portals to adjacent rooms
+			/*
 		for (int i = 0; i < room.portalsCount; i++)
 		{
 			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
@@ -1185,7 +1186,6 @@ struct Mario : Lara
 				surfaces_count += (f.triangle) ? 1 : 2;
 			}
 
-			/*
 			COUNT_ROOM_SECTORS(level, surfaces_count, room2);
 
 			for (int j = 0; j < room2.portalsCount; j++)
@@ -1219,8 +1219,8 @@ struct Mario : Lara
 					}
 				}
 			}
-			*/
 		}
+			*/
 
 		// HACK: create a big floor surface so that mario doesn't hit invisible walls
 		surfaces_count += 2;
@@ -1229,14 +1229,14 @@ struct Mario : Lara
 		struct SM64Surface surfaces[surfaces_count];
 
 		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
-			{(int(center.x) - 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
-			{(int(center.x) - 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
+			{(int(center.x) + 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 16384)/IMARIO_SCALE},
+			{(int(center.x) - 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 16384)/IMARIO_SCALE},
+			{(int(center.x) - 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 16384)/IMARIO_SCALE},
 		}};
 		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-			{(int(center.x) - 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
-			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
-			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
+			{(int(center.x) - 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 16384)/IMARIO_SCALE},
+			{(int(center.x) + 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 16384)/IMARIO_SCALE},
+			{(int(center.x) + 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 16384)/IMARIO_SCALE},
 		}};
 
 		for (int i=0; i<level->entitiesCount; i++)
@@ -1299,6 +1299,7 @@ struct Mario : Lara
 			}
 		}*/
 
+			/*
 		for (int i = 0; i < room.portalsCount; i++)
 		{
 			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
@@ -1312,7 +1313,6 @@ struct Mario : Lara
 				ADD_FACE(surfaces, surface_ind, room2, d2, f);
 			}
 
-			/*
 			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
 
 			for (int j = 0; j < room2.portalsCount; j++)
@@ -1346,8 +1346,8 @@ struct Mario : Lara
 					}
 				}
 			}
-			*/
 		}
+			*/
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
 	}
