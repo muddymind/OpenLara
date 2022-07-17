@@ -53,6 +53,7 @@ struct Mario : Lara
 	float lastPos[3], currPos[3];
 	float lastGeom[9 * SM64_GEO_MAX_TRIANGLES], currGeom[9 * SM64_GEO_MAX_TRIANGLES];
 
+	int customTimer;
 	float marioTicks;
 	bool postInit;
 	struct MarioControllerObj objs[4096];
@@ -70,6 +71,7 @@ struct Mario : Lara
 		marioTicks = 0;
 		objCount = 0;
 		movingBlock = NULL;
+		customTimer = 0;
 
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 		{
@@ -600,7 +602,8 @@ struct Mario : Lara
 
 		if (pickupListCount > 0)
 		{
-			sm64_set_mario_action(marioId, stand != STAND_UNDERWATER ? 0x00800380 : 0x300024E1); // ACT_PUNCHING or ACT_WATER_PUNCH
+			sm64_set_mario_action(marioId, (pickupList[0]->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER) ? 0x0000132E : (stand != STAND_UNDERWATER) ? 0x00800380 : 0x300024E1); // ACT_PUNCHING, ACT_UNLOCKING_KEY_DOOR or ACT_WATER_PUNCH
+			timer = 0;
 			state = STATE_PICK_UP;
 			return true;
 		}
@@ -1039,6 +1042,35 @@ struct Mario : Lara
 
 			case STATE_PICK_UP:
 				{
+					if (pickupList[0]->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER)
+					{
+						switch(marioState.action)
+						{
+							case 0x0000132E: // ACT_UNLOCKING_KEY_DOOR
+								if (marioAnim->animFrame == 20)
+								{
+									marioAnim->animFrame--;
+									if (customTimer == 0) customTimer++;
+									else if (customTimer >= 25)
+									{
+										sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
+										customTimer = 0;
+									}
+								}
+								break;
+
+							case 0x0000132F: // ACT_UNLOCKING_STAR_DOOR
+								if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+									sm64_set_mario_action(marioId, 0x80000588); // ACT_THROWING
+								break;
+
+							case 0x80000588: // ACT_THROWING
+								if (marioAnim->animFrame == 7) // mario touches the scion
+									game->loadNextLevel();
+								break;
+						}
+					}
+
 					int end = (marioState.action == 0x00001319) ? 60 : marioAnim->curAnim->loopEnd-1;
 					if (marioAnim->animFrame == end) // anim done, pick up
 					{
@@ -1444,6 +1476,8 @@ struct Mario : Lara
 
 				while (marioTicks > 1./30)
 				{
+					if (customTimer) customTimer++;
+
 					for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
 					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
 
