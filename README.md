@@ -19,7 +19,7 @@ Levels tested and finished as Mario:
 - [x] Obelisk of Khamoon
 - [x] Sanctuary of the Scion
 - [x] Natla's Mines
-- [ ] Atlantis
+- [x] Atlantis
 - [ ] The Great Pyramid
 
 Final quality of life improvements:
