@@ -1,9 +1,6 @@
 #ifndef H_MARIO
 #define H_MARIO
 
-#define MARIO_SCALE 4.f
-#define IMARIO_SCALE 4
-
 extern "C" {
 	#include <libsm64/src/libsm64.h>
 	#include <libsm64/src/decomp/include/surface_terrains.h>
@@ -13,131 +10,6 @@ extern "C" {
 	#include <libsm64/src/decomp/include/mario_animation_ids.h>
 }
 
-#define ADD_FACE(surfaces, surface_ind, room, d, f) \
-	surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
-		{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
-		{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE}, \
-		{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
-	}}; \
-	if (!f.triangle) \
-	{ \
-		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
-			{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
-			{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE}, \
-			{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
-		}}; \
-	}
-
-#define ADD_FACE_COORD_ROOM_MESH(surfaces, surface_ind, m, d, f) \
-	surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
-		{(m.x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		{(m.x + d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
-		{(m.x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-	}}; \
-	if (!f.triangle) \
-	{ \
-		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, { \
-			{(m.x + d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-			{(m.x + d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
-			{(m.x + d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(m.y + d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(m.z + d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		}}; \
-	}
-
-#define COUNT_ROOM_SECTORS(level, surfaces_count, room) \
-	COUNT_ROOM_SECTORS_UP(level, surfaces_count, room);\
-	COUNT_ROOM_SECTORS_DOWN(level, surfaces_count, room);
-
-#define ADD_ROOM_SECTORS(level, surfaces, surface_ind, room) \
-	ADD_ROOM_SECTORS_UP(level, surfaces, surface_ind, room);\
-	ADD_ROOM_SECTORS_DOWN(level, surfaces, surface_ind, room);
-
-void COUNT_ROOM_SECTORS_UP(TR::Level* level, size_t& surfaces_count, TR::Room& room)
-{
-	for (int i=0; i<room.xSectors * room.zSectors; i++)
-	{
-		if (room.sectors[i].roomAbove == TR::NO_ROOM) continue;
-		
-		TR::Room &roomUp = level->rooms[room.sectors[i].roomAbove];
-		TR::Room::Data &dUp = roomUp.data;
-		
-		for (int j = 0; j < dUp.fCount; j++)
-		{
-			TR::Face &f = dUp.faces[j];
-			if (f.water) continue;
-			
-			surfaces_count += (f.triangle) ? 1 : 2;
-		}
-		
-		COUNT_ROOM_SECTORS_UP(level, surfaces_count, roomUp);
-		break;
-	}
-}
-
-void COUNT_ROOM_SECTORS_DOWN(TR::Level* level, size_t& surfaces_count, TR::Room& room)
-{
-	for (int i=0; i<room.xSectors * room.zSectors; i++)
-	{
-		if (room.sectors[i].roomBelow == TR::NO_ROOM) continue;
-		
-		TR::Room &roomDown = level->rooms[room.sectors[i].roomBelow];
-		TR::Room::Data &dDown = roomDown.data;
-		
-		for (int j = 0; j < dDown.fCount; j++)
-		{
-			TR::Face &f = dDown.faces[j];
-			if (f.water) continue;
-			
-			surfaces_count += (f.triangle) ? 1 : 2;
-		}
-		
-		COUNT_ROOM_SECTORS_DOWN(level, surfaces_count, roomDown);
-		break;
-	}
-}
-
-void ADD_ROOM_SECTORS_UP(TR::Level* level, struct SM64Surface* surfaces, size_t& surface_ind, TR::Room& room)
-{
-	for (int i=0; i<room.xSectors * room.zSectors; i++)
-	{
-		if (room.sectors[i].roomAbove == TR::NO_ROOM) continue;
-		
-		TR::Room &roomUp = level->rooms[room.sectors[i].roomAbove];
-		TR::Room::Data &dUp = roomUp.data;
-		
-		for (int j = 0; j < dUp.fCount; j++)
-		{
-			TR::Face &f = dUp.faces[j];
-			if (f.water) continue;
-			
-			ADD_FACE(surfaces, surface_ind, roomUp, dUp, f);
-		}
-		
-		ADD_ROOM_SECTORS_UP(level, surfaces, surface_ind, roomUp);
-		break;
-	}
-}
-
-void ADD_ROOM_SECTORS_DOWN(TR::Level* level, struct SM64Surface* surfaces, size_t& surface_ind, TR::Room& room)
-{
-	for (int i=0; i<room.xSectors * room.zSectors; i++)
-	{
-		if (room.sectors[i].roomBelow == TR::NO_ROOM) continue;
-		
-		TR::Room &roomDown = level->rooms[room.sectors[i].roomBelow];
-		TR::Room::Data &dDown = roomDown.data;
-		
-		for (int j = 0; j < dDown.fCount; j++)
-		{
-			TR::Face &f = dDown.faces[j];
-			if (f.water) continue;
-			
-			ADD_FACE(surfaces, surface_ind, roomDown, dDown, f);
-		}
-		
-		ADD_ROOM_SECTORS_DOWN(level, surfaces, surface_ind, roomDown);
-		break;
-	}
-}
 
 #include "core.h"
 #include "game.h"
@@ -147,6 +19,8 @@ void ADD_ROOM_SECTORS_DOWN(TR::Level* level, struct SM64Surface* surfaces, size_
 #include "enemy.h"
 #include "inventory.h"
 #include "mesh.h"
+
+#include "marioMacros.h"
 
 struct MarioMesh
 {
@@ -1267,6 +1141,24 @@ struct Mario : Lara
 		size_t surfaces_count = 0;
 		size_t surface_ind = 0;
 
+		// find doppelganger's room and add meshes from its' room so mario doppelganger can spawn
+		for (int i=0; i<level->entitiesCount; i++)
+		{
+			if (level->entities[i].type != TR::Entity::ENEMY_DOPPELGANGER) continue;
+
+			TR::Room &roomD = level->rooms[level->entities[i].room];
+			TR::Room::Data &dD = roomD.data;
+			for (int j = 0; j < dD.fCount; j++)
+			{
+				TR::Face &f = dD.faces[j];
+				if (f.water) continue;
+
+				surfaces_count += (f.triangle) ? 1 : 2;
+			}
+
+			COUNT_ROOM_SECTORS(level, surfaces_count, roomD);
+		}
+
 		// get meshes from this room
 		TR::Room::Data &d = room.data;
 		for (int i = 0; i < d.fCount; i++)
@@ -1346,6 +1238,23 @@ struct Mario : Lara
 			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) + 8192)/IMARIO_SCALE},
 			{(int(center.x) + 8192)/IMARIO_SCALE, (-room.info.yBottom - 4096)/IMARIO_SCALE, (-int(center.z) - 8192)/IMARIO_SCALE},
 		}};
+
+		for (int i=0; i<level->entitiesCount; i++)
+		{
+			if (level->entities[i].type != TR::Entity::ENEMY_DOPPELGANGER) continue;
+
+			TR::Room &roomD = level->rooms[level->entities[i].room];
+			TR::Room::Data &dD = roomD.data;
+			for (int j = 0; j < dD.fCount; j++)
+			{
+				TR::Face &f = dD.faces[j];
+				if (f.water) continue;
+
+				ADD_FACE(surfaces, surface_ind, roomD, dD, f);
+			}
+
+			ADD_ROOM_SECTORS(level, surfaces, surface_ind, roomD);
+		}
 
 		for (int i = 0; i < d.fCount; i++)
 		{
@@ -1559,8 +1468,8 @@ struct Mario : Lara
 				for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
 				TRmarioMesh->update(&marioGeometry);
 
-				float hp = health / float(LARA_MAX_HEALTH);
-				float ox = oxygen / float(LARA_MAX_OXYGEN);
+				float hp = health / LARA_MAX_HEALTH;
+				float ox = oxygen / LARA_MAX_OXYGEN;
 				if (hp > 0.f)
 				{
 					switch(stand)

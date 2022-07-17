@@ -1,8 +1,15 @@
 #ifndef H_ENEMY
 #define H_ENEMY
 
+extern "C" {
+	#include <libsm64/src/libsm64.h>
+}
+
 #include "character.h"
 #include "objects.h"
+#include "mario.h"
+#include "marioMacros.h"
+#include "marioDoppelganger.img.h"
 
 #define STALK_BOX       (1024 * 3)
 #define ESCAPE_BOX      (1024 * 5)
@@ -2436,6 +2443,228 @@ struct Mummy : Enemy {
 
 
 #define DOPPELGANGER_ROOM_CENTER (vec3(36, 0, 60) * 1024.0f)
+
+struct MarioDoppelganger: Enemy
+{
+	int32_t marioId;
+	struct SM64MarioInputs marioInputs;
+    struct SM64MarioState marioState;
+    struct SM64MarioGeometryBuffers marioGeometry;
+	Mesh* TRmarioMesh;
+	Texture* marioDoppelgangerTex;
+
+	size_t mesh_num_vertices;
+	uint16_t *mesh_index;
+
+	float lastPos[3], currPos[3];
+	float lastGeom[9 * SM64_GEO_MAX_TRIANGLES], currGeom[9 * SM64_GEO_MAX_TRIANGLES];
+
+	float marioTicks;
+	bool tickedOnce;
+
+	MarioDoppelganger(IGame *game, int entity) : Enemy(game, entity, 1000, 341, 150.0f, 0.0f)
+	{
+		marioId = -1;
+		marioTicks = 0;
+		tickedOnce = false;
+
+		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
+		{
+			lastGeom[i] = 0;
+			currGeom[i] = 0;
+		}
+
+		marioGeometry.position = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
+		marioGeometry.color    = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
+		marioGeometry.normal   = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
+		marioGeometry.uv       = (float*)malloc( sizeof(float) * 6 * SM64_GEO_MAX_TRIANGLES );
+
+		mesh_index = (uint16_t*)malloc( 3 * SM64_GEO_MAX_TRIANGLES * sizeof(uint16_t) );
+		for( int i = 0; i < 3 * SM64_GEO_MAX_TRIANGLES; ++i )
+			mesh_index[i] = i;
+
+		mesh_num_vertices = 3 * SM64_GEO_MAX_TRIANGLES;
+
+		TRmarioMesh = new Mesh((Index*)mesh_index, mesh_num_vertices, NULL, 0, 1, true, true);
+		TRmarioMesh->initMario(&marioGeometry);
+
+		marioDoppelgangerTex = new Texture(SM64_TEXTURE_WIDTH, SM64_TEXTURE_HEIGHT, 1, FMT_RGBA, 0, (void*)MARIO_DOPPELGANGER_TEXTURE, true);
+	}
+
+	virtual ~MarioDoppelganger()
+	{
+		free(marioGeometry.position);
+		free(marioGeometry.color);
+		free(marioGeometry.normal);
+		free(marioGeometry.uv);
+		TRmarioMesh->iBuffer = NULL;
+		free(mesh_index);
+		delete TRmarioMesh;
+		delete marioDoppelgangerTex;
+
+		if (marioId != -1) sm64_mario_delete(marioId);
+	}
+
+	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
+	{
+		Core::setCullMode(cmBack);
+		glUseProgram(Core::marioShader);
+
+		GAPI::Texture *dtex = Core::active.textures[sDiffuse];
+		marioDoppelgangerTex->bind(sDiffuse);
+
+		MeshRange range;
+		range.aIndex = 0;
+		range.iStart = 0;
+		range.vStart = 0;
+		range.iCount = mesh_num_vertices;
+
+		TRmarioMesh->render(range);
+
+		if (Core::active.shader) glUseProgram(Core::active.shader->ID);
+
+		Core::setCullMode(cmFront);
+
+		if (dtex) dtex->bind(sDiffuse);
+	}
+
+	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
+	{
+		enemy->hit(damage * 10, this);
+		sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
+	}
+
+	virtual void update()
+	{
+		if (!target)
+		{
+			marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
+			sm64_set_mario_state(marioId, 0); // remove cap
+			target = (Character*)game->getLara(0);
+		}
+
+		if (stand != STAND_AIR && tickedOnce)
+		{
+			Mario* targetMario = ((Mario*)target);
+			pos.x    = DOPPELGANGER_ROOM_CENTER.x * 2.0f - targetMario->marioState.position[0];
+			pos.y    = target->pos.y;
+			pos.z    = DOPPELGANGER_ROOM_CENTER.z * 2.0f + targetMario->marioState.position[2];
+			angle    = target->angle;
+			angle.y -= PI;
+			sm64_set_mario_position(marioId, pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+
+			memcpy(&marioInputs, &targetMario->marioInputs, sizeof(struct SM64MarioInputs));
+			marioInputs.camLookX *= -1;
+			marioInputs.camLookZ *= -1;
+		}
+
+		if (flags.active)
+		{
+			float hp = target->health / 1000.f;
+			if (hp > 0.f) sm64_mario_set_health(marioId, (hp <= 0.2f) ? 0x200 : 0x880); // mario panting animation if low on health
+			else sm64_mario_kill(marioId);
+
+			marioTicks += Core::deltaTime;
+			while (marioTicks > 1./30)
+			{
+				tickedOnce = true;
+
+				for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
+				for (int i=0; i<3 * mesh_num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
+
+				sm64_mario_tick(marioId, &marioInputs, &marioState, &marioGeometry);
+				marioTicks -= 1./30;
+				mesh_num_vertices = 3 * marioGeometry.numTrianglesUsed;
+
+				for (int i=0; i<3; i++) currPos[i] = marioState.position[i] * MARIO_SCALE;
+				for (int i=0; i<3 * mesh_num_vertices; i++)
+				{
+					currGeom[i] = marioGeometry.position[i] * MARIO_SCALE;
+					float val = 75.f - ((i%9/4.5f) * 7.f);
+					marioGeometry.color[i] = (i%3 == 0) ? val/100.f : 0;
+
+					if (i%3 != 0) // flip y and z
+					{
+						currGeom[i] = -currGeom[i];
+						marioGeometry.normal[i] = -marioGeometry.normal[i];
+					}
+				}
+
+				// these indices below will have their vertex colors set to
+				// a white-ish color to resemble bones from the atlantean creatures.
+				// all of these were found via bruteforce
+				int whiteGeometry[] = {1365, 1368, 1371, 1374, 1377, 1380, 1383, 1386, 1389, 1392, 1395, 1398,
+                                       1401, 1404, 1407, 1410, 1413, 1416, 1419, 1422, 1425, 1428, 1431, 1434,
+                                       1437, 1440, 1443, 1446, 1449, 1452, 1455, 1458, 1461, 1464, 1467, 1470,
+                                       1473, 1476, 1479, 1482, 1485, 1488, 1491, 1494, 1497, 1500, 1695, 1698,
+                                       1701, 1704, 1707, 1710, 1713, 1716, 1719, 1722, 1725, 1728, 1731, 1734,
+                                       1737, 1740, 1743, 1746, 1749, 1752, 1755, 1758, 1761, 1764, 1767, 1770,
+                                       1773, 1776, 1779, 1782, 1785, 1788, 1791, 1794, 1797, 1800, 1803, 1806,
+                                       1809, 1812, 1815, 1818, 1821, 1824, 1827, 1830, 783, 807, 810, 813, 816,
+                                       819, 822, 825, 828, 831, 834, 837, 840, 843, 846, 849, 852, 855, 858,
+                                       861, 864, 867, 870, 873, 876, 882, 885, 888, 891, 894, 897, 900, 903,
+                                       906, 909, 672, 684, 690, 711, 714, 687, 753, 1983, 1986, 1989, 1992,
+                                       1995, 1998, 2001, 2004, 2007, 2010, 2013, 2016, 2019, 2022, 2025, 2028,
+                                       2031, 2034, 2037, 2040, 2043, 2046, 2049, 2052, 2055, 2058, 2211, 2214,
+                                       2217, 2220, 2223, 2226, 2229, 2232, 2235, 2238, 2241, 2244, 2247, 2250,
+                                       2253, 2256, 2259, 2262, 2265, 2268, 2271, 2274, 2277, 2280, 2283, 2286};
+
+				for (size_t i=0; i<sizeof(whiteGeometry) / sizeof(int); i++)
+				{
+					marioGeometry.color[whiteGeometry[i]*3+0] = marioGeometry.color[whiteGeometry[i]*3+3] = marioGeometry.color[whiteGeometry[i]*3+6] = 0.7686274509803922f; // red
+					marioGeometry.color[whiteGeometry[i]*3+1] = marioGeometry.color[whiteGeometry[i]*3+4] = marioGeometry.color[whiteGeometry[i]*3+7] = 0.6901960784313725f; // green
+					marioGeometry.color[whiteGeometry[i]*3+2] = marioGeometry.color[whiteGeometry[i]*3+5] = marioGeometry.color[whiteGeometry[i]*3+8] = 0.4549019607843137f; // blue
+				}
+			}
+
+			for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
+			for (int i=0; i<3 * mesh_num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
+			TRmarioMesh->update(&marioGeometry);
+		}
+
+		Enemy::updateRoom();
+
+		TR::Level::FloorInfo info;
+		getFloorInfo(getRoomIndex(), target->pos, info);
+		float laraHeight = info.floor - target->pos.y;
+
+		getFloorInfo(getRoomIndex(), pos, info);
+		float selfHeight = info.floor - pos.y;
+
+		if (stand != STAND_AIR && target->stand == Character::STAND_GROUND && selfHeight > 1024 && laraHeight < 256)
+		{
+			stand = STAND_AIR;
+			memset(&marioInputs, 0, sizeof(struct SM64MarioInputs));
+		}
+
+		if (stand == STAND_AIR)
+		{
+			pos.y = -marioState.position[1];
+			if (marioState.action == 0x0C400201) stand = STAND_GROUND; // ACT_IDLE
+			marioInputs.buttonZ = (marioState.action == 0x0800034B); // ACT_LEDGE_GRAB (let go of ledge)
+
+			if (selfHeight < 128.0f)
+			{
+				game->checkTrigger(this, true);
+				flags.invisible = true;
+				deactivate(true);
+			}
+		}
+	}
+
+	virtual int getStateGround()
+	{
+		if (!think(true))
+			return state;
+		return state;
+	}
+
+	virtual void updatePosition()
+	{
+		Enemy::updatePosition();
+		lookAt(target);
+	}
+};
 
 struct Doppelganger : Enemy {
     enum {

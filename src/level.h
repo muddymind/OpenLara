@@ -1161,7 +1161,7 @@ struct Level : IGame {
 
         switch (level.entities[index].type) {
             case TR::Entity::LARA                  : return (players[0]) ? new Lara(this, index) : new Mario(this, index);
-            case TR::Entity::ENEMY_DOPPELGANGER    : return new Doppelganger(this, index);
+            case TR::Entity::ENEMY_DOPPELGANGER    : if (players[0]->isMario) return new MarioDoppelganger(this, index); return new Doppelganger(this, index);
             case TR::Entity::ENEMY_WOLF            : return new Wolf(this, index);
             case TR::Entity::ENEMY_BEAR            : return new Bear(this, index);
             case TR::Entity::ENEMY_BAT             : return new Bat(this, index);
