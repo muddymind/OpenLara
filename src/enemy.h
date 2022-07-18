@@ -2162,7 +2162,7 @@ struct GiantMutant : Enemy {
         if (health <= 0.0f && !exploded && animation.index == ANIM_DEATH && flags.state == TR::Entity::asInactive) {
             flags.state = TR::Entity::asActive;
             game->playSound(TR::SND_MUTANT_DEATH, pos, Sound::PAN);
-            explode(0xffffffff, GIANT_MUTANT_PART_DAMAGE);
+            explode(0xffffffff, (game->getLara(0)->isMario) ? 0 : GIANT_MUTANT_PART_DAMAGE);
             game->checkTrigger(this, true);
         }
 
@@ -2390,7 +2390,7 @@ struct Centaur : Enemy {
     virtual void deactivate(bool removeFromList = false) {
         if (!removeFromList) {
             if (!explodeMask)
-                explode(0xffffffff, CENTAUR_PART_DAMAGE);
+                explode(0xffffffff, (game->getLara(0)->isMario) ? 0 : CENTAUR_PART_DAMAGE);
             return;
         }
         Enemy::deactivate(removeFromList);
