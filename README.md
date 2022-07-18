@@ -24,6 +24,8 @@ Levels tested and finished as Mario:
 
 Final quality of life improvements:
 - [ ] Collisions with all entities (doors, trapdoors, trap floors)
+- [ ] Mario fall damage
+- [ ] Correct mesh loading between rooms
 
 And some more I will remember later on...
 
