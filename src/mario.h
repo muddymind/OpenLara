@@ -120,6 +120,9 @@ struct Mario : Lara
 		for (int i=0; i<objCount; i++)
 			sm64_surface_object_delete(objs[i].ID);
 
+		for (int i=0; i<0x22; i++)
+			sm64_stop_background_music(i);
+
 		if (marioId != -1) sm64_mario_delete(marioId);
 	}
 
@@ -932,7 +935,11 @@ struct Mario : Lara
 
 					if ( (flags.active == TR::ACTIVE) || (((level->version & (TR::VER_TR2 | TR::VER_TR3))) && flags.active) ) {
 						flags.once |= info.trigInfo.once;
-						game->playTrack(track);
+
+						if (level->version & TR::VER_TR1 && level->id == 21 && track == 6) // natla final boss!
+							sm64_play_music(0, ((4 << 8) | SEQ_LEVEL_BOSS_KOOPA_FINAL), 0); // SEQUENCE_ARGS(4, seqID)
+						else
+							game->playTrack(track);
 					} else
 						game->stopTrack();
 
