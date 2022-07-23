@@ -358,22 +358,6 @@ struct Camera : ICamera {
         if (eye.pos.y < ceiling) eye.pos.y = ceiling;
     }
 
-	virtual void update(SM64MarioState* marioState)
-	{
-		if (shake > 0.0f) {
-			shake = max(0.0f, shake - Core::deltaTime);
-			Input::setJoyVibration(cameraIndex,  clamp(shake, 0.0f, 1.0f), 0);
-		}
-
-		if (mode == MODE_FOLLOW) {
-			speed = CAM_SPEED_FOLLOW;
-		}
-
-		if (mode == MODE_COMBAT) {
-			speed = CAM_SPEED_COMBAT;
-		}
-	}
-
     virtual void update() {
         if (shake > 0.0f) {
             shake = max(0.0f, shake - Core::deltaTime);
