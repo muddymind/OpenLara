@@ -2947,6 +2947,7 @@ struct Lara : Character {
             return;
 
         camera->centerView = false;
+        if (state != STATE_UNUSED_5) camera->camDist = 0;
 
         switch (state) {
             case STATE_WATER_OUT  :
@@ -3003,6 +3004,10 @@ struct Lara : Character {
                 break;
             case STATE_WADE       :
                 camera->setAngle(-22, 0);
+                break;
+            case STATE_UNUSED_5   : // mario special
+                camera->setAngle(5, 0);
+                if (camera->camDist > -1024*2) camera->camDist -= 64;
                 break;
             default :
                 camera->setAngle(0, 0);

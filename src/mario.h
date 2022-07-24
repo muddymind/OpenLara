@@ -62,6 +62,7 @@ struct Mario : Lara
 	Mesh* TRmarioMesh;
 
 	Block* movingBlock; // hack
+	Character* bowserSwing; // hack
 
 	Mario(IGame *game, int entity) : Lara(game, entity)
 	{
@@ -71,6 +72,8 @@ struct Mario : Lara
 		marioTicks = 0;
 		objCount = 0;
 		movingBlock = NULL;
+		bowserSwing = NULL;
+		bowserAngle = 0;
 		customTimer = 0;
 
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
@@ -521,7 +524,7 @@ struct Mario : Lara
 
 	void setStateFromMario()
 	{
-		if (state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK || state == STATE_SWITCH_DOWN || state == STATE_SWITCH_UP || state == STATE_MIDAS_USE) return;
+		if (state == STATE_UNUSED_5 || state == STATE_PICK_UP || state == STATE_USE_KEY || state == STATE_USE_PUZZLE || state == STATE_PUSH_BLOCK || state == STATE_PULL_BLOCK || state == STATE_SWITCH_DOWN || state == STATE_SWITCH_UP || state == STATE_MIDAS_USE) return;
 
 		if (state != STATE_PUSH_PULL_READY && input & ACTION && getBlock())
 		{
@@ -538,7 +541,7 @@ struct Mario : Lara
                 if (block && (pushState == STATE_PUSH_BLOCK || block->doMarioMove(input & FORTH != 0)))
 				{
 					movingBlock = block;
-					sm64_set_mario_action(marioId, (pushState == STATE_PUSH_BLOCK) ? 0x00800380 : 0x00000390);
+					sm64_set_mario_action(marioId, (pushState == STATE_PUSH_BLOCK) ? 0x00800380 : 0x00000390); // ACT_PUNCHING or ACT_PICKING_UP_BOWSER
 					state = pushState;
 				}
 			}
@@ -981,6 +984,30 @@ struct Mario : Lara
 
 		switch (state)
 		{
+			case STATE_UNUSED_5: // swinging giant mutant
+				bowserSwing->pos.x = pos.x + (sin(-marioState.faceAngle + M_PI)*512);
+				bowserSwing->pos.y = pos.y - 144;
+				bowserSwing->pos.z = pos.z + (cos(-marioState.faceAngle + M_PI)*512);
+				bowserSwing->angle.y = -marioState.faceAngle + M_PI;
+				static float angleVel = fabs(marioState.angleVel[1]);
+				if (!bowserSwing || marioState.action == 0x00000392) // ACT_RELEASING_BOWSER
+				{
+					state = STATE_STOP;
+					bowserSwing->activate();
+					bowserSwing->animation.setState(9); // GiantMutant::STATE_FALL
+					bowserSwing->animation.setAnim(2); // idle animation
+					bowserSwing->state = 9; // GiantMutant::STATE_FALL
+					bowserSwing->stand = Character::STAND_AIR;
+					bowserSwing->velocity.x = sin(-marioState.faceAngle + M_PI) * angleVel*850;
+					bowserSwing->velocity.y = -angleVel*500;
+					bowserSwing->velocity.z = cos(-marioState.faceAngle + M_PI) * angleVel*850;
+					bowserSwing->hit(angleVel*300, this);
+					bowserSwing = NULL;
+				}
+				else angleVel = fabs(marioState.angleVel[1]);
+
+				break;
+
 			case STATE_MIDAS_USE:
 				if (marioAnim->animID == MARIO_ANIM_CREDITS_RAISE_HAND && marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
 				{
@@ -1540,6 +1567,18 @@ struct Mario : Lara
 						if (collide(spheres[i]) && (sm64_mario_attack(marioId, spheres[i].center.x, spheres[i].center.y, spheres[i].center.z, target->getBoundingBox().max.y - target->getBoundingBox().min.y) ||
 						    sm64_mario_attack(marioId, spheres[i].center.x, -spheres[i].center.y, -spheres[i].center.z, target->getBoundingBox().max.y - target->getBoundingBox().min.y)))
 						{
+							if (stand == STAND_GROUND && i == 0 && target->getEntity().type == TR::Entity::ENEMY_GIANT_MUTANT && (marioState.action == 0x00800457 || marioState.action == 0x0188088A || marioState.action == 0x00880456)) // ACT_MOVE_PUNCHING or ACT_DIVE or ACT_DIVE_SLIDE
+							{
+								// mario picks up the giant mutant and swings it
+								bowserSwing = (Character*)target;
+								bowserAngle = angle.y;
+								game->playSound(TR::SND_HIT_MUTANT, target->pos, Sound::PAN);
+								target->deactivate();
+								sm64_set_mario_action(marioId, 0x00000390); // ACT_PICKING_UP_BOWSER
+								state = STATE_UNUSED_5; // swing the mutant
+								break;
+							}
+
 							float damage = 5.f;
 							if (marioState.action == 0x018008AC) // ACT_JUMP_KICK
 								damage += 5;
@@ -1563,10 +1602,10 @@ struct Mario : Lara
 				if (marioId >= 0)
 				{
 					angle.x = (stand == STAND_UNDERWATER) ? marioState.pitchAngle : 0;
-					angle.y = -marioState.faceAngle + M_PI;
-					pos.x = (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? marioState.position[0] - (sin(angle.y)*128) : marioState.position[0]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+					angle.y = (state == STATE_UNUSED_5) ? bowserAngle : -marioState.faceAngle + M_PI;
+					pos.x = (state == STATE_UNUSED_5) ? marioState.position[0] + (sin(-marioState.faceAngle + M_PI)*32) : (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? marioState.position[0] - (sin(angle.y)*128) : marioState.position[0]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
 					pos.y = (marioState.action == 0x0800034B) ? -marioState.position[1]+384 : (marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F) ? -marioState.position[1]-128 : -marioState.position[1]; // ACT_LEDGE_GRAB or ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
-					pos.z = (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? -marioState.position[2] - (cos(angle.y)*128) : -marioState.position[2]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+					pos.z = (state == STATE_UNUSED_5) ? -marioState.position[2] + (cos(-marioState.faceAngle + M_PI)*32) :(marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? -marioState.position[2] - (cos(angle.y)*128) : -marioState.position[2]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
 
 					if (marioState.particleFlags & (1 << 11)) // PARTICLE_FIRE
 						game->addEntity(TR::Entity::SMOKE, getRoomIndex(), pos);

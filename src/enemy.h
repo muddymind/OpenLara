@@ -2284,6 +2284,16 @@ struct GiantMutant : Enemy {
         //setOverrides(true, jointChest, jointHead);
         //lookAt(target);
     }
+
+    virtual void updateVelocity() {
+        if (stand == STAND_AIR && (!flying || health <= 0.0f))
+            applyGravity(velocity.y);
+        else
+            velocity = getDir() * animation.getSpeed();
+
+        if (health <= 0.0f && stand == STAND_GROUND)
+            velocity.x = velocity.z = 0.0f;
+    }
 };
 
 #define CENTAUR_TURN_FAST   (DEG2RAD * 120)

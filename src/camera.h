@@ -67,6 +67,8 @@ struct Camera : ICamera {
     float       specTimer;
     int16       specRoom;
 
+    int         camDist;
+
     Camera(IGame *game, Character *owner) : ICamera(), game(game), level(game->getLevel()), frustum(new Frustum()), timer(-1.0f), viewIndex(-1), viewIndexLast(-1), viewTarget(NULL) {
         this->owner = owner;
         reset();
@@ -80,6 +82,7 @@ struct Camera : ICamera {
         Sound::listener[cameraIndex].matrix.identity();
         Sound::listener[cameraIndex].matrix.translate(vec3(float(0x7FFFFFFF)));
 
+        camDist = 0;
         lookAngle = vec3(0.0f);
 
         changeView(false);
@@ -158,7 +161,14 @@ struct Camera : ICamera {
                 pos = b.pos;
             } else {
                 if (mode != MODE_STATIC)
+                {
                     pos.y = box.max.y + (box.min.y - box.max.y) * (3.0f / 4.0f);
+                    if (owner->isMario)
+                    {
+                        pos.x += sin(owner->bowserAngle) * camDist;
+                        pos.z += cos(owner->bowserAngle) * camDist;
+                    }
+                }
                 else
                     pos.y = center.y;
 
