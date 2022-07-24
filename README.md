@@ -23,10 +23,11 @@ Levels tested and finished as Mario:
 - [ ] The Great Pyramid
 
 Final quality of life improvements:
-- [ ] Collisions with all entities (doors, trapdoors, trap floors)
+- [ ] Add collisions to all entities (doors, trapdoors, trap floors)
 - [ ] Mario fall damage
 - [ ] Correct mesh loading between rooms
 - [ ] Make Mario's lighting blend in correctly with the rooms he is in (a glsl shader thing...)
+- [ ] Fix Mario's collisions with movable boxes on Atlantis and The Great Pyramid
 
 And some more I will remember later on...
 
