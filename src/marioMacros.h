@@ -10,14 +10,14 @@ extern "C" {
 }
 
 #define ADD_FACE(surfaces, surface_ind, room, d, f, slippery) \
-	surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
+	surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, { \
 		{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
 		{(room.info.x + d.vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[1]].pos.z)/IMARIO_SCALE}, \
 		{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
 	}}; \
 	if (!f.triangle) \
 	{ \
-		surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
+		surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, { \
 			{(room.info.x + d.vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
 			{(room.info.x + d.vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[3]].pos.z)/IMARIO_SCALE}, \
 			{(room.info.x + d.vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d.vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d.vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
