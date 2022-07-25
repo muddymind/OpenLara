@@ -1295,14 +1295,14 @@ struct Mario : Lara
 		struct SM64Surface surfaces[surfaces_count];
 
 		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-			{(int(center.x) + 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 16384)/IMARIO_SCALE},
-			{(int(center.x) - 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 16384)/IMARIO_SCALE},
-			{(int(center.x) - 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 16384)/IMARIO_SCALE},
+			{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
+			{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
+			{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
 		}};
 		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-			{(int(center.x) - 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 16384)/IMARIO_SCALE},
-			{(int(center.x) + 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 16384)/IMARIO_SCALE},
-			{(int(center.x) + 16384)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 16384)/IMARIO_SCALE},
+			{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
+			{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
+			{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
 		}};
 
 		for (int i=0; i<level->entitiesCount; i++)
