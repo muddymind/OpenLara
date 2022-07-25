@@ -1316,7 +1316,13 @@ struct Mario : Lara
 				TR::Face &f = dD.faces[j];
 				if (f.water) continue;
 
-				ADD_FACE(surfaces, surface_ind, roomD, dD, f);
+				float topY = max(dD.vertices[f.vertices[0]].pos.y, max(dD.vertices[f.vertices[1]].pos.y, dD.vertices[f.vertices[2]].pos.y));
+
+				TR::Level::FloorInfo info;
+				getFloorInfo(level->entities[i].room, vec3(roomD.info.x + dD.vertices[f.vertices[0]].pos.x + 1, topY, roomD.info.z + dD.vertices[f.vertices[0]].pos.z - 1), info);
+				bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
+
+				ADD_FACE(surfaces, surface_ind, roomD, dD, f, slippery);
 			}
 
 			ADD_ROOM_SECTORS(level, surfaces, surface_ind, roomD);
@@ -1327,7 +1333,13 @@ struct Mario : Lara
 			TR::Face &f = d.faces[i];
 			if (f.water) continue;
 
-			ADD_FACE(surfaces, surface_ind, room, d, f);
+			float topY = max(d.vertices[f.vertices[0]].pos.y, max(d.vertices[f.vertices[1]].pos.y, d.vertices[f.vertices[2]].pos.y));
+
+			TR::Level::FloorInfo info;
+			getFloorInfo(getRoomIndex(), vec3(room.info.x + d.vertices[f.vertices[0]].pos.x + 1, topY, room.info.z + d.vertices[f.vertices[0]].pos.z - 1), info);
+			bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
+
+			ADD_FACE(surfaces, surface_ind, room, d, f, slippery);
 		}
 
 		ADD_ROOM_SECTORS(level, surfaces, surface_ind, room);
