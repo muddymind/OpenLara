@@ -17,10 +17,10 @@ const char *MARIO_SHADER =
 "\n "
 "\n #ifdef VERTEX"
 "\n "
-"\n     layout(location = 0) in vec3 position;"
-"\n     layout(location = 1) in vec3 normal;"
-"\n     layout(location = 2) in vec3 color;"
-"\n     layout(location = 3) in vec2 uv;"
+"\n     in vec3 position;"
+"\n     in vec3 normal;"
+"\n     in vec3 color;"
+"\n     in vec2 uv;"
 "\n "
 "\n     void main()"
 "\n     {"
@@ -59,10 +59,10 @@ const char *METAL_MARIO_SHADER =
 "\n "
 "\n #ifdef VERTEX"
 "\n "
-"\n     layout(location = 0) in vec3 position;"
-"\n     layout(location = 1) in vec3 normal;"
-"\n     layout(location = 2) in vec3 color;"
-"\n     layout(location = 3) in vec2 uv;"
+"\n     in vec3 position;"
+"\n     in vec3 normal;"
+"\n     in vec3 color;"
+"\n     in vec2 uv;"
 "\n "
 "\n     void main()"
 "\n     {"
@@ -90,8 +90,8 @@ const char *METAL_MARIO_SHADER =
 GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, GLenum shaderType )
 {
     const GLchar *shaderDefine = shaderType == GL_VERTEX_SHADER 
-        ? "\n#version 330\n#define VERTEX  \n#define v2f out\n" 
-        : "\n#version 330\n#define FRAGMENT\n#define v2f in \n";
+        ? "\n#version 120\n#define VERTEX  \n#define v2f out\n" 
+        : "\n#version 120\n#define FRAGMENT\n#define v2f in \n";
 
     const GLchar *shaderStrings[2] = { shaderDefine, shaderContents };
     GLint shaderStringLengths[2] = { (GLint)strlen( shaderDefine ), (GLint)shaderContentsLength };
@@ -125,6 +125,10 @@ GLuint shader_load( const char *shaderContents )
     GLuint ref = glCreateProgram();
     glAttachShader( ref, vert );
     glAttachShader( ref, frag );
+
+    const GLchar *attribs[] = {"position", "normal", "color", "uv"};
+	for (int i=0; i<4; i++) glBindAttribLocation(ref, i, attribs[i]);
+
     glLinkProgram ( ref );
     glDetachShader( ref, vert );
     glDetachShader( ref, frag );
