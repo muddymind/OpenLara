@@ -20,7 +20,7 @@ Levels tested and finished as Mario:
 - [x] Sanctuary of the Scion
 - [x] Natla's Mines
 - [x] Atlantis
-- [ ] The Great Pyramid
+- [x] The Great Pyramid
 
 Final quality of life improvements:
 - [ ] Add collisions to all entities (doors, trapdoors, trap floors)
