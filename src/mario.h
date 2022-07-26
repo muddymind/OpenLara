@@ -311,6 +311,7 @@ struct Mario : Lara
 	}
 
 	vec3 getPos() {return vec3(marioState.position[0], -marioState.position[1], -marioState.position[2]);}
+	bool canDrawWeapon() {return false;}
 	void marioInteracting(TR::Entity::Type type) // hack
 	{
 		marioInputs.buttonB = false;

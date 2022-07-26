@@ -896,7 +896,7 @@ struct Lara : Character {
                && state != STATE_PICK_UP;
     }
 
-    bool canDrawWeapon() {
+    virtual bool canDrawWeapon() {
         if (wpnCurrent == TR::Entity::NONE)
             return false;
 
