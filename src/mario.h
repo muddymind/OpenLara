@@ -360,7 +360,7 @@ struct Mario : Lara
 	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
 	{
 		if (dozy || level->isCutsceneLevel()) return;
-		if (!burn && marioState.action != 0x010208B7 && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_LAVA_BOOST, ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
+		if (!burn && !marioState.fallDamage && marioState.action != 0x010208B7 && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_LAVA_BOOST, ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
 		if (health <= 0.0f && hitType != TR::HIT_FALL && hitType != TR::HIT_LAVA) return;
 
 		if (hitType == TR::HIT_MIDAS)
@@ -1542,6 +1542,9 @@ struct Mario : Lara
 							marioGeometry.normal[i] = -marioGeometry.normal[i];
 						}
 					}
+
+					if (marioState.fallDamage)
+						hit(marioState.fallDamage / 8 * 250);
 				}
 
 				for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
