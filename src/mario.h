@@ -1317,10 +1317,20 @@ struct Mario : Lara
 				TR::Face &f = dD.faces[j];
 				if (f.water) continue;
 
+				int16 x[2] = {dD.vertices[f.vertices[0]].pos.x, 0};
+				int16 z[2] = {dD.vertices[f.vertices[0]].pos.z, 0};
+				for (int j=1; j<3; j++)
+				{
+					if (x[0] != dD.vertices[f.vertices[j]].pos.x) x[1] = dD.vertices[f.vertices[j]].pos.x;
+					if (z[0] != dD.vertices[f.vertices[j]].pos.z) z[1] = dD.vertices[f.vertices[j]].pos.z;
+				}
+
+				float midX = (x[0] + x[1]) / 2.f;
 				float topY = max(dD.vertices[f.vertices[0]].pos.y, max(dD.vertices[f.vertices[1]].pos.y, dD.vertices[f.vertices[2]].pos.y));
+				float midZ = (z[0] + z[1]) / 2.f;
 
 				TR::Level::FloorInfo info;
-				getFloorInfo(level->entities[i].room, vec3(roomD.info.x + dD.vertices[f.vertices[0]].pos.x + 1, topY, roomD.info.z + dD.vertices[f.vertices[0]].pos.z - 1), info);
+				getFloorInfo(getRoomIndex(), vec3(room.info.x + midX, topY, room.info.z + midZ), info);
 				bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
 
 				ADD_FACE(surfaces, surface_ind, roomD, dD, f, slippery);
@@ -1334,10 +1344,20 @@ struct Mario : Lara
 			TR::Face &f = d.faces[i];
 			if (f.water) continue;
 
+			int16 x[2] = {d.vertices[f.vertices[0]].pos.x, 0};
+			int16 z[2] = {d.vertices[f.vertices[0]].pos.z, 0};
+			for (int j=1; j<3; j++)
+			{
+				if (x[0] != d.vertices[f.vertices[j]].pos.x) x[1] = d.vertices[f.vertices[j]].pos.x;
+				if (z[0] != d.vertices[f.vertices[j]].pos.z) z[1] = d.vertices[f.vertices[j]].pos.z;
+			}
+
+			float midX = (x[0] + x[1]) / 2.f;
 			float topY = max(d.vertices[f.vertices[0]].pos.y, max(d.vertices[f.vertices[1]].pos.y, d.vertices[f.vertices[2]].pos.y));
+			float midZ = (z[0] + z[1]) / 2.f;
 
 			TR::Level::FloorInfo info;
-			getFloorInfo(getRoomIndex(), vec3(room.info.x + d.vertices[f.vertices[0]].pos.x + 1, topY, room.info.z + d.vertices[f.vertices[0]].pos.z - 1), info);
+			getFloorInfo(getRoomIndex(), vec3(room.info.x + midX, topY, room.info.z + midZ), info);
 			bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
 
 			ADD_FACE(surfaces, surface_ind, room, d, f, slippery);
