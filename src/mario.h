@@ -54,6 +54,7 @@ struct Mario : Lara
 	float lastGeom[9 * SM64_GEO_MAX_TRIANGLES], currGeom[9 * SM64_GEO_MAX_TRIANGLES];
 
 	int customTimer;
+	bool reverseAnim;
 	float marioTicks;
 	bool postInit;
 	struct MarioControllerObj objs[4096];
@@ -64,10 +65,13 @@ struct Mario : Lara
 	Block* movingBlock; // hack
 	Character* bowserSwing; // hack
 
+	int switchSnd[3];
+
 	Mario(IGame *game, int entity) : Lara(game, entity)
 	{
 		isMario = true;
 		postInit = false;
+		reverseAnim = false;
 		marioId = -1;
 		marioTicks = 0;
 		objCount = 0;
@@ -104,6 +108,10 @@ struct Mario : Lara
 		lastPos[0] = currPos[0] = pos.x;
 		lastPos[1] = currPos[1] = -pos.y;
 		lastPos[2] = currPos[2] = -pos.z;
+
+		switchSnd[0] = 38; // normal switch
+		switchSnd[1] = 61; // underwater switch
+		switchSnd[2] = 25; // button
 
 		animation.setAnim(ANIM_STAND);
 
@@ -722,6 +730,11 @@ struct Mario : Lara
 							default : animIndex = -1;
 						}
 
+						if (stand != STAND_UNDERWATER)
+						{
+							sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
+							if (actionState == STATE_SWITCH_DOWN && controller->getEntity().type == TR::Entity::SWITCH) reverseAnim = true;
+						}
 						state = actionState;
 						controller->activate();
 					}
@@ -1007,6 +1020,29 @@ struct Mario : Lara
 				}
 				else angleVel = fabs(marioState.angleVel[1]);
 
+				break;
+
+			case STATE_SWITCH_DOWN:
+				if (marioState.action == 0x0000132F && reverseAnim) // ACT_UNLOCKING_STAR_DOOR
+				{
+					if (customTimer == 0) customTimer++;
+					if (customTimer < 19) sm64_set_mario_anim_frame(marioId, 94);
+
+					if (marioAnim->animFrame == 92) game->playSound(switchSnd[0], pos, Sound::PAN);
+					else if (marioAnim->animFrame == 68)
+					{
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						reverseAnim = false;
+						customTimer = 0;
+					}
+				}
+				break;
+
+			case STATE_SWITCH_UP:
+				if (marioAnim->animFrame == 80)
+					game->playSound(switchSnd[0], pos, Sound::PAN);
+				else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+					sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
 				break;
 
 			case STATE_MIDAS_USE:
@@ -1544,6 +1580,13 @@ struct Mario : Lara
 				while (marioTicks > 1./30)
 				{
 					if (customTimer) customTimer++;
+					if (reverseAnim)
+					{
+						int16_t rot[3];
+						struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
+						sm64_set_mario_anim_frame(marioId, marioAnim->animFrame-2);
+						if (marioAnim->animFrame <= 0) reverseAnim = false;
+					}
 
 					for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
 					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
