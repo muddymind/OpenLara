@@ -1003,7 +1003,7 @@ struct Mario : Lara
 		int16_t rot[3];
 		struct SM64AnimInfo *marioAnim = sm64_mario_get_anim_info(marioId, rot);
 		if (!marioAnim || !marioAnim->curAnim) return;
-		//if (marioState.action) printf("%d %x %d %d\n", state, marioState.action, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1);
+		//if (marioState.action) printf("%d %x %d %d %d %s\n", state, marioState.action, marioAnim->animFrame, marioAnim->curAnim->loopEnd-1, customTimer, reverseAnim?"true":"false");
 
 		switch (state)
 		{
@@ -1032,10 +1032,11 @@ struct Mario : Lara
 				break;
 
 			case STATE_SWITCH_DOWN:
-				if (switchInteraction == TR::Entity::SWITCH_BUTTON && reverseAnim)
+				if (switchInteraction == TR::Entity::SWITCH_BUTTON)
 				{
 					if (!switchSndPlayed)
 					{
+						if (!reverseAnim) reverseAnim = true;
 						if (customTimer == 0) customTimer++;
 						if (customTimer < 8) sm64_set_mario_anim_frame(marioId, 94);
 					}
@@ -1052,10 +1053,14 @@ struct Mario : Lara
 						customTimer = 0;
 					}
 				}
-				else if (marioState.action == 0x0000132F && reverseAnim) // ACT_UNLOCKING_STAR_DOOR
+				else if (marioState.action == 0x0000132F) // ACT_UNLOCKING_STAR_DOOR
 				{
-					if (customTimer == 0) customTimer++;
-					if (customTimer < 19) sm64_set_mario_anim_frame(marioId, 94);
+					if (!switchSndPlayed)
+					{
+						if (!reverseAnim) reverseAnim = true;
+						if (customTimer == 0) customTimer++;
+						if (customTimer < 19) sm64_set_mario_anim_frame(marioId, 94);
+					}
 
 					if (marioAnim->animFrame == 92 && !switchSndPlayed)
 					{
@@ -1084,10 +1089,11 @@ struct Mario : Lara
 				break;
 
 			case STATE_SWITCH_UP:
-				if (switchInteraction == TR::Entity::SWITCH_BUTTON && reverseAnim)
+				if (switchInteraction == TR::Entity::SWITCH_BUTTON)
 				{
 					if (!switchSndPlayed)
 					{
+						if (!reverseAnim) reverseAnim = true;
 						if (customTimer == 0) customTimer++;
 						if (customTimer < 8) sm64_set_mario_anim_frame(marioId, 94);
 					}
