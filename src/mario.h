@@ -68,6 +68,7 @@ struct Mario : Lara
 	Character* bowserSwing; // hack
 
 	int switchSnd[3];
+	bool switchSndPlayed;
 
 	Mario(IGame *game, int entity) : Lara(game, entity)
 	{
@@ -116,6 +117,7 @@ struct Mario : Lara
 		switchSnd[0] = 38; // normal switch
 		switchSnd[1] = 61; // underwater switch
 		switchSnd[2] = 25; // button
+		switchSndPlayed = false;
 
 		animation.setAnim(ANIM_STAND);
 
@@ -737,9 +739,10 @@ struct Mario : Lara
 						if (stand != STAND_UNDERWATER)
 						{
 							sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
-							if (actionState == STATE_SWITCH_DOWN && controller->getEntity().type == TR::Entity::SWITCH) reverseAnim = true;
+							if ((actionState == STATE_SWITCH_DOWN && controller->getEntity().type == TR::Entity::SWITCH) || controller->getEntity().type == TR::Entity::SWITCH_BUTTON) reverseAnim = true;
 						}
 						state = actionState;
+						switchSndPlayed = false;
 						switchInteraction = controller->getEntity().type;
 						controller->activate();
 					}
@@ -1029,19 +1032,36 @@ struct Mario : Lara
 				break;
 
 			case STATE_SWITCH_DOWN:
-				if (switchInteraction == TR::Entity::SWITCH_BUTTON)
+				if (switchInteraction == TR::Entity::SWITCH_BUTTON && reverseAnim)
 				{
-					if (marioAnim->animFrame == 80)
+					if (!switchSndPlayed)
+					{
+						if (customTimer == 0) customTimer++;
+						if (customTimer < 8) sm64_set_mario_anim_frame(marioId, 94);
+					}
+
+					if (marioAnim->animFrame == 80 && !switchSndPlayed)
+					{
 						game->playSound(switchSnd[2], pos, Sound::PAN);
-					else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+						switchSndPlayed = true;
+					}
+					else if (marioAnim->animFrame == 61)
+					{
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						reverseAnim = false;
+						customTimer = 0;
+					}
 				}
 				else if (marioState.action == 0x0000132F && reverseAnim) // ACT_UNLOCKING_STAR_DOOR
 				{
 					if (customTimer == 0) customTimer++;
 					if (customTimer < 19) sm64_set_mario_anim_frame(marioId, 94);
 
-					if (marioAnim->animFrame == 92) game->playSound(switchSnd[0], pos, Sound::PAN);
+					if (marioAnim->animFrame == 92 && !switchSndPlayed)
+					{
+						game->playSound(switchSnd[0], pos, Sound::PAN);
+						switchSndPlayed = true;
+					}
 					else if (marioAnim->animFrame == 68)
 					{
 						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
@@ -1052,9 +1072,10 @@ struct Mario : Lara
 				else if (stand == STAND_UNDERWATER)
 				{
 					if (customTimer == 0) customTimer++;
-					else if (customTimer == 62)
+					else if (customTimer == 62 && !switchSndPlayed)
 					{
 						game->playSound(switchSnd[1], pos, Sound::PAN);
+						switchSndPlayed = true;
 						sm64_set_mario_action(marioId, 0x300024E1); // ACT_WATER_PUNCH
 					}
 					sm64_set_mario_velocity(marioId, 0, 0, 0);
@@ -1063,10 +1084,36 @@ struct Mario : Lara
 				break;
 
 			case STATE_SWITCH_UP:
-				if (marioAnim->animFrame == 80)
-					game->playSound((switchInteraction == TR::Entity::SWITCH_BUTTON) ? switchSnd[2] : switchSnd[0], pos, Sound::PAN);
-				else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
-					sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+				if (switchInteraction == TR::Entity::SWITCH_BUTTON && reverseAnim)
+				{
+					if (!switchSndPlayed)
+					{
+						if (customTimer == 0) customTimer++;
+						if (customTimer < 8) sm64_set_mario_anim_frame(marioId, 94);
+					}
+
+					if (marioAnim->animFrame == 80 && !switchSndPlayed)
+					{
+						game->playSound(switchSnd[2], pos, Sound::PAN);
+						switchSndPlayed = true;
+					}
+					else if (marioAnim->animFrame == 61)
+					{
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						reverseAnim = false;
+						customTimer = 0;
+					}
+				}
+				else if (switchInteraction != TR::Entity::SWITCH_BUTTON)
+				{
+					if (marioAnim->animFrame == 80 && !switchSndPlayed)
+					{
+						game->playSound((switchInteraction == TR::Entity::SWITCH_BUTTON) ? switchSnd[2] : switchSnd[0], pos, Sound::PAN);
+						switchSndPlayed = true;
+					}
+					else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+				}
 				break;
 
 			case STATE_MIDAS_USE:
