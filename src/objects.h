@@ -47,6 +47,13 @@ struct Switch : Controller {
             timer = 0.0f;
         }
     }
+
+    virtual void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
+    {
+        if (getEntity().type != TR::Entity::SWITCH_WATER) pos.y += 128;
+        Controller::render(frustum, mesh, type, caustics);
+        if (getEntity().type != TR::Entity::SWITCH_WATER) pos.y -= 128;
+    }
 };
 
 struct Gear : Controller {
