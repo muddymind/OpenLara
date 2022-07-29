@@ -54,6 +54,7 @@ struct Mario : Lara
 	float lastGeom[9 * SM64_GEO_MAX_TRIANGLES], currGeom[9 * SM64_GEO_MAX_TRIANGLES];
 
 	int customTimer;
+	int switchInteraction;
 	int marioWaterLevel;
 	bool reverseAnim;
 	float marioTicks;
@@ -81,6 +82,7 @@ struct Mario : Lara
 		bowserAngle = 0;
 		customTimer = 0;
 		marioWaterLevel = 0;
+		switchInteraction = 0;
 
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 		{
@@ -738,6 +740,7 @@ struct Mario : Lara
 							if (actionState == STATE_SWITCH_DOWN && controller->getEntity().type == TR::Entity::SWITCH) reverseAnim = true;
 						}
 						state = actionState;
+						switchInteraction = controller->getEntity().type;
 						controller->activate();
 					}
 				}
@@ -1026,7 +1029,14 @@ struct Mario : Lara
 				break;
 
 			case STATE_SWITCH_DOWN:
-				if (marioState.action == 0x0000132F && reverseAnim) // ACT_UNLOCKING_STAR_DOOR
+				if (switchInteraction == TR::Entity::SWITCH_BUTTON)
+				{
+					if (marioAnim->animFrame == 80)
+						game->playSound(switchSnd[2], pos, Sound::PAN);
+					else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
+						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+				}
+				else if (marioState.action == 0x0000132F && reverseAnim) // ACT_UNLOCKING_STAR_DOOR
 				{
 					if (customTimer == 0) customTimer++;
 					if (customTimer < 19) sm64_set_mario_anim_frame(marioId, 94);
@@ -1054,7 +1064,7 @@ struct Mario : Lara
 
 			case STATE_SWITCH_UP:
 				if (marioAnim->animFrame == 80)
-					game->playSound(switchSnd[0], pos, Sound::PAN);
+					game->playSound((switchInteraction == TR::Entity::SWITCH_BUTTON) ? switchSnd[2] : switchSnd[0], pos, Sound::PAN);
 				else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
 					sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
 				break;
