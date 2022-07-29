@@ -1038,7 +1038,7 @@ struct Mario : Lara
 					{
 						if (!reverseAnim) reverseAnim = true;
 						if (customTimer == 0) customTimer++;
-						if (customTimer < 8) sm64_set_mario_anim_frame(marioId, 94);
+						if (customTimer < 15) sm64_set_mario_anim_frame(marioId, 94);
 					}
 
 					if (marioAnim->animFrame == 80 && !switchSndPlayed)
@@ -1095,7 +1095,7 @@ struct Mario : Lara
 					{
 						if (!reverseAnim) reverseAnim = true;
 						if (customTimer == 0) customTimer++;
-						if (customTimer < 8) sm64_set_mario_anim_frame(marioId, 94);
+						if (customTimer < 15) sm64_set_mario_anim_frame(marioId, 94);
 					}
 
 					if (marioAnim->animFrame == 80 && !switchSndPlayed)
