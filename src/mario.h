@@ -54,6 +54,7 @@ struct Mario : Lara
 	float lastGeom[9 * SM64_GEO_MAX_TRIANGLES], currGeom[9 * SM64_GEO_MAX_TRIANGLES];
 
 	int customTimer;
+	int marioWaterLevel;
 	bool reverseAnim;
 	float marioTicks;
 	bool postInit;
@@ -79,6 +80,7 @@ struct Mario : Lara
 		bowserSwing = NULL;
 		bowserAngle = 0;
 		customTimer = 0;
+		marioWaterLevel = 0;
 
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 		{
@@ -745,6 +747,7 @@ struct Mario : Lara
 
 				switchIsDown = controller->state == Switch::STATE_DOWN;
 				state = STATE_STOP;
+				customTimer = 0;
 				break;
 			}
 
@@ -1036,6 +1039,17 @@ struct Mario : Lara
 						customTimer = 0;
 					}
 				}
+				else if (stand == STAND_UNDERWATER)
+				{
+					if (customTimer == 0) customTimer++;
+					else if (customTimer == 62)
+					{
+						game->playSound(switchSnd[1], pos, Sound::PAN);
+						sm64_set_mario_action(marioId, 0x300024E1); // ACT_WATER_PUNCH
+					}
+					sm64_set_mario_velocity(marioId, 0, 0, 0);
+					if (marioState.action != 0x300024E1) sm64_add_mario_position(marioId, 0, ((marioWaterLevel - 80) - (marioState.position[1]/MARIO_SCALE) < 400.0f) ? -0.625f : 1, 0);
+				}
 				break;
 
 			case STATE_SWITCH_UP:
@@ -1232,7 +1246,8 @@ struct Mario : Lara
 
 		if (marioId >= 0)
 		{
-			sm64_set_mario_water_level(marioId, (room.flags.water || dozy) ? ((room.waterLevelSurface != TR::NO_WATER) ? -room.waterLevelSurface/IMARIO_SCALE : 32767) : -32768);
+			marioWaterLevel = (room.flags.water || dozy) ? ((room.waterLevelSurface != TR::NO_WATER) ? -room.waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
+			sm64_set_mario_water_level(marioId, marioWaterLevel);
 			/*if (room.waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -room.waterLevelSurface/IMARIO_SCALE);
 			else if (room.flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
 			else sm64_set_mario_water_level(marioId, -32768);*/
