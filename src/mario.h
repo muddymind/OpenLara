@@ -450,6 +450,13 @@ struct Mario : Lara
 			return input;
 		}
 
+		if (!camera->spectator)
+		{
+			Input::Joystick &joy = Input::joy[Core::settings.controls[pid].joyIndex];
+			marioInputs.stickX = fabsf(joy.L.x) > INPUT_JOY_DZ_STICK/2.f ? joy.L.x : 0;
+			marioInputs.stickY = fabsf(joy.L.y) > INPUT_JOY_DZ_STICK/2.f ? joy.L.y : 0;
+		}
+
 		float dir;
 		float spd = 0;
 		if (Input::state[pid][cUp] && Input::state[pid][cRight])
@@ -513,12 +520,12 @@ struct Mario : Lara
 		marioInputs.buttonA = canMove && Input::state[pid][cJump];
 		marioInputs.buttonB = canMove && Input::state[pid][cAction];
 		marioInputs.buttonZ = canMove && Input::state[pid][cDuck];
-		marioInputs.stickX = canMove && spd ? spd * cosf(dir) : 0;
-		marioInputs.stickY = canMove && spd ? spd * sinf(dir) : 0;
+		if (!marioInputs.stickX) marioInputs.stickX = canMove && spd ? spd * cosf(dir) : 0;
+		if (!marioInputs.stickY) marioInputs.stickY = canMove && spd ? spd * sinf(dir) : 0;
 
-        if (Input::state[pid][cUp])        input |= FORTH;
-        if (Input::state[pid][cDown])      input |= BACK;
-        if (Input::state[pid][cAction])    input |= ACTION;
+		if (Input::state[pid][cUp])        input |= FORTH;
+		if (Input::state[pid][cDown])      input |= BACK;
+		if (Input::state[pid][cAction])    input |= ACTION;
 
 		return input;
 	}
