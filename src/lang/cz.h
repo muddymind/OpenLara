@@ -87,7 +87,7 @@ const char *STR_CZ[] = { ""
     , "Vibrace"
     , "Auto-zm{ena c)ile"
     , "Multi-m)i{ren)i"
-    , "Character" // need translation!
+    , "Postava" // thanks Raina Audron
     , "Mario"
     , "Lara"
     // controls
