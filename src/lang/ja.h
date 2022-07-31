@@ -90,9 +90,10 @@ const char *STR_JA[] = { "日本語"
     , "バイブレーション"
     , "リターゲティング"
     , "マルチエイミング"
-    , "Character" // need translation!
-    , "Mario"
-    , "Lara"
+	// mario and lara selection. thanks Eringo
+    , "キャラクター"
+    , "マリオ"
+    , "ララ"
     // controls
     , "左", "右", "上", "下", "ジャンプ", "歩く", "アクション", "銃を抜く", "見る", "しゃがむ", "ダッシュ", "転がる", "持ち物を見る", "スタート"
     , STR_KEYS
