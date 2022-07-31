@@ -87,7 +87,7 @@ const char *STR_PL[] = { ""
     , "Wibracje"
     , "Auto. zmiana celu"
     , "Wielo-celowanie"
-    , "Character" // need translation!
+    , "Posta)c" // thanks Sezz
     , "Mario"
     , "Lara"
     // controls
