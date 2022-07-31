@@ -625,6 +625,7 @@ struct Block : Controller {
         to = p;
         transition = 0;
         marioAnim = true;
+        game->playSound(63, pos, Sound::PAN);
         updateFloor(false);
         activate();
         return true;
