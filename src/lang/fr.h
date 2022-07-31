@@ -87,7 +87,7 @@ const char *STR_FR[] = { ""
     , "Vibration"
     , "Reciblage"
     , "Multi-vis)ee"
-    , "Character" // need translation!
+    , "Personnage" // thanks CamilleLRR
     , "Mario"
     , "Lara"
     // controls
