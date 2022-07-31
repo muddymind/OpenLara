@@ -436,6 +436,7 @@ namespace Core {
             uint8  vibration;
             uint8  retarget;
             uint8  multiaim;
+            uint8  character; // mario or lara
             KeySet keys[cMAX];
         } controls[2];
 
@@ -981,6 +982,7 @@ namespace Core {
             ctrl.vibration = true;
             ctrl.retarget  = true;
             ctrl.multiaim  = true;
+            ctrl.character = 0; // mario
 
             ctrl.keys[ cLeft      ] = KeySet( ikLeft,   jkLeft   );
             ctrl.keys[ cRight     ] = KeySet( ikRight,  jkRight  );
@@ -1005,6 +1007,7 @@ namespace Core {
             ctrl.vibration = true;
             ctrl.retarget  = true;
             ctrl.multiaim  = true;
+            ctrl.character = 1; // lara
 
             ctrl.keys[ cLeft      ] = KeySet( ikNone,   jkLeft   );
             ctrl.keys[ cRight     ] = KeySet( ikNone,   jkRight  );

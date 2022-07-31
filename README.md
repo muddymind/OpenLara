@@ -32,7 +32,7 @@ Final quality of life improvements:
 - [x] Fix Mario's collisions with static meshes
 - [ ] Fix Mario being teleported below the map when jumping on an enemy (sometimes)
 - [x] Allow moving Mario with analog stick/joystick
-- [ ] Add an option for each player to switch between Mario and Lara
+- [x] Add an option for each player to switch between Mario and Lara
 
 And some more I will remember later on...
 

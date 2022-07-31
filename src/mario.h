@@ -105,7 +105,7 @@ struct Mario : Lara
 		TRmarioMesh = new Mesh((Index*)marioRenderState.mario.index, marioRenderState.mario.num_vertices, NULL, 0, 1, true, true);
 		TRmarioMesh->initMario(&marioGeometry);
 
-		marioUpdateRoom(TR::NO_ROOM);
+		if (!game->getLara(0)) marioUpdateRoom(TR::NO_ROOM);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
@@ -141,6 +141,15 @@ struct Mario : Lara
 			sm64_stop_background_music(i);
 
 		if (marioId != -1) sm64_mario_delete(marioId);
+	}
+
+	virtual void reset(int room, const vec3 &pos, float angle, Stand forceStand = STAND_GROUND)
+	{
+		Lara::reset(room, pos, angle, forceStand);
+
+		if (marioId != -1) sm64_mario_delete(marioId);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
+		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
 	}
 
 	void postInitMario()
@@ -1311,11 +1320,11 @@ struct Mario : Lara
 
 	void marioUpdateRoom(int oldRoom)
 	{
-		TR::Room &room = getRoom();
+		TR::Room &waterRoom = getRoom();
 
 		if (marioId >= 0)
 		{
-			marioWaterLevel = (room.flags.water || dozy) ? ((room.waterLevelSurface != TR::NO_WATER) ? -room.waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
+			marioWaterLevel = (waterRoom.flags.water || dozy) ? ((waterRoom.waterLevelSurface != TR::NO_WATER) ? -waterRoom.waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
 			sm64_set_mario_water_level(marioId, marioWaterLevel);
 			/*if (room.waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -room.waterLevelSurface/IMARIO_SCALE);
 			else if (room.flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
@@ -1346,85 +1355,81 @@ struct Mario : Lara
 			COUNT_ROOM_SECTORS(level, surfaces_count, roomD);
 		}
 
-		// get meshes from this room
-		TR::Room::Data &d = room.data;
-		for (int i = 0; i < d.fCount; i++)
+		// for all marios
+		for (int M=0; M<2; M++)
 		{
-			TR::Face &f = d.faces[i];
-			if (f.water) continue;
+			if (M > 0 && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
 
-			surfaces_count += (f.triangle) ? 1 : 2;
-		}
+			TR::Room &room = (M == marioId || marioId == -1) ? waterRoom : game->getLara(M)->getRoom();
 
-		COUNT_ROOM_SECTORS(level, surfaces_count, room);
-
-		// get meshes from this room's portals to adjacent rooms
-			/*
-		for (int i = 0; i < room.portalsCount; i++)
-		{
-			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
-			TR::Room::Data &d2 = room2.data;
-
-			for (int j = 0; j < d2.fCount; j++)
+			// get meshes from this room
+			TR::Room::Data &d = room.data;
+			for (int i = 0; i < d.fCount; i++)
 			{
-				TR::Face &f = d2.faces[j];
+				TR::Face &f = d.faces[i];
 				if (f.water) continue;
 
 				surfaces_count += (f.triangle) ? 1 : 2;
 			}
 
-			COUNT_ROOM_SECTORS(level, surfaces_count, room2);
+			COUNT_ROOM_SECTORS(level, surfaces_count, room);
 
-			for (int j = 0; j < room2.portalsCount; j++)
+			// get meshes from this room's portals to adjacent rooms
+			/*
+			for (int i = 0; i < room.portalsCount; i++)
 			{
-				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
-				TR::Room &room3 = level->rooms[room2.portals[j].roomIndex];
-				TR::Room::Data &d3 = room3.data;
+				TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+				TR::Room::Data &d2 = room2.data;
 
-				for (int k = 0; k < d3.fCount; k++)
+				for (int j = 0; j < d2.fCount; j++)
 				{
-					TR::Face &f = d3.faces[k];
+					TR::Face &f = d2.faces[j];
 					if (f.water) continue;
 
 					surfaces_count += (f.triangle) ? 1 : 2;
 				}
 
-				COUNT_ROOM_SECTORS(level, surfaces_count, room3);
+				COUNT_ROOM_SECTORS(level, surfaces_count, room2);
 
-				for (int k = 0; k < room3.portalsCount; k++)
+				for (int j = 0; j < room2.portalsCount; j++)
 				{
-					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
-					TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
-					TR::Room::Data &d4 = room4.data;
+					if (room2.portals[j].roomIndex == getRoomIndex()) continue;
+					TR::Room &room3 = level->rooms[room2.portals[j].roomIndex];
+					TR::Room::Data &d3 = room3.data;
 
-					for (int l = 0; l < d4.fCount; l++)
+					for (int k = 0; k < d3.fCount; k++)
 					{
-						TR::Face &f = d4.faces[l];
+						TR::Face &f = d3.faces[k];
 						if (f.water) continue;
 
 						surfaces_count += (f.triangle) ? 1 : 2;
 					}
+
+					COUNT_ROOM_SECTORS(level, surfaces_count, room3);
+
+					for (int k = 0; k < room3.portalsCount; k++)
+					{
+						if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
+						TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
+						TR::Room::Data &d4 = room4.data;
+
+						for (int l = 0; l < d4.fCount; l++)
+						{
+							TR::Face &f = d4.faces[l];
+							if (f.water) continue;
+
+							surfaces_count += (f.triangle) ? 1 : 2;
+						}
+					}
 				}
 			}
-		}
 			*/
 
-		// HACK: create a big floor surface so that mario doesn't hit invisible walls
-		surfaces_count += 2;
-		vec3 center = room.getCenter();
+			// HACK: create a big floor surface so that mario doesn't hit invisible walls
+			surfaces_count += 2;
+		}
 
 		struct SM64Surface surfaces[surfaces_count];
-
-		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-			{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
-			{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
-			{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
-		}};
-		surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-			{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
-			{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
-			{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
-		}};
 
 		for (int i=0; i<level->entitiesCount; i++)
 		{
@@ -1450,7 +1455,7 @@ struct Mario : Lara
 				float midZ = (z[0] + z[1]) / 2.f;
 
 				TR::Level::FloorInfo info;
-				getFloorInfo(getRoomIndex(), vec3(room.info.x + midX, topY, room.info.z + midZ), info);
+				getFloorInfo(level->entities[i].room, vec3(roomD.info.x + midX, topY, roomD.info.z + midZ), info);
 				bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
 
 				ADD_FACE(surfaces, surface_ind, roomD, dD, f, slippery);
@@ -1459,114 +1464,134 @@ struct Mario : Lara
 			ADD_ROOM_SECTORS(level, surfaces, surface_ind, roomD);
 		}
 
-		for (int i = 0; i < d.fCount; i++)
+		for (int M=0; M<2; M++)
 		{
-			TR::Face &f = d.faces[i];
-			if (f.water) continue;
+			if (M > 0 && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
 
-			int16 x[2] = {d.vertices[f.vertices[0]].pos.x, 0};
-			int16 z[2] = {d.vertices[f.vertices[0]].pos.z, 0};
-			for (int j=1; j<3; j++)
+			TR::Room &room = (M == marioId || marioId == -1) ? waterRoom : game->getLara(M)->getRoom();
+			TR::Room::Data &d = room.data;
+
+			for (int i = 0; i < d.fCount; i++)
 			{
-				if (x[0] != d.vertices[f.vertices[j]].pos.x) x[1] = d.vertices[f.vertices[j]].pos.x;
-				if (z[0] != d.vertices[f.vertices[j]].pos.z) z[1] = d.vertices[f.vertices[j]].pos.z;
-			}
-
-			float midX = (x[0] + x[1]) / 2.f;
-			float topY = max(d.vertices[f.vertices[0]].pos.y, max(d.vertices[f.vertices[1]].pos.y, d.vertices[f.vertices[2]].pos.y));
-			float midZ = (z[0] + z[1]) / 2.f;
-
-			TR::Level::FloorInfo info;
-			getFloorInfo(getRoomIndex(), vec3(room.info.x + midX, topY, room.info.z + midZ), info);
-			bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
-
-			ADD_FACE(surfaces, surface_ind, room, d, f, slippery);
-		}
-
-		ADD_ROOM_SECTORS(level, surfaces, surface_ind, room);
-
-		/*
-		for (int i=0; i<room.portalsCount; i++)
-		{
-			vec3 portalCenter = room.portals[i].getCenter();
-			printf("room %d, your pos %.2f %.2f %.2f, portal %d: %.2f %.2f %.2f\n", getRoomIndex(), pos.x, pos.y, pos.z, room.portals[i].roomIndex, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
-
-			int sx = portalCenter.x/1024;
-			int sz = portalCenter.z/1024;
-
-			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
-			//printf("%d %d - %d %d\n", sx, sz, room2.xSectors, room2.zSectors);
-
-			TR::Room::Data &d2 = room2.data;
-
-			int addFaces[d2.fCount] = {-1};
-			int addFaceInd = 0;
-
-			for (int j = 0; j < d2.fCount; j++)
-			{
-				TR::Face &f = d2.faces[j];
-				int vertices = (f.triangle) ? 3 : 4;
-				if (d2.vertices[f.vertices[0]].pos.y == portalCenter.y + room.portals[i].getSize().y &&
-					(room2.info.x + d2.vertices[f.vertices[0]].pos.x) - (room.info.x + portalCenter.x) == 512 &&
-					((room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == -1023 || (room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == 0)
-					)
-				{
-					printf("face %d: %.2f %.2f %.2f - ", j, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
-					for (int k=0; k<vertices; k++)
-						printf("%d %d %d%s", room2.info.x + d2.vertices[f.vertices[k]].pos.x, d2.vertices[f.vertices[k]].pos.y, room2.info.z + d2.vertices[f.vertices[k]].pos.z, (k==vertices-1) ? "\n" : " - ");
-				}
-			}
-		}*/
-
-			/*
-		for (int i = 0; i < room.portalsCount; i++)
-		{
-			TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
-			TR::Room::Data &d2 = room2.data;
-
-			for (int j = 0; j < d2.fCount; j++)
-			{
-				TR::Face &f = d2.faces[j];
+				TR::Face &f = d.faces[i];
 				if (f.water) continue;
 
-				ADD_FACE(surfaces, surface_ind, room2, d2, f);
-			}
-
-			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
-
-			for (int j = 0; j < room2.portalsCount; j++)
-			{
-				if (room2.portals[j].roomIndex == getRoomIndex()) continue;
-				TR::Room &room3 = level->rooms[room2.portals[j].roomIndex];
-				TR::Room::Data &d3 = room3.data;
-
-				for (int k = 0; k < d3.fCount; k++)
+				int16 x[2] = {d.vertices[f.vertices[0]].pos.x, 0};
+				int16 z[2] = {d.vertices[f.vertices[0]].pos.z, 0};
+				for (int j=1; j<3; j++)
 				{
-					TR::Face &f = d3.faces[k];
-					if (f.water) continue;
-
-					ADD_FACE(surfaces, surface_ind, room3, d3, f);
+					if (x[0] != d.vertices[f.vertices[j]].pos.x) x[1] = d.vertices[f.vertices[j]].pos.x;
+					if (z[0] != d.vertices[f.vertices[j]].pos.z) z[1] = d.vertices[f.vertices[j]].pos.z;
 				}
 
-				ADD_ROOM_SECTORS(level, surfaces, surface_ind, room3);
+				float midX = (x[0] + x[1]) / 2.f;
+				float topY = max(d.vertices[f.vertices[0]].pos.y, max(d.vertices[f.vertices[1]].pos.y, d.vertices[f.vertices[2]].pos.y));
+				float midZ = (z[0] + z[1]) / 2.f;
 
-				for (int k = 0; k < room3.portalsCount; k++)
+				TR::Level::FloorInfo info;
+				getFloorInfo(getRoomIndex(), vec3(room.info.x + midX, topY, room.info.z + midZ), info);
+				bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
+
+				ADD_FACE(surfaces, surface_ind, room, d, f, slippery);
+			}
+
+			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room);
+
+			/*
+			for (int i=0; i<room.portalsCount; i++)
+			{
+				vec3 portalCenter = room.portals[i].getCenter();
+				printf("room %d, your pos %.2f %.2f %.2f, portal %d: %.2f %.2f %.2f\n", getRoomIndex(), pos.x, pos.y, pos.z, room.portals[i].roomIndex, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
+
+				int sx = portalCenter.x/1024;
+				int sz = portalCenter.z/1024;
+
+				TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+				//printf("%d %d - %d %d\n", sx, sz, room2.xSectors, room2.zSectors);
+
+				TR::Room::Data &d2 = room2.data;
+
+				int addFaces[d2.fCount] = {-1};
+				int addFaceInd = 0;
+
+				for (int j = 0; j < d2.fCount; j++)
 				{
-					if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
-					TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
-					TR::Room::Data &d4 = room4.data;
-
-					for (int l = 0; l < d4.fCount; l++)
+					TR::Face &f = d2.faces[j];
+					int vertices = (f.triangle) ? 3 : 4;
+					if (d2.vertices[f.vertices[0]].pos.y == portalCenter.y + room.portals[i].getSize().y &&
+						(room2.info.x + d2.vertices[f.vertices[0]].pos.x) - (room.info.x + portalCenter.x) == 512 &&
+						((room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == -1023 || (room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == 0)
+						)
 					{
-						TR::Face &f = d4.faces[l];
+						printf("face %d: %.2f %.2f %.2f - ", j, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
+						for (int k=0; k<vertices; k++)
+							printf("%d %d %d%s", room2.info.x + d2.vertices[f.vertices[k]].pos.x, d2.vertices[f.vertices[k]].pos.y, room2.info.z + d2.vertices[f.vertices[k]].pos.z, (k==vertices-1) ? "\n" : " - ");
+					}
+				}
+			}*/
+
+			/*
+			for (int i = 0; i < room.portalsCount; i++)
+			{
+				TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
+				TR::Room::Data &d2 = room2.data;
+
+				for (int j = 0; j < d2.fCount; j++)
+				{
+					TR::Face &f = d2.faces[j];
+					if (f.water) continue;
+
+					ADD_FACE(surfaces, surface_ind, room2, d2, f);
+				}
+
+				ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
+
+				for (int j = 0; j < room2.portalsCount; j++)
+				{
+					if (room2.portals[j].roomIndex == getRoomIndex()) continue;
+					TR::Room &room3 = level->rooms[room2.portals[j].roomIndex];
+					TR::Room::Data &d3 = room3.data;
+
+					for (int k = 0; k < d3.fCount; k++)
+					{
+						TR::Face &f = d3.faces[k];
 						if (f.water) continue;
 
-						ADD_FACE(surfaces, surface_ind, room4, d4, f);
+						ADD_FACE(surfaces, surface_ind, room3, d3, f);
+					}
+
+					ADD_ROOM_SECTORS(level, surfaces, surface_ind, room3);
+
+					for (int k = 0; k < room3.portalsCount; k++)
+					{
+						if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
+						TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
+						TR::Room::Data &d4 = room4.data;
+
+						for (int l = 0; l < d4.fCount; l++)
+						{
+							TR::Face &f = d4.faces[l];
+							if (f.water) continue;
+
+							ADD_FACE(surfaces, surface_ind, room4, d4, f);
+						}
 					}
 				}
 			}
-		}
 			*/
+
+			vec3 center = room.getCenter();
+			surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+				{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
+				{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
+				{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
+			}};
+			surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+				{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
+				{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
+				{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
+			}};
+		}
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
 	}

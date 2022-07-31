@@ -746,7 +746,7 @@ struct Lara : Character {
         return TR::NO_ROOM;
     }
 
-    void reset(int room, const vec3 &pos, float angle, Stand forceStand = STAND_GROUND) {
+    virtual void reset(int room, const vec3 &pos, float angle, Stand forceStand = STAND_GROUND) {
         statsDistDelta = 0.0f;
 
         visibleMask = 0xFFFFFFFF;

@@ -87,6 +87,9 @@ const char *STR_PL[] = { ""
     , "Wibracje"
     , "Auto. zmiana celu"
     , "Wielo-celowanie"
+    , "Character" // need translation!
+    , "Mario"
+    , "Lara"
     // controls
     , "Lewo", "Prawo", "Prz)od", "Ty}l", "Skok", "Ch)od", "Akcja", "Bro)n", "Rozgl|adanie si|e", "Kucanie", "Sprint", "Przewr)ot", "Ekwipunek", "Menu pauzy"
     , STR_KEYS

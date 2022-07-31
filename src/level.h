@@ -755,7 +755,7 @@ struct Level : IGame {
     }
 
 
-    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle) {
+    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle, bool mario=false) {
         int index;
         for (index = level.entitiesBaseCount; index < level.entitiesCount; index++) {
             TR::Entity &e = level.entities[index];
@@ -788,7 +788,7 @@ struct Level : IGame {
                     e.intensity = 0x1FFF - level.rooms[room].ambient;
             }
 
-        Controller *controller = initController(index);
+        Controller *controller = initController(index, mario);
         e.controller = controller;
 
         if (e.isEnemy() || e.isSprite()) {
@@ -1095,7 +1095,7 @@ struct Level : IGame {
     void initEntities() {
         for (int i = 0; i < level.entitiesBaseCount; i++) {
             TR::Entity &e = level.entities[i];
-            e.controller = initController(i);
+            e.controller = initController(i, (e.type == TR::Entity::LARA && Core::settings.controls[0].character == 0));
             if (e.type == TR::Entity::LARA || ((level.version & TR::VER_TR1) && e.type == TR::Entity::CUT_1))
                 players[0] = (Lara*)e.controller;
         }
@@ -1126,7 +1126,7 @@ struct Level : IGame {
         }
 
         if (!players[index]) {
-            players[index] = (Lara*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f);
+            players[index] = (Lara*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f, (Core::settings.controls[index].character == 0));
             players[index]->camera->cameraIndex = index;
             Sound::listenersCount = 2;
         } else if (index == 1) {
@@ -1155,12 +1155,12 @@ struct Level : IGame {
         players[index] = NULL;
     }
 
-    Controller* initController(int index) {
+    Controller* initController(int index, bool mario=false) {
         if (level.entities[index].type == TR::Entity::CUT_1 && (level.version & TR::VER_TR1))
             return new Lara(this, index);
 
         switch (level.entities[index].type) {
-            case TR::Entity::LARA                  : return (players[0]) ? new Lara(this, index) : new Mario(this, index);
+            case TR::Entity::LARA                  : return (mario) ? new Mario(this, index) : new Lara(this, index);
             case TR::Entity::ENEMY_DOPPELGANGER    : if (players[0]->isMario) return new MarioDoppelganger(this, index); return new Doppelganger(this, index);
             case TR::Entity::ENEMY_WOLF            : return new Wolf(this, index);
             case TR::Entity::ENEMY_BEAR            : return new Bear(this, index);

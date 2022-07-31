@@ -87,6 +87,9 @@ const char *STR_SV[] = { ""
     , "Vibration"
     , "Omniriktning"
     , "Multi-riktning"
+    , "Character" // need translation!
+    , "Mario"
+    , "Lara"
     // controls
     , "V~anster", "H~oger", "Spring", "Backa", "Hoppa", "G^a", "Action", "Dra Vapen", "Titta", "Ducka", "Rusa", "Rulla", "Lager", "Start"
     , STR_KEYS
