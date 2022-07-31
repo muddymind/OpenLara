@@ -87,7 +87,7 @@ const char *STR_PT[] = { ""
     , "Vibra|c+ao"
     , "Mudar Alvo"
     , "Alvo Duplo"
-    , "Character" // need translation!
+    , "Personagem" // thnks muddymind
     , "Mario"
     , "Lara"
     // controls
