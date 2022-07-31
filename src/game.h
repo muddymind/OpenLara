@@ -90,8 +90,8 @@ const char *METAL_MARIO_SHADER =
 GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, GLenum shaderType )
 {
     const GLchar *shaderDefine = shaderType == GL_VERTEX_SHADER 
-        ? "\n#version 120\n#define VERTEX  \n#define v2f out\n" 
-        : "\n#version 120\n#define FRAGMENT\n#define v2f in \n";
+        ? "\n#version 130\n#define VERTEX  \n#define v2f out\n" 
+        : "\n#version 130\n#define FRAGMENT\n#define v2f in \n";
 
     const GLchar *shaderStrings[2] = { shaderDefine, shaderContents };
     GLint shaderStringLengths[2] = { (GLint)strlen( shaderDefine ), (GLint)shaderContentsLength };
