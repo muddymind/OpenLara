@@ -87,7 +87,7 @@ const char *STR_FI[] = { "Suomi"
     , "V~arin~a"
     , "Uudelleent~aht~ays"
     , "Multi-T~aht~ays"
-    , "Character" // need translation!
+    , "Hahmo" // thanks Ligu
     , "Mario"
     , "Lara"
     // controls
