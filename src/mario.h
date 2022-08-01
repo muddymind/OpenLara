@@ -105,7 +105,7 @@ struct Mario : Lara
 		TRmarioMesh = new Mesh((Index*)marioRenderState.mario.index, marioRenderState.mario.num_vertices, NULL, 0, 1, true, true);
 		TRmarioMesh->initMario(&marioGeometry);
 
-		if (!game->getLara(0)) marioUpdateRoom(TR::NO_ROOM);
+		if (!game->getLara(0) || !game->getLara(0)->isMario) marioUpdateRoom(TR::NO_ROOM);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
 		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
@@ -1358,7 +1358,7 @@ struct Mario : Lara
 		// for all marios
 		for (int M=0; M<2; M++)
 		{
-			if (M > 0 && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
+			if (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
 
 			TR::Room &room = (M == marioId || marioId == -1) ? waterRoom : game->getLara(M)->getRoom();
 
@@ -1466,7 +1466,7 @@ struct Mario : Lara
 
 		for (int M=0; M<2; M++)
 		{
-			if (M > 0 && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
+			if (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
 
 			TR::Room &room = (M == marioId || marioId == -1) ? waterRoom : game->getLara(M)->getRoom();
 			TR::Room::Data &d = room.data;
