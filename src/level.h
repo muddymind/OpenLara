@@ -755,7 +755,51 @@ struct Level : IGame {
     }
 
 
-    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle, bool mario=false) {
+    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle) {
+        int index;
+        for (index = level.entitiesBaseCount; index < level.entitiesCount; index++) {
+            TR::Entity &e = level.entities[index];
+            if (!e.controller) {
+                e.type          = type;
+                e.room          = room;
+                e.x             = int(pos.x);
+                e.y             = int(pos.y);
+                e.z             = int(pos.z);
+                e.rotation      = TR::angle(normalizeAngle(angle));
+                e.intensity     = -1;
+                e.flags.value   = 0;
+                e.flags.smooth  = true;
+                e.modelIndex    = level.getModelIndex(e.type);
+                break;
+            }
+        }
+
+        if (index == level.entitiesCount)
+            return NULL;
+
+        TR::Entity &e = level.entities[index];
+        if (e.isPickup())
+            e.intensity = 4096;
+        else
+            if (e.isSprite()) {
+                if (e.type == TR::Entity::LAVA_PARTICLE || e.type == TR::Entity::FLAME)
+                    e.intensity = 0; // emissive
+                else
+                    e.intensity = 0x1FFF - level.rooms[room].ambient;
+            }
+
+        Controller *controller = initController(index);
+        e.controller = controller;
+
+        if (e.isEnemy() || e.isSprite()) {
+            controller->flags.active = TR::ACTIVE;
+            controller->activate();
+        }
+
+        return controller;
+    }
+
+    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle, bool mario) {
         int index;
         for (index = level.entitiesBaseCount; index < level.entitiesCount; index++) {
             TR::Entity &e = level.entities[index];
