@@ -1752,8 +1752,9 @@ struct Mario : Lara
 					int count = target->getSpheres(spheres);
 					for (int i=0; i<count; i++)
 					{
-						if (collide(spheres[i]) && (sm64_mario_attack(marioId, spheres[i].center.x, spheres[i].center.y, spheres[i].center.z, target->getBoundingBox().max.y - target->getBoundingBox().min.y) ||
-						    sm64_mario_attack(marioId, spheres[i].center.x, -spheres[i].center.y, -spheres[i].center.z, target->getBoundingBox().max.y - target->getBoundingBox().min.y)))
+						if (collide(spheres[i]) &&
+						    (sm64_mario_attack(marioId, spheres[i].center.x, spheres[i].center.y, -spheres[i].center.z, 0) ||
+						     sm64_mario_attack(marioId, spheres[i].center.x, -spheres[i].center.y, -spheres[i].center.z, 0)))
 						{
 							if (stand == STAND_GROUND && i == 0 && target->getEntity().type == TR::Entity::ENEMY_GIANT_MUTANT && (marioState.action == 0x00800457 || marioState.action == 0x0188088A || marioState.action == 0x00880456)) // ACT_MOVE_PUNCHING or ACT_DIVE or ACT_DIVE_SLIDE
 							{
