@@ -27,7 +27,7 @@ Final quality of life improvements:
 - [x] Mario fall damage
 - [ ] Correct mesh loading between rooms
 - [ ] Make Mario's lighting blend in correctly with the rooms he is in (a glsl shader thing...)
-- [ ] Fix Mario's collisions with movable boxes on Atlantis and The Great Pyramid
+- [x] Fix Mario's collisions with movable boxes on Atlantis and The Great Pyramid
 - [x] Give Mario animations for certain events like pulling switches
 - [x] Fix Mario's collisions with static meshes
 - [x] Fix Mario being teleported below the map when jumping on an enemy (sometimes)

@@ -240,14 +240,18 @@ struct Mario : Lara
 			// some code taken from extension.h below
 
 			// first increment the surface count
-			for (int c = 0; c < model->mCount; c++)
+			if (e->isBlock()) obj.surfaceCount += 12; // 6 sides, 2 triangles per side to form a quad
+			else
 			{
-				int index = level->meshOffsets[model->mStart + c];
-				if (index || model->mStart + c <= 0)
+				for (int c = 0; c < model->mCount; c++)
 				{
-					TR::Mesh &d = level->meshes[index];
-					for (int j = 0; j < d.fCount; j++)
-						obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+					int index = level->meshOffsets[model->mStart + c];
+					if (index || model->mStart + c <= 0)
+					{
+						TR::Mesh &d = level->meshes[index];
+						for (int j = 0; j < d.fCount; j++)
+							obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+					}
 				}
 			}
 
@@ -284,35 +288,64 @@ struct Mario : Lara
 				}
 			}
 
-			for (int c = 0; c < model->mCount; c++)
+			if (e->isBlock())
 			{
-				int index = level->meshOffsets[model->mStart + c];
-				if (index || model->mStart + c <= 0)
+				// bottom of block
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+
+				// left (Z+)
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 0, 128}, {128, 256, 128}, {-128, 256, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 256, 128}, {-128, 0, 128}, {128, 0, 128}}}; // top right, bottom left, bottom right
+
+				// right (Z-)
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 0, -128}, {-128, 256, -128}, {128, 256, -128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 256, -128}, {128, 0, -128}, {-128, 0, -128}}}; // top right, bottom left, bottom right
+
+				// back (X+)
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 0, -128}, {128, 256, -128}, {128, 256, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 256, 128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+
+				// front (X-)
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 0, 128}, {-128, 256, 128}, {-128, 256, -128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 256, -128}, {-128, 0, -128}, {-128, 0, 128}}}; // top right, bottom left, bottom right
+
+				// top of block
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 256, 128}, {-128, 256, -128}, {-128, 256, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 256, -128}, {128, 256, 128}, {128, 256, -128}}}; // top right, bottom left, bottom right
+			}
+			else
+			{
+				for (int c = 0; c < model->mCount; c++)
 				{
-					TR::Mesh &d = level->meshes[index];
-					for (int j = 0; j < d.fCount; j++)
+					int index = level->meshOffsets[model->mStart + c];
+					if (index || model->mStart + c <= 0)
 					{
-						TR::Face &f = d.faces[j];
-
-						offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
-
-						obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-							{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
-							{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
-							{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
-						}};
-
-						if (!f.triangle)
+						TR::Mesh &d = level->meshes[index];
+						for (int j = 0; j < d.fCount; j++)
 						{
-							surface_ind++;
-							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-								{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
-								{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
-								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
-							}};
-						}
+							TR::Face &f = d.faces[j];
 
-						surface_ind++;
+							offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
+
+							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
+								{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+							}};
+
+							if (!f.triangle)
+							{
+								surface_ind++;
+								obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+									{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+									{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
+									{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+								}};
+							}
+
+							surface_ind++;
+						}
 					}
 				}
 			}
