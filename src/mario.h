@@ -1237,7 +1237,7 @@ struct Mario : Lara
 					int end = (marioState.action == 0x00001319) ? 60 : marioAnim->curAnim->loopEnd-1;
 					if (marioAnim->animFrame == end) // anim done, pick up
 					{
-						if (marioState.action == 0x800380 || marioState.action == 0x300024E1) // punching action || ACT_WATER_PUNCH
+						if (marioState.action == 0x800380 || marioState.action == 0x00800457 || marioState.action == 0x300024E1) // punching action || ACT_MOVE_PUNCHING || ACT_WATER_PUNCH
 						{
 							if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
 							else
