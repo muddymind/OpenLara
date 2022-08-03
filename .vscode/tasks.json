@@ -1,0 +1,72 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compileSm64",
+            "command": "make -C ${workspaceFolder}\\src\\libs\\libsm64",
+            "type": "shell"
+        },
+        {
+            "label": "exportSm64",
+            "command": "xcopy ${workspaceFolder}\\src\\libs\\libsm64\\dist\\sm64.dll ${workspaceFolder}\\bin\\sm64.dll /y",
+            "type": "shell",
+            "dependsOn": [
+                "compileSm64"
+            ],
+        },
+        {
+            "label": "setwinresources",
+            "command": "windres ${workspaceFolder}\\src\\platform\\win\\OpenLara.rc ${workspaceFolder}\\src\\platform\\win\\OpenLara.rc.o",
+            "type": "shell",
+            "dependsOn": [
+                "exportSm64"
+            ]
+        },
+        {
+            "type": "cppbuild",
+            "label": "Compile OpenLara g++",
+            "command": "g++",
+            "args": [
+                "-std=c++11",
+                "-g",
+                "-fno-exceptions",
+                "-fno-rtti",
+                "-ffunction-sections",
+                "-fdata-sections", 
+                "-Wl,--gc-sections", 
+                "-DWIN32", 
+                "-DNDEBUG", 
+                "-DNO_TOUCH_SUPPORT",
+                "-DGEOMETRY_EXPORT",
+                "-I../../libs/",
+                "main.cpp",
+                "../../libs/stb_vorbis/stb_vorbis.c",
+                "../../libs/minimp3/minimp3.cpp",
+                "../../libs/tinf/tinflate.c",
+                "OpenLara.rc.o", 
+                "-I../../",
+                "-o../../../bin/OpenLara_mingw.exe",
+                "-L../../libs/libsm64/dist",
+                "-lsm64",
+                "-lopengl32",
+                "-lwinmm",
+                "-lwsock32",
+                "-lgdi32",
+                "-lm"
+            ],
+            "options": {
+              "cwd": "${workspaceFolder}\\src\\platform\\win"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": {
+              "kind": "build",
+              "isDefault": true
+            },
+            "dependsOn": [
+                "setwinresources"
+            ],
+        }
+    ]
+}
