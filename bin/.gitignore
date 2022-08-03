@@ -6,4 +6,7 @@
 *.RAW
 *.zip
 *.txt
-
+*.FMV
+lib*.dll
+*.exe
+sm64.dll
