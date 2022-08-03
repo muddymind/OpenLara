@@ -43,6 +43,15 @@ struct MarioControllerObj
 	vec3 offset;
 };
 
+struct MarioStaticMeshObj
+{
+	MarioStaticMeshObj() : ID(0), staticMesh(NULL) {}
+
+	uint32_t ID;
+	struct SM64ObjectTransform transform;
+	TR::StaticMesh* staticMesh;
+};
+
 struct Mario : Lara
 {
 	int32_t marioId;
@@ -60,7 +69,9 @@ struct Mario : Lara
 	float marioTicks;
 	bool postInit;
 	struct MarioControllerObj objs[4096];
+	struct MarioStaticMeshObj staticObjs[1024];
 	int objCount;
+	int staticObjCount;
 
 	Mesh* TRmarioMesh;
 
@@ -78,6 +89,7 @@ struct Mario : Lara
 		marioId = -1;
 		marioTicks = 0;
 		objCount = 0;
+		staticObjCount = 0;
 		movingBlock = NULL;
 		bowserSwing = NULL;
 		bowserAngle = 0;
@@ -137,6 +149,9 @@ struct Mario : Lara
 		for (int i=0; i<objCount; i++)
 			sm64_surface_object_delete(objs[i].ID);
 
+		for (int i=0; i<staticObjCount; i++)
+			sm64_surface_object_delete(staticObjs[i].ID);
+
 		for (int i=0; i<0x22; i++)
 			sm64_stop_background_music(i);
 
@@ -156,65 +171,6 @@ struct Mario : Lara
 	{
 		if (postInit) return;
 		postInit = true;
-
-		// create collisions from static meshes (objects like the fence at lara's home, the chairs/table, the music instruments etc.)
-		for (int i = 0; i < level->roomsCount; i++)
-		{
-			TR::Room *room = &level->rooms[i];
-			for (int j = 0; j < room->meshesCount; j++)
-			{
-				TR::Room::Mesh &m  = room->meshes[j];
-				TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
-				if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) continue;
-
-				// define the surface object
-				struct SM64SurfaceObject obj;
-				obj.surfaceCount = 0;
-				obj.transform.position[0] = m.x / MARIO_SCALE;
-				obj.transform.position[1] = -m.y / MARIO_SCALE;
-				obj.transform.position[2] = -m.z / MARIO_SCALE;
-				for (int k=0; k<3; k++) obj.transform.eulerRotation[k] = (k == 1) ? float(m.rotation) / M_PI * 180.f : 0;
-
-				TR::Mesh &d = level->meshes[level->meshOffsets[sm->mesh]];
-
-				// increment the surface count for this
-				for (int k = 0; k < d.fCount; k++)
-					obj.surfaceCount += (d.faces[k].triangle) ? 1 : 2;
-
-				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
-				size_t surface_ind = 0;
-
-				// add the faces
-				for (int k = 0; k < d.fCount; k++)
-				{
-					TR::Face &f = d.faces[k];
-
-					obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-						{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
-						{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
-						{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
-					}};
-
-					if (!f.triangle)
-					{
-						obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-							{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
-							{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
-							{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
-						}};
-					}
-				}
-
-				// create the final object and put it in the objs[] array
-				struct MarioControllerObj cObj;
-				cObj.ID = sm64_surface_object_create(&obj);
-				cObj.transform = obj.transform;
-				cObj.entity = NULL;
-
-				objs[objCount++] = cObj;
-				free(obj.surfaces);
-			}
-		}
 
 		// create collisions from entities (bridges, doors)
 		for (int i=0; i<level->entitiesCount; i++)
@@ -1353,11 +1309,11 @@ struct Mario : Lara
 
 	void marioUpdateRoom(int oldRoom)
 	{
-		TR::Room &waterRoom = getRoom();
+		TR::Room &myRoom = getRoom();
 
 		if (marioId >= 0)
 		{
-			marioWaterLevel = (waterRoom.flags.water || dozy) ? ((waterRoom.waterLevelSurface != TR::NO_WATER) ? -waterRoom.waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
+			marioWaterLevel = (myRoom.flags.water || dozy) ? ((myRoom.waterLevelSurface != TR::NO_WATER) ? -myRoom.waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
 			sm64_set_mario_water_level(marioId, marioWaterLevel);
 			/*if (room.waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -room.waterLevelSurface/IMARIO_SCALE);
 			else if (room.flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
@@ -1365,6 +1321,66 @@ struct Mario : Lara
 		}
 
 		//printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
+
+		// delete old static meshes
+		for (int i=0; i<staticObjCount; i++)
+			sm64_surface_object_delete(staticObjs[i].ID);
+		staticObjCount = 0;
+
+		// create collisions from static meshes (objects like the fence at lara's home, the chairs/table, the music instruments etc.)
+		for (int j = 0; j < myRoom.meshesCount; j++)
+		{
+			TR::Room::Mesh &m  = myRoom.meshes[j];
+			TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
+			if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) continue;
+
+			// define the surface object
+			struct SM64SurfaceObject obj;
+			obj.surfaceCount = 0;
+			obj.transform.position[0] = m.x / MARIO_SCALE;
+			obj.transform.position[1] = -m.y / MARIO_SCALE;
+			obj.transform.position[2] = -m.z / MARIO_SCALE;
+			for (int k=0; k<3; k++) obj.transform.eulerRotation[k] = (k == 1) ? float(m.rotation) / M_PI * 180.f : 0;
+
+			TR::Mesh &d = level->meshes[level->meshOffsets[sm->mesh]];
+
+			// increment the surface count for this
+			for (int k = 0; k < d.fCount; k++)
+				obj.surfaceCount += (d.faces[k].triangle) ? 1 : 2;
+
+			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+			size_t surface_ind = 0;
+
+			// add the faces
+			for (int k = 0; k < d.fCount; k++)
+			{
+				TR::Face &f = d.faces[k];
+
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+					{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+					{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
+					{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+				}};
+
+				if (!f.triangle)
+				{
+					obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
+						{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+						{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
+						{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+					}};
+				}
+			}
+
+			// create the final object and put it in the objs[] array
+			struct MarioStaticMeshObj mObj;
+			mObj.ID = sm64_surface_object_create(&obj);
+			mObj.transform = obj.transform;
+			mObj.staticMesh = sm;
+
+			staticObjs[staticObjCount++] = mObj;
+			free(obj.surfaces);
+		}
 
 		// load sm64surfaces
 		size_t surfaces_count = 0;
@@ -1393,7 +1409,7 @@ struct Mario : Lara
 		{
 			if (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
 
-			TR::Room &room = (M == marioId || marioId == -1) ? waterRoom : game->getLara(M)->getRoom();
+			TR::Room &room = (M == marioId || marioId == -1) ? myRoom : game->getLara(M)->getRoom();
 
 			// get meshes from this room
 			TR::Room::Data &d = room.data;
@@ -1501,7 +1517,7 @@ struct Mario : Lara
 		{
 			if (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
 
-			TR::Room &room = (M == marioId || marioId == -1) ? waterRoom : game->getLara(M)->getRoom();
+			TR::Room &room = (M == marioId || marioId == -1) ? myRoom : game->getLara(M)->getRoom();
 			TR::Room::Data &d = room.data;
 
 			for (int i = 0; i < d.fCount; i++)
