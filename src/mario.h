@@ -1662,6 +1662,10 @@ struct Mario : Lara
 		}
 
 		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
+
+		#ifdef DEBUG_RENDER
+			debug_get_sm64_all_surfaces();
+		#endif
 	}
 
 	void update()
@@ -1884,6 +1888,11 @@ struct Mario : Lara
 				if (p != pos && updateZone())
 					updateLights();
 			}
+
+			#ifdef DEBUG_RENDER
+			debug_get_sm64_collisions();
+			#endif
+
         }
         
         camera->update();
@@ -1971,6 +1980,84 @@ struct Mario : Lara
 	void updateVelocity()
 	{
 		//Lara::updateVelocity();
+	}
+
+	void reset_vertex_array_coordinates(vec3 *v)
+	{
+		v[0].x=0.0f;
+		v[0].y=0.0f;
+		v[0].z=0.0f;
+		v[1].x=0.0f;
+		v[1].y=0.0f;
+		v[1].z=0.0f;
+		v[2].x=0.0f;
+		v[2].y=0.0f;
+		v[2].z=0.0f;
+	}
+
+	void init_sm64_debug_surfaces(){
+		sm64DebugSurfaces = (sm64DebugSurfacesSt*)malloc(sizeof(sm64DebugSurfacesSt));
+		sm64DebugSurfaces->allGeometry = NULL;
+		sm64DebugSurfaces->allGeometryCount=0;
+
+		reset_vertex_array_coordinates(sm64DebugSurfaces->wall.v);
+		reset_vertex_array_coordinates(sm64DebugSurfaces->ceiling.v);
+		reset_vertex_array_coordinates(sm64DebugSurfaces->floor.v);
+	}
+
+	void importSM64debugSurface(struct sm64DebugGenericSurface *dst, struct SM64DebugSurface src)
+	{
+		dst->v[0] = vec3((float)src.v1[0]*IMARIO_SCALE, (float)-src.v1[1]*IMARIO_SCALE, (float)-src.v1[2]*IMARIO_SCALE);
+		dst->v[1] = vec3((float)src.v2[0]*IMARIO_SCALE, (float)-src.v2[1]*IMARIO_SCALE, (float)-src.v2[2]*IMARIO_SCALE);
+		dst->v[2] = vec3((float)src.v3[0]*IMARIO_SCALE, (float)-src.v3[1]*IMARIO_SCALE, (float)-src.v3[2]*IMARIO_SCALE);
+	}
+
+	virtual void debug_get_sm64_collisions()
+	{
+		if(!surfaceDebuggerEnabled)
+		{
+			return;
+		}
+
+		if(sm64DebugSurfaces == NULL)
+		{
+			init_sm64_debug_surfaces();
+		}
+
+		struct SM64DebugSurface floor;
+		struct SM64DebugSurface wall;
+		struct SM64DebugSurface ceiling;
+		sm64_get_collision_surfaces(&floor, &ceiling, &wall);
+		importSM64debugSurface(&(sm64DebugSurfaces->wall), wall);
+		importSM64debugSurface(&(sm64DebugSurfaces->floor), floor);
+		importSM64debugSurface(&(sm64DebugSurfaces->ceiling), ceiling);
+	}
+
+	virtual void debug_get_sm64_all_surfaces()
+	{
+		if(!surfaceDebuggerEnabled)
+		{
+			return;
+		}
+		printf("all\n");
+		if(sm64DebugSurfaces == NULL)
+		{
+			init_sm64_debug_surfaces();
+		}
+
+		if(sm64DebugSurfaces->allGeometry!=NULL) {
+			free(sm64DebugSurfaces->allGeometry);
+		}
+
+		struct SM64DebugSurface *imported = sm64_get_all_surfaces(&(sm64DebugSurfaces->allGeometryCount));
+
+		sm64DebugSurfaces->allGeometry = (struct sm64DebugGenericSurface*) malloc(sizeof(struct sm64DebugGenericSurface)*sm64DebugSurfaces->allGeometryCount);
+
+		for(int i=0; i<sm64DebugSurfaces->allGeometryCount; i++){
+			importSM64debugSurface(&(sm64DebugSurfaces->allGeometry[i]), imported[i]);
+		}
+
+		return;
 	}
 };
 
