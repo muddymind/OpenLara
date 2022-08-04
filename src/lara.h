@@ -329,6 +329,27 @@ struct Lara : Character {
 
     int32       networkInput;
 
+    struct sm64DebugSurface{
+        bool isValid=false;
+        vec3 v[3];
+    };
+
+    struct sm64DebugGenericSurface{
+        vec3 v[3];
+    };
+
+    struct sm64DebugSurfacesSt{
+        struct sm64DebugGenericSurface floor;
+        struct sm64DebugGenericSurface wall;
+        struct sm64DebugGenericSurface ceiling;
+        struct sm64DebugGenericSurface *allGeometry;
+        int allGeometryCount;
+    };
+
+    struct sm64DebugSurfacesSt *sm64DebugSurfaces = NULL;
+
+    bool surfaceDebuggerEnabled = false;
+
 #ifdef _DEBUG
     //uint16      *dbgBoxes;
     //int         dbgBoxesCount;
@@ -3893,6 +3914,15 @@ struct Lara : Character {
             if (dtex) dtex->bind(sDiffuse);
         }
     }
+
+    virtual void debug_get_sm64_collisions(){
+        return;
+    }
+
+    virtual void debug_get_sm64_all_surfaces(){
+        return;
+    }
+
 };
 
 #endif

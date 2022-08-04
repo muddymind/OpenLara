@@ -173,6 +173,30 @@ namespace Debug {
             glEnd();
         }
 
+        void triangle(const vec3 &a, const vec3 &b, const vec3 &c, const vec4 &linecolor, const vec4 &facecolor) {
+            glLineWidth(2.0f);
+            //Core::setDepthTest(false);
+            glColor4fv((GLfloat*)&linecolor);
+            glBegin(GL_LINES);                
+                glVertex3fv((GLfloat*)&a);
+                glVertex3fv((GLfloat*)&b);
+                glVertex3fv((GLfloat*)&b);
+                glVertex3fv((GLfloat*)&c);
+                glVertex3fv((GLfloat*)&c);
+                glVertex3fv((GLfloat*)&a);
+            glEnd();
+
+            glColor4fv((GLfloat*)&facecolor);
+            glBegin(GL_TRIANGLES);                
+                glVertex3fv((GLfloat*)&c);
+                glVertex3fv((GLfloat*)&b);
+                glVertex3fv((GLfloat*)&a);
+                
+            glEnd();
+            //Core::setDepthTest(true);
+            glLineWidth(1.0f);
+        }
+
         void textColor(const vec2 &pos, const vec4 &color, const char *str) {
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
@@ -541,6 +565,26 @@ namespace Debug {
                 sprintf(buf, "zone: %d", controller->zone);
                 Debug::Draw::text(controller->pos - vec3(0, 128, 0), vec4(0, 1, 0.8f, 1), buf);
             }
+        }
+
+        void sm64debug(Lara *lara) {
+
+            if(lara->sm64DebugSurfaces == NULL || !lara->surfaceDebuggerEnabled || !lara->isMario)
+            {
+                return;
+            }
+            
+            Core::setDepthTest(false);
+
+            Debug::Draw::triangle(lara->sm64DebugSurfaces->wall.v[0], lara->sm64DebugSurfaces->wall.v[1], lara->sm64DebugSurfaces->wall.v[2], vec4(0.0f, 0.0f, 1.0f, 1.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f));
+            Debug::Draw::triangle(lara->sm64DebugSurfaces->ceiling.v[0], lara->sm64DebugSurfaces->ceiling.v[1], lara->sm64DebugSurfaces->ceiling.v[2], vec4(0.0f, 1.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 0.5f));
+            Debug::Draw::triangle(lara->sm64DebugSurfaces->floor.v[0], lara->sm64DebugSurfaces->floor.v[1], lara->sm64DebugSurfaces->floor.v[2], vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f));
+
+            for(int i=0; i<lara->sm64DebugSurfaces->allGeometryCount; i++){
+                Debug::Draw::triangle(lara->sm64DebugSurfaces->allGeometry[i].v[0], lara->sm64DebugSurfaces->allGeometry[i].v[1], lara->sm64DebugSurfaces->allGeometry[i].v[2], vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+            }
+
+            Core::setDepthTest(true);            
         }
 
         void lights(const TR::Level &level, int room, Controller *lara) {

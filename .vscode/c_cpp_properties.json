@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/src/libs/","${workspaceFolder}/src/","C:/msys64/mingw64/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "DWIN32",
+                "DNDEBUG",
+                "DEBUG_RENDER",
+                "DNO_TOUCH_SUPPORT",
+                "DGEOMETRY_EXPORT",
+                "WIN32",
+                "_WIN32",
+                "GEOMETRY_EXPORT"
+            ],
+            "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
+            "cStandard": "c99",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "clang-x64",
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

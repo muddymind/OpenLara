@@ -2407,6 +2407,20 @@ struct Level : IGame {
             Extension::exportLibSM64(this, &level);
             Input::down[ikF2] = false;
         }
+        if (Input::down[ikF3]) {
+            Lara *lara = (Lara *)getLara();
+            if(lara!=NULL)
+            {
+                lara->surfaceDebuggerEnabled=!lara->surfaceDebuggerEnabled;
+
+                if(lara->surfaceDebuggerEnabled && lara->isMario)
+                {
+                    lara->debug_get_sm64_collisions();
+                    lara->debug_get_sm64_all_surfaces();
+                }
+            }
+            Input::down[ikF3] = false;
+        }
     #endif
     }
 
@@ -3115,6 +3129,7 @@ struct Level : IGame {
         //    Debug::Level::path(level, (Enemy*)level.entities[21].controller);
         //    Debug::Level::debugOverlaps(level, players[0]->box);
         //    Debug::Level::debugBoxes(level, lara->dbgBoxes, lara->dbgBoxesCount);
+            Debug::Level::sm64debug(players[0]);
             Core::setDepthTest(true);
             Core::setBlendMode(bmNone);
         /*// render ambient cube

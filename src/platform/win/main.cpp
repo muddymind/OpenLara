@@ -443,8 +443,10 @@ HWND hWnd;
             HGLRC fRC = wglCreateContext(fDC);
             wglMakeCurrent(fDC, fRC);
 
+            #ifndef DEBUG_RENDER
             wglChoosePixelFormatARB    = GetProcOGL(wglChoosePixelFormatARB);
             wglCreateContextAttribsARB = GetProcOGL(wglCreateContextAttribsARB);
+            #endif
 
             wglMakeCurrent(0, 0);
             ReleaseDC(fWnd, fDC);
