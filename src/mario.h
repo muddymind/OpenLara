@@ -1739,7 +1739,7 @@ struct Mario : Lara
 					}
 					else if (obj->entity->type == TR::Entity::TRAP_FLOOR)
 					{
-						if (!c->isCollider() && obj->spawned)
+						if (!c->isCollider())
 						{
 							sm64_surface_object_delete(obj->ID);
 							obj->spawned = false;
