@@ -1708,7 +1708,7 @@ struct Mario : Lara
 			for (int i=0; i<objCount; i++)
 			{
 				struct MarioControllerObj *obj = &objs[i];
-				if (!obj->entity || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
+				if (!obj->entity || !obj->spawned || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
 
 				if (obj->entity->controller)
 				{
