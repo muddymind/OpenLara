@@ -35,12 +35,13 @@ struct MarioRenderState
 
 struct MarioControllerObj
 {
-	MarioControllerObj() : ID(0), entity(NULL) {}
+	MarioControllerObj() : ID(0), entity(NULL), spawned(false) {}
 
 	uint32_t ID;
 	struct SM64ObjectTransform transform;
 	TR::Entity* entity;
 	vec3 offset;
+	bool spawned;
 };
 
 struct MarioStaticMeshObj
@@ -147,7 +148,9 @@ struct Mario : Lara
 		delete TRmarioMesh;
 
 		for (int i=0; i<objCount; i++)
-			sm64_surface_object_delete(objs[i].ID);
+		{
+			if (objs[i].spawned) sm64_surface_object_delete(objs[i].ID);
+		}
 
 		for (int i=0; i<staticObjCount; i++)
 			sm64_surface_object_delete(staticObjs[i].ID);
@@ -179,7 +182,7 @@ struct Mario : Lara
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock() && e->type != TR::Entity::DRAWBRIDGE)
+			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock() && e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::DRAWBRIDGE)
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -197,6 +200,7 @@ struct Mario : Lara
 
 			// first increment the surface count
 			if (e->isBlock()) obj.surfaceCount += 12; // 6 sides, 2 triangles per side to form a quad
+			else if (e->type == TR::Entity::TRAP_FLOOR) obj.surfaceCount += 2; // floor
 			else
 			{
 				for (int c = 0; c < model->mCount; c++)
@@ -217,6 +221,15 @@ struct Mario : Lara
 			vec3 offset(0,0,0);
 			int16 topPointSign = 1;
 			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
+			else if (e->type == TR::Entity::TRAP_FLOOR)
+			{
+				offset.y = 512;
+			}
+			else if (e->isDoor())
+			{
+				offset.x = (obj.transform.eulerRotation[1] == 90 || obj.transform.eulerRotation[1] == 180) ? -512 : 512;
+				offset.z = (obj.transform.eulerRotation[1] == 0 || obj.transform.eulerRotation[1] == 90) ? -512 : (obj.transform.eulerRotation[1] == 180) ? 512 : 0;
+			}
 			else if (e->type == TR::Entity::DRAWBRIDGE)
 			{
 				offset.y = -128;
@@ -270,6 +283,11 @@ struct Mario : Lara
 				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 256, 128}, {-128, 256, -128}, {-128, 256, 128}}}; // bottom left, top right, top left
 				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 256, -128}, {128, 256, 128}, {128, 256, -128}}}; // top right, bottom left, bottom right
 			}
+			else if (e->type == TR::Entity::TRAP_FLOOR)
+			{
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE,{{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+			}
 			else
 			{
 				for (int c = 0; c < model->mCount; c++)
@@ -282,7 +300,7 @@ struct Mario : Lara
 						{
 							TR::Face &f = d.faces[j];
 
-							offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
+							if (!offset.y) offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
 
 							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
 								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
@@ -311,6 +329,7 @@ struct Mario : Lara
 
 			// and finally add the object (this returns an uint32_t which is the object's ID)
 			struct MarioControllerObj cObj;
+			cObj.spawned = true;
 			cObj.ID = sm64_surface_object_create(&obj);
 			cObj.transform = obj.transform;
 			cObj.entity = e;
@@ -1708,7 +1727,21 @@ struct Mario : Lara
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 
-					if (obj->entity->type == TR::Entity::DRAWBRIDGE)
+					if (obj->entity->isDoor())
+					{
+						float rot = float(obj->entity->rotation) / M_PI * 180.f;
+						obj->transform.eulerRotation[1] = (c->isActive()) ? rot+90 : rot;
+						sm64_surface_object_move(obj->ID, &obj->transform);
+					}
+					else if (obj->entity->type == TR::Entity::TRAP_FLOOR)
+					{
+						if (!c->isCollider() && obj->spawned)
+						{
+							sm64_surface_object_delete(obj->ID);
+							obj->spawned = false;
+						}
+					}
+					else if (obj->entity->type == TR::Entity::DRAWBRIDGE)
 					{
 						obj->transform.eulerRotation[0] = (!c->isCollider()) ? -90 : 0;
 						sm64_surface_object_move(obj->ID, &obj->transform);
