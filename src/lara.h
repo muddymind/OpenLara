@@ -336,6 +336,7 @@ struct Lara : Character {
 
     struct sm64DebugGenericSurface{
         vec3 v[3];
+        uintptr_t surfacePointer;
     };
 
     struct sm64DebugSurfacesSt{
