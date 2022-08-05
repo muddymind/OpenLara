@@ -2019,6 +2019,9 @@ struct Mario : Lara
 
 	void init_sm64_debug_surfaces(){
 		sm64DebugSurfaces = (sm64DebugSurfacesSt*)malloc(sizeof(sm64DebugSurfacesSt));
+		sm64DebugSurfaces->wall.surfacePointer=0;
+		sm64DebugSurfaces->ceiling.surfacePointer=0;
+		sm64DebugSurfaces->floor.surfacePointer=0;
 		sm64DebugSurfaces->allGeometry = NULL;
 		sm64DebugSurfaces->allGeometryCount=0;
 
@@ -2029,12 +2032,16 @@ struct Mario : Lara
 
 	void importSM64debugSurface(struct sm64DebugGenericSurface *dst, struct SM64DebugSurface src)
 	{
-		dst->v[0] = vec3((float)src.v1[0]*IMARIO_SCALE, (float)-src.v1[1]*IMARIO_SCALE, (float)-src.v1[2]*IMARIO_SCALE);
-		dst->v[1] = vec3((float)src.v2[0]*IMARIO_SCALE, (float)-src.v2[1]*IMARIO_SCALE, (float)-src.v2[2]*IMARIO_SCALE);
-		dst->v[2] = vec3((float)src.v3[0]*IMARIO_SCALE, (float)-src.v3[1]*IMARIO_SCALE, (float)-src.v3[2]*IMARIO_SCALE);
+		if(dst->surfacePointer != src.surfacePointer)
+		{
+			dst->surfacePointer = src.surfacePointer;
+			dst->v[0] = vec3((float)src.v1[0]*IMARIO_SCALE, (float)-src.v1[1]*IMARIO_SCALE, (float)-src.v1[2]*IMARIO_SCALE);
+			dst->v[1] = vec3((float)src.v2[0]*IMARIO_SCALE, (float)-src.v2[1]*IMARIO_SCALE, (float)-src.v2[2]*IMARIO_SCALE);
+			dst->v[2] = vec3((float)src.v3[0]*IMARIO_SCALE, (float)-src.v3[1]*IMARIO_SCALE, (float)-src.v3[2]*IMARIO_SCALE);
+		}
 	}
 
-	virtual void debug_get_sm64_collisions()
+virtual void debug_get_sm64_collisions()
 	{
 		if(!surfaceDebuggerEnabled)
 		{
@@ -2047,8 +2054,14 @@ struct Mario : Lara
 		}
 
 		struct SM64DebugSurface floor;
+		floor.surfacePointer = sm64DebugSurfaces->floor.surfacePointer;
+
 		struct SM64DebugSurface wall;
+		wall.surfacePointer = sm64DebugSurfaces->wall.surfacePointer;
+
 		struct SM64DebugSurface ceiling;
+		ceiling.surfacePointer = sm64DebugSurfaces->ceiling.surfacePointer;
+
 		sm64_get_collision_surfaces(&floor, &ceiling, &wall);
 		importSM64debugSurface(&(sm64DebugSurfaces->wall), wall);
 		importSM64debugSurface(&(sm64DebugSurfaces->floor), floor);
