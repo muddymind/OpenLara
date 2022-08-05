@@ -182,7 +182,7 @@ struct Mario : Lara
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock() && e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::DRAWBRIDGE)
+			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock() && e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 && e->type != TR::Entity::DRAWBRIDGE)
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -219,20 +219,37 @@ struct Mario : Lara
 			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
 			vec3 offset(0,0,0);
+			bool doOffsetY = true;
 			int16 topPointSign = 1;
 			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
 			else if (e->type == TR::Entity::TRAP_FLOOR)
 			{
 				offset.y = 512;
+				doOffsetY = false;
 			}
 			else if (e->isDoor())
 			{
 				offset.x = (obj.transform.eulerRotation[1] == 90 || obj.transform.eulerRotation[1] == 180) ? -512 : 512;
 				offset.z = (obj.transform.eulerRotation[1] == 0 || obj.transform.eulerRotation[1] == 90) ? -512 : (obj.transform.eulerRotation[1] == 180) ? 512 : 0;
 			}
+			else if (e->type == TR::Entity::TRAP_DOOR_1)
+			{
+				offset.x = 512*cos(float(e->rotation)) - 512*sin(float(e->rotation));
+				offset.z = 512*sin(float(e->rotation)) - 512*cos(float(e->rotation));
+				offset.y = -88;
+				doOffsetY = false;
+			}
+			else if (e->type == TR::Entity::TRAP_DOOR_2)
+			{
+				offset.x = 512*cos(float(e->rotation)) - 512*sin(float(e->rotation));
+				offset.z = -512*sin(float(e->rotation)) + 512*cos(float(e->rotation));
+				offset.y = -88;
+				doOffsetY = false;
+			}
 			else if (e->type == TR::Entity::DRAWBRIDGE)
 			{
 				offset.y = -128;
+				doOffsetY = false;
 				// before you go "yanderedev code":
 				// can't use switch() here because eulerRotation isn't an integer
 				if (obj.transform.eulerRotation[1] == 90)
@@ -300,7 +317,7 @@ struct Mario : Lara
 						{
 							TR::Face &f = d.faces[j];
 
-							if (!offset.y) offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
+							if (doOffsetY) offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
 
 							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
 								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
@@ -1721,7 +1738,7 @@ struct Mario : Lara
 					float y = (c->pos.y - obj->offset.y);
 					float z = (c->pos.z + obj->offset.z);
 
-					if ((x != obj->transform.position[0]*MARIO_SCALE || y != obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE) &&
+					if ((x != obj->transform.position[0]*MARIO_SCALE || y != obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE) && obj->entity->type != TR::Entity::TRAP_DOOR_1 && obj->entity->type != TR::Entity::TRAP_DOOR_2 &&
 					    (x != obj->transform.position[0]*MARIO_SCALE || y != -obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE))
 					{
 						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, x, y, z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
@@ -1735,6 +1752,11 @@ struct Mario : Lara
 					{
 						float rot = float(obj->entity->rotation) / M_PI * 180.f;
 						obj->transform.eulerRotation[1] = (c->isActive()) ? rot+90 : rot;
+						sm64_surface_object_move(obj->ID, &obj->transform);
+					}
+					else if (obj->entity->type == TR::Entity::TRAP_DOOR_1 || obj->entity->type == TR::Entity::TRAP_DOOR_2)
+					{
+						obj->transform.eulerRotation[0] = (!c->isCollider()) ? 90 : 0;
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 					else if (obj->entity->type == TR::Entity::TRAP_FLOOR)
