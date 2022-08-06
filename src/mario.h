@@ -260,7 +260,7 @@ struct Mario : Lara
 				else if (obj.transform.eulerRotation[1] == 270)
 				{
 					offset.x = 512;
-					offset.z = 384;
+					offset.z = 512;
 				}
 				else if (obj.transform.eulerRotation[1] == 180)
 				{
