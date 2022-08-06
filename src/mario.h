@@ -1035,6 +1035,7 @@ struct Mario : Lara
 		if (needFlip) {
 			game->flipMap();
 			game->setEffect(this, effect);
+			marioUpdateRoom(TR::NO_ROOM);
 		}
 	}
 
