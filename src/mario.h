@@ -248,7 +248,7 @@ struct Mario : Lara
 			}
 			else if (e->type == TR::Entity::DRAWBRIDGE)
 			{
-				offset.y = -128;
+				offset.y = -20;
 				doOffsetY = false;
 				// before you go "yanderedev code":
 				// can't use switch() here because eulerRotation isn't an integer
