@@ -230,7 +230,7 @@ struct Mario : Lara
 			else if (e->isDoor())
 			{
 				offset.x = (512*cos(float(e->rotation)) - 512*sin(float(e->rotation))) * (1);
-				offset.z = (-512*sin(float(e->rotation)) - 512*cos(float(e->rotation))) * ((e->type == TR::Entity::DOOR_1 || e->type == TR::Entity::DOOR_2 || e->type == TR::Entity::DOOR_4 || e->type == TR::Entity::DOOR_5 ||e->type == TR::Entity::DOOR_6 || e->type == TR::Entity::DOOR_7 || e->type == TR::Entity::DOOR_8) ? -1 : 1);
+				offset.z = (-512*sin(float(e->rotation)) - 512*cos(float(e->rotation))) * ((e->type == TR::Entity::DOOR_1 || e->type == TR::Entity::DOOR_2 || (e->type == TR::Entity::DOOR_3 && abs(cos(float(e->rotation))) == 1) || e->type == TR::Entity::DOOR_4 || e->type == TR::Entity::DOOR_5 ||e->type == TR::Entity::DOOR_6 || e->type == TR::Entity::DOOR_7 || e->type == TR::Entity::DOOR_8) ? -1 : 1);
 			}
 			else if (e->type == TR::Entity::TRAP_DOOR_1)
 			{
