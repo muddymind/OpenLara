@@ -197,7 +197,7 @@ struct Mario : Lara
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !e->isBlock() && e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::DRAWBRIDGE)
+			if (!(e->type >= 68 && e->type <= 70) && !e->isDoor() && !e->isBlock() && e->type != TR::Entity::MOVING_BLOCK && e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 && e->type != TR::Entity::DRAWBRIDGE)
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -234,20 +234,37 @@ struct Mario : Lara
 			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
 			vec3 offset(0,0,0);
+			bool doOffsetY = true;
 			int16 topPointSign = 1;
 			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
 			else if (e->type == TR::Entity::TRAP_FLOOR)
 			{
 				offset.y = 512;
+				doOffsetY = false;
 			}
 			else if (e->isDoor())
 			{
-				offset.x = (obj.transform.eulerRotation[1] == 90 || obj.transform.eulerRotation[1] == 180) ? -512 : 512;
-				offset.z = (obj.transform.eulerRotation[1] == 0 || obj.transform.eulerRotation[1] == 90) ? -512 : (obj.transform.eulerRotation[1] == 180) ? 512 : 0;
+				offset.x = (512*cos(float(e->rotation)) - 512*sin(float(e->rotation))) * (1);
+				offset.z = (-512*sin(float(e->rotation)) - 512*cos(float(e->rotation))) * ((e->type == TR::Entity::DOOR_1 || e->type == TR::Entity::DOOR_2 || (e->type == TR::Entity::DOOR_3 && abs(cos(float(e->rotation))) == 1) || e->type == TR::Entity::DOOR_4 || e->type == TR::Entity::DOOR_5 ||e->type == TR::Entity::DOOR_6 || e->type == TR::Entity::DOOR_7 || e->type == TR::Entity::DOOR_8) ? -1 : 1);
+			}
+			else if (e->type == TR::Entity::TRAP_DOOR_1)
+			{
+				offset.x = 512*cos(float(e->rotation)) - 512*sin(float(e->rotation));
+				offset.z = 512*sin(float(e->rotation)) + 512*cos(float(e->rotation));
+				offset.y = -88;
+				doOffsetY = false;
+			}
+			else if (e->type == TR::Entity::TRAP_DOOR_2)
+			{
+				offset.x = 512*cos(float(e->rotation)) - 512*sin(float(e->rotation));
+				offset.z = -512*sin(float(e->rotation)) + 512*cos(float(e->rotation));
+				offset.y = -88;
+				doOffsetY = false;
 			}
 			else if (e->type == TR::Entity::DRAWBRIDGE)
 			{
-				offset.y = -128;
+				offset.y = -20;
+				doOffsetY = false;
 				// before you go "yanderedev code":
 				// can't use switch() here because eulerRotation isn't an integer
 				if (obj.transform.eulerRotation[1] == 90)
@@ -258,7 +275,7 @@ struct Mario : Lara
 				else if (obj.transform.eulerRotation[1] == 270)
 				{
 					offset.x = 512;
-					offset.z = 384;
+					offset.z = 512;
 				}
 				else if (obj.transform.eulerRotation[1] == 180)
 				{
@@ -406,7 +423,7 @@ struct Mario : Lara
 	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
 	{
 		if (dozy || level->isCutsceneLevel()) return;
-		if (!burn && !marioState.fallDamage && marioState.action != 0x010208B7 && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_LAVA_BOOST, ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
+		if (!burn && !marioState.fallDamage && marioState.action != 0x010208B7 && hitType != TR::HIT_SPIKES && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_LAVA_BOOST, ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
 		if (health <= 0.0f && hitType != TR::HIT_FALL && hitType != TR::HIT_LAVA) return;
 
 		if (hitType == TR::HIT_MIDAS)
@@ -1033,6 +1050,7 @@ struct Mario : Lara
 		if (needFlip) {
 			game->flipMap();
 			game->setEffect(this, effect);
+			marioUpdateRoom(TR::NO_ROOM);
 		}
 	}
 
@@ -1601,6 +1619,13 @@ struct Mario : Lara
 			for (int i=0; i<objCount; i++)
 			{
 				struct MarioControllerObj *obj = &objs[i];
+				if (obj->entity && obj->entity->isDoor() && !obj->spawned && !((Controller*)obj->entity->controller)->isActive()) // door closed, bring back
+				{
+					// LAZY SOLUTION BECAUSE DIFFICULT
+					obj->transform.position[1] += 65536;
+					sm64_surface_object_move(obj->ID, &obj->transform);
+					obj->spawned = true;
+				}
 				if (!obj->entity || !obj->spawned || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
 
 				if (obj->entity->controller)
@@ -1610,20 +1635,34 @@ struct Mario : Lara
 					float y = (c->pos.y - obj->offset.y);
 					float z = (c->pos.z + obj->offset.z);
 
-					if ((x != obj->transform.position[0]*MARIO_SCALE || y != obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE) &&
+					if (obj->entity->type == TR::Entity::MOVING_BLOCK) // always move
+					{
+						obj->transform.position[0] = x/MARIO_SCALE;
+						obj->transform.position[1] = -y/MARIO_SCALE;
+						obj->transform.position[2] = -z/MARIO_SCALE;
+						sm64_surface_object_move(obj->ID, &obj->transform);
+					}
+
+					if ((x != obj->transform.position[0]*MARIO_SCALE || y != obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE) && obj->entity->type != TR::Entity::TRAP_DOOR_1 && obj->entity->type != TR::Entity::TRAP_DOOR_2 && !obj->entity->isDoor() && obj->entity->type != TR::Entity::MOVING_BLOCK &&
 					    (x != obj->transform.position[0]*MARIO_SCALE || y != -obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE))
 					{
 						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, x, y, z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
 						obj->transform.position[0] = x/MARIO_SCALE;
 						obj->transform.position[1] = -y/MARIO_SCALE;
 						obj->transform.position[2] = -z/MARIO_SCALE;
-						//sm64_surface_object_move(obj->ID, &obj->transform);
+						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 
-					if (obj->entity->isDoor())
+					if (obj->entity->isDoor() && c->isActive()) // door open
 					{
-						float rot = float(obj->entity->rotation) / M_PI * 180.f;
-						obj->transform.eulerRotation[1] = (c->isActive()) ? rot+90 : rot;
+						// LAZY SOLUTION BECAUSE DIFFICULT
+						obj->transform.position[1] -= 65536;
+						sm64_surface_object_move(obj->ID, &obj->transform);
+						obj->spawned = false;
+					}
+					else if (obj->entity->type == TR::Entity::TRAP_DOOR_1 || obj->entity->type == TR::Entity::TRAP_DOOR_2)
+					{
+						obj->transform.eulerRotation[0] = (!c->isCollider()) ? 90 : 0;
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 					else if (obj->entity->type == TR::Entity::TRAP_FLOOR)
@@ -1770,6 +1809,10 @@ struct Mario : Lara
 					pos.x = (state == STATE_UNUSED_5) ? marioState.position[0] + (sin(-marioState.faceAngle + M_PI)*32) : (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? marioState.position[0] - (sin(angle.y)*128) : marioState.position[0]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
 					pos.y = (marioState.action == 0x0800034B) ? -marioState.position[1]+384 : (marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F) ? -marioState.position[1]-128 : -marioState.position[1]; // ACT_LEDGE_GRAB or ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
 					pos.z = (state == STATE_UNUSED_5) ? -marioState.position[2] + (cos(-marioState.faceAngle + M_PI)*32) :(marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? -marioState.position[2] - (cos(angle.y)*128) : -marioState.position[2]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+					velocity.x = marioState.velocity[0] * 2;
+					velocity.y = -marioState.velocity[1] * 2;
+					velocity.z = -marioState.velocity[2] * 2;
+					speed = sqrtf((velocity.x*velocity.x) + (velocity.z*velocity.z));
 
 					if (marioState.particleFlags & (1 << 11)) // PARTICLE_FIRE
 						game->addEntity(TR::Entity::SMOKE, getRoomIndex(), pos);
