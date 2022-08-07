@@ -3129,7 +3129,7 @@ struct Level : IGame {
         //    Debug::Level::path(level, (Enemy*)level.entities[21].controller);
         //    Debug::Level::debugOverlaps(level, players[0]->box);
         //    Debug::Level::debugBoxes(level, lara->dbgBoxes, lara->dbgBoxesCount);
-            Debug::Level::sm64debug(players[0]);
+            Debug::Level::sm64debug(players[0], &level);
             Core::setDepthTest(true);
             Core::setBlendMode(bmNone);
         /*// render ambient cube

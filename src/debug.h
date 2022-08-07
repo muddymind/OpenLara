@@ -567,9 +567,9 @@ namespace Debug {
             }
         }
 
-        void sm64debug(Lara *lara) {
+        void sm64debug(Lara *lara, TR::Level *level) {
 
-            if(lara->sm64DebugSurfaces == NULL || !lara->surfaceDebuggerEnabled || !lara->isMario)
+            if(lara->sm64DebugSurfaces == NULL || !lara->surfaceDebuggerEnabled || !lara->isMario || !level)
             {
                 return;
             }
@@ -595,6 +595,42 @@ namespace Debug {
 
             for(int i=0; i<lara->sm64DebugSurfaces->colliderGeometryCount; i++){
                 Debug::Draw::triangle(lara->sm64DebugSurfaces->colliderGeometry[i].v[0], lara->sm64DebugSurfaces->colliderGeometry[i].v[1], lara->sm64DebugSurfaces->colliderGeometry[i].v[2], vec4(0.9f, 0.0f, 0.9f, 0.5f), vec4(0.9f, 0.0f, 0.9f, 0.3f));       
+            }
+
+            for (int i = 0; i < level->roomsCount; i++) {
+                TR::Room &r = level->rooms[i];
+ 
+                for (int j = 0; j < r.meshesCount; j++) {
+                    TR::Room::Mesh &m  = r.meshes[j];
+                    TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
+
+                    if (sm->flags != 2 || !level->meshOffsets[sm->mesh])
+                    {
+                        continue;
+                    }
+
+                    Box box;
+                    vec3 offset = vec3(float(m.x), float(m.y), float(m.z));
+                    sm->getBox(false, m.rotation, box); // visible box
+
+                    Debug::Draw::box(offset + box.min, offset + box.max, vec4(1, 1, 0, 0.25));
+
+                    // if (sm->flags != 2 && ) { // collision box
+                    //     sm->getBox(true, m.rotation, box);
+                    //     Debug::Draw::box(offset + box.min - vec3(10.0f), offset + box.max + vec3(10.0f), vec4(1, 0, 0, 0.50));
+                    // }
+                    
+                    //if (!level.meshOffsets[sm->mesh]) continue;
+                    //const TR::Mesh &mesh = level.meshes[level.meshOffsets[sm->mesh]];
+                    
+                    {
+                        char buf[255];
+                        sprintf(buf, "id: %d", (int)m.meshIndex);
+                        Debug::Draw::text(offset + (box.min + box.max) * 0.5f, vec4(0.5, 0.5, 1.0, 1), buf);
+                    }
+                    
+                    
+                }
             }
 
             Core::setDepthTest(true);            
