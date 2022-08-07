@@ -1050,7 +1050,7 @@ struct Mario : Lara
 		if (needFlip) {
 			game->flipMap();
 			game->setEffect(this, effect);
-			marioUpdateRoom(TR::NO_ROOM);
+			marioUpdateRoom(TR::NO_ROOM, true);
 		}
 	}
 
@@ -1523,8 +1523,12 @@ struct Mario : Lara
 		
 	}
 
-	void marioUpdateRoom(int oldRoom)
+	void marioUpdateRoom(int oldRoom, bool forceRefresh=false)
 	{
+		if(forceRefresh){
+			previousLoadedRoomsCount=0;
+		}
+
 		TR::Room &myRoom = getRoom();
 
 		// Set the water level to SM64
