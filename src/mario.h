@@ -1934,6 +1934,8 @@ struct Mario : Lara
 		sm64DebugSurfaces->floor.surfacePointer=0;
 		sm64DebugSurfaces->allGeometry = NULL;
 		sm64DebugSurfaces->allGeometryCount=0;
+		sm64DebugSurfaces->colliderGeometry=NULL;
+		sm64DebugSurfaces->allGeometryCount=0;
 
 		reset_vertex_array_coordinates(sm64DebugSurfaces->wall.v);
 		reset_vertex_array_coordinates(sm64DebugSurfaces->ceiling.v);
@@ -1973,10 +1975,20 @@ struct Mario : Lara
 		struct SM64DebugSurface ceiling;
 		ceiling.surfacePointer = sm64DebugSurfaces->ceiling.surfacePointer;
 
-		sm64_get_collision_surfaces(&floor, &ceiling, &wall);
+		struct SM64DebugSurface *imported = sm64_get_collision_surfaces(&floor, &ceiling, &wall, &(sm64DebugSurfaces->colliderGeometryCount));
 		importSM64debugSurface(&(sm64DebugSurfaces->wall), wall);
 		importSM64debugSurface(&(sm64DebugSurfaces->floor), floor);
 		importSM64debugSurface(&(sm64DebugSurfaces->ceiling), ceiling);
+
+		if(sm64DebugSurfaces->colliderGeometry!=NULL) {
+			free(sm64DebugSurfaces->colliderGeometry);
+		}
+
+		sm64DebugSurfaces->colliderGeometry = (struct sm64DebugGenericSurface*) malloc(sizeof(struct sm64DebugGenericSurface)*sm64DebugSurfaces->colliderGeometryCount);
+
+		for(int i=0; i<sm64DebugSurfaces->colliderGeometryCount; i++){
+			importSM64debugSurface(&(sm64DebugSurfaces->colliderGeometry[i]), imported[i]);
+		}
 	}
 
 	virtual void debug_get_sm64_all_surfaces()

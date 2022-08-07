@@ -586,15 +586,15 @@ namespace Debug {
                 case 1:
                     Debug::Draw::triangle(lara->sm64DebugSurfaces->allGeometry[i].v[0], lara->sm64DebugSurfaces->allGeometry[i].v[1], lara->sm64DebugSurfaces->allGeometry[i].v[2], vec4(1.0f, 0.9f, 0.0f, 0.5f), vec4(1.0f, 0.9f, 0.0f, 0.3f));
                     break;
-
-                case 2:
-                    Debug::Draw::triangle(lara->sm64DebugSurfaces->allGeometry[i].v[0], lara->sm64DebugSurfaces->allGeometry[i].v[1], lara->sm64DebugSurfaces->allGeometry[i].v[2], vec4(0.9f, 0.0f, 0.9f, 0.5f), vec4(0.9f, 0.0f, 0.9f, 0.3f));
-                    break;
                 
                 default:
                     Debug::Draw::triangle(lara->sm64DebugSurfaces->allGeometry[i].v[0], lara->sm64DebugSurfaces->allGeometry[i].v[1], lara->sm64DebugSurfaces->allGeometry[i].v[2], vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
                     break;
                 }                
+            }
+
+            for(int i=0; i<lara->sm64DebugSurfaces->colliderGeometryCount; i++){
+                Debug::Draw::triangle(lara->sm64DebugSurfaces->colliderGeometry[i].v[0], lara->sm64DebugSurfaces->colliderGeometry[i].v[1], lara->sm64DebugSurfaces->colliderGeometry[i].v[2], vec4(0.9f, 0.0f, 0.9f, 0.5f), vec4(0.9f, 0.0f, 0.9f, 0.3f));       
             }
 
             Core::setDepthTest(true);            

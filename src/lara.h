@@ -346,6 +346,8 @@ struct Lara : Character {
         struct sm64DebugGenericSurface ceiling;
         struct sm64DebugGenericSurface *allGeometry;
         int allGeometryCount;
+        struct sm64DebugGenericSurface *colliderGeometry;
+        int colliderGeometryCount;
     };
 
     struct sm64DebugSurfacesSt *sm64DebugSurfaces = NULL;
