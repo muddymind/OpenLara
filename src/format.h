@@ -2772,7 +2772,7 @@ namespace TR {
             ASSERT(m.minX <= m.maxX && m.minY <= m.maxY && m.minZ <= m.maxZ);
 
             box = ::Box(m.min(), m.max());
-            box.rotate90(k);
+            //box.rotate90(k);
 
             ASSERT(box.min.x <= box.max.x && box.min.y <= box.max.y && box.min.z <= box.max.z);
         }
@@ -6624,6 +6624,22 @@ namespace TR {
         void flipMap() {
             for (int i = 0; i < roomsCount; i++)
                 if (rooms[i].alternateRoom > -1) {
+                    Room &src = rooms[i];
+                    Room &dst = rooms[src.alternateRoom];
+
+                    swap(src, dst);
+                    swap(src.alternateRoom, dst.alternateRoom);
+                }
+            state.flags.flipped = !state.flags.flipped;
+        }
+
+        void flipMap(int rooms_modified[][2], int &modified_count) {
+            modified_count = 0;
+            for (int i = 0; i < roomsCount; i++)
+                if (rooms[i].alternateRoom > -1) {
+                    rooms_modified[modified_count][0]=i;
+                    rooms_modified[modified_count++][1]=rooms[i].alternateRoom;
+                    rooms[i].alternateRoom;
                     Room &src = rooms[i];
                     Room &dst = rooms[src.alternateRoom];
 

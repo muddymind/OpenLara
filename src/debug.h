@@ -612,16 +612,6 @@ namespace Debug {
                     Box box;
                     vec3 offset = vec3(float(m.x), float(m.y), float(m.z));
                     sm->getBox(false, m.rotation, box); // visible box
-
-                    Debug::Draw::box(offset + box.min, offset + box.max, vec4(1, 1, 0, 0.25));
-
-                    // if (sm->flags != 2 && ) { // collision box
-                    //     sm->getBox(true, m.rotation, box);
-                    //     Debug::Draw::box(offset + box.min - vec3(10.0f), offset + box.max + vec3(10.0f), vec4(1, 0, 0, 0.50));
-                    // }
-                    
-                    //if (!level.meshOffsets[sm->mesh]) continue;
-                    //const TR::Mesh &mesh = level.meshes[level.meshOffsets[sm->mesh]];
                     
                     {
                         char buf[255];

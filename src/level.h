@@ -261,7 +261,7 @@ struct Level : IGame {
                     {
                         sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
                         sm64_set_mario_faceangle( ((Mario*)lara)->marioId, (int16_t)((-lara->angle.y + M_PI) / M_PI * 32768.0f));
-                        ((Mario*)lara)->marioUpdateRoom(TR::NO_ROOM);
+                        ((Mario*)lara)->updateMarioVisibleRooms();
                         ((Mario*)lara)->currPos[0] = ((Mario*)lara)->lastPos[0] = lara->pos.x;
                         ((Mario*)lara)->currPos[1] = ((Mario*)lara)->lastPos[1] = -lara->pos.y;
                         ((Mario*)lara)->currPos[2] = ((Mario*)lara)->lastPos[2] = -lara->pos.z;
@@ -510,7 +510,16 @@ struct Level : IGame {
         updateBlocks(false);
         if (water && waterCache) waterCache->flipMap();
         mesh->flipMap();
-        level.flipMap();
+        level.flipMap();        
+        updateBlocks(true);
+    }
+
+    virtual void flipMap(int roomsSwitched[][2], int &roomsSwitchedCount, bool water = true) 
+    {
+        updateBlocks(false);
+        if (water && waterCache) waterCache->flipMap();
+        mesh->flipMap();
+        level.flipMap(roomsSwitched, roomsSwitchedCount);        
         updateBlocks(true);
     }
 
@@ -1103,7 +1112,7 @@ struct Level : IGame {
 
         Core::resetTime();
 
-        if (player && player->isMario) ((Mario*)player)->marioUpdateRoom(TR::NO_ROOM);
+        if (player && player->isMario) ((Mario*)player)->updateMarioVisibleRooms();
     }
 
     virtual ~Level() {
