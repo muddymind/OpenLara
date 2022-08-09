@@ -1579,8 +1579,6 @@ struct Mario : Lara
 				case 7: //harp
 				case 8: //piano	
 				case 13: //handcart
-				//case 15: //stair horizontal rails
-				//case 18: //stair rails pillars
 					boundingBox = generateMeshBoundingBox(sm);					
 					break;
 				}
@@ -1588,9 +1586,25 @@ struct Mario : Lara
 			case TR::LevelID::LVL_TR1_1: //Caves
 				switch (m.meshIndex)
 				{
+				case 0:	// branches
+				case 1:	// branches	
+				case 7:	// ice stalactite
+					continue;
 				// case 2: //wood fence blocking path to exit - solved by viewbox size
 				// 	boundingBox = generateMeshBoundingBox(sm);					
 				// 	break;
+				}
+				break;
+			case TR::LevelID::LVL_TR1_2: //City of Vilcabamba
+				switch (m.meshIndex)
+				{
+				case 0:	// branches	
+				case 1:	// branches	
+					continue;
+				case 3: // barn animal food holder - Mario can get stuck on it.
+				case 7:	// Stone Statues - Mario can clip through them and fall into the void.
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
 				}
 				break;
 			case TR::LevelID::LVL_TR1_3A: //The Lost Valley
