@@ -1591,6 +1591,24 @@ struct Mario : Lara
 				// 	boundingBox = generateMeshBoundingBox(sm);					
 				// 	break;
 				}
+			case TR::LevelID::LVL_TR1_3A: //The Lost Valley
+				switch (m.meshIndex)
+				{
+				case 0:	// branches
+				case 1:	// branches
+				case 2: // tree/bushes
+				case 3: // tree/bushes
+				case 4: // tree/bushes
+				case 5: // tree/bushes
+				case 6: // dead tree trunk get mario stuck. we will ignore it.
+				case 7: // trees
+				case 8: // trees
+					continue;
+				case 12: // skeleton
+				case 13: // skeleton
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
+				}
 			case TR::LevelID::LVL_TR1_8B: //Obelisk of Khamoon
 				switch (m.meshIndex)
 				{
