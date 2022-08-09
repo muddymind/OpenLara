@@ -604,10 +604,10 @@ namespace Debug {
                     TR::Room::Mesh &m  = r.meshes[j];
                     TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
 
-                    if (sm->flags != 2 || !level->meshOffsets[sm->mesh])
-                    {
-                        continue;
-                    }
+                    // if (sm->flags != 2 || !level->meshOffsets[sm->mesh])
+                    // {
+                    //     continue;
+                    // }
 
                     Box box;
                     vec3 offset = vec3(float(m.x), float(m.y), float(m.z));
@@ -615,7 +615,7 @@ namespace Debug {
                     
                     {
                         char buf[255];
-                        sprintf(buf, "id: %d", (int)m.meshIndex);
+                        sprintf(buf, "ID: %d", (int)m.meshIndex);
                         Debug::Draw::text(offset + (box.min + box.max) * 0.5f, vec4(0.5, 0.5, 1.0, 1), buf);
                     }
                     

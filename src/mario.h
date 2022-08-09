@@ -120,10 +120,10 @@ struct Mario : Lara
 		TRmarioMesh = new Mesh((Index*)marioRenderState.mario.index, marioRenderState.mario.num_vertices, NULL, 0, 1, true, true);
 		TRmarioMesh->initMario(&marioGeometry);
 
-		//roomsFlipControl = (TR::Room **)malloc((sizeof(struct TR::Room*))*level->roomsCount);
-
+		
 		if (!game->getLara(0) || !game->getLara(0)->isMario) 
 		{
+			printf("Loading level %d", level->id);
 			sm64_level_init(level->roomsCount);
 			for(int i=0; i< level->roomsCount; i++)
 			{
@@ -1436,6 +1436,113 @@ struct Mario : Lara
 		return collision_surfaces;
 	}
 
+	TR::Mesh *generateMeshBoundingBox(TR::StaticMesh *sm)
+	{
+		Box box;
+		sm->getBox(true, box);
+		
+		TR::Mesh *boundingBox = (TR::Mesh *) malloc(sizeof(TR::Mesh));
+		boundingBox->fCount = 12;
+		boundingBox->faces = (TR::Face *)malloc(sizeof(TR::Face)*boundingBox->fCount);
+
+		boundingBox->vCount = 8;
+		boundingBox->vertices = (TR::Mesh::Vertex *)malloc(sizeof(TR::Mesh::Vertex)*boundingBox->vCount);
+
+		boundingBox->vertices[0].coord.x=box.min.x;
+		boundingBox->vertices[0].coord.y=box.min.y;
+		boundingBox->vertices[0].coord.z=box.min.z;
+
+		boundingBox->vertices[1].coord.x=box.min.x;
+		boundingBox->vertices[1].coord.y=box.max.y;
+		boundingBox->vertices[1].coord.z=box.min.z;
+
+		boundingBox->vertices[2].coord.x=box.max.x;
+		boundingBox->vertices[2].coord.y=box.max.y;
+		boundingBox->vertices[2].coord.z=box.min.z;
+
+		boundingBox->vertices[3].coord.x=box.max.x;
+		boundingBox->vertices[3].coord.y=box.min.y;
+		boundingBox->vertices[3].coord.z=box.min.z;
+
+		boundingBox->vertices[4].coord.x=box.min.x;
+		boundingBox->vertices[4].coord.y=box.min.y;
+		boundingBox->vertices[4].coord.z=box.max.z;
+
+		boundingBox->vertices[5].coord.x=box.min.x;
+		boundingBox->vertices[5].coord.y=box.max.y;
+		boundingBox->vertices[5].coord.z=box.max.z;
+
+		boundingBox->vertices[6].coord.x=box.max.x;
+		boundingBox->vertices[6].coord.y=box.max.y;
+		boundingBox->vertices[6].coord.z=box.max.z;
+		
+		boundingBox->vertices[7].coord.x=box.max.x;
+		boundingBox->vertices[7].coord.y=box.min.y;
+		boundingBox->vertices[7].coord.z=box.max.z;
+
+		boundingBox->faces[0].triangle=1;
+		boundingBox->faces[0].vertices[0]=2;
+		boundingBox->faces[0].vertices[1]=1;
+		boundingBox->faces[0].vertices[2]=0;
+
+		boundingBox->faces[1].triangle=1;
+		boundingBox->faces[1].vertices[0]=0;
+		boundingBox->faces[1].vertices[1]=3;
+		boundingBox->faces[1].vertices[2]=2;
+
+		boundingBox->faces[2].triangle=1;
+		boundingBox->faces[2].vertices[0]=2;
+		boundingBox->faces[2].vertices[1]=3;
+		boundingBox->faces[2].vertices[2]=7;
+
+		boundingBox->faces[3].triangle=1;
+		boundingBox->faces[3].vertices[0]=7;
+		boundingBox->faces[3].vertices[1]=6;
+		boundingBox->faces[3].vertices[2]=2;
+
+		boundingBox->faces[4].triangle=1;
+		boundingBox->faces[4].vertices[0]=6;
+		boundingBox->faces[4].vertices[1]=7;
+		boundingBox->faces[4].vertices[2]=4;
+
+		boundingBox->faces[5].triangle=1;
+		boundingBox->faces[5].vertices[0]=4;
+		boundingBox->faces[5].vertices[1]=5;
+		boundingBox->faces[5].vertices[2]=6;
+
+		boundingBox->faces[6].triangle=1;
+		boundingBox->faces[6].vertices[0]=4;
+		boundingBox->faces[6].vertices[1]=0;
+		boundingBox->faces[6].vertices[2]=5;
+
+		boundingBox->faces[7].triangle=1;
+		boundingBox->faces[7].vertices[0]=0;
+		boundingBox->faces[7].vertices[1]=1;
+		boundingBox->faces[7].vertices[2]=5;
+
+		boundingBox->faces[8].triangle=1;
+		boundingBox->faces[8].vertices[0]=7;
+		boundingBox->faces[8].vertices[1]=3;
+		boundingBox->faces[8].vertices[2]=0;
+
+		boundingBox->faces[9].triangle=1;
+		boundingBox->faces[9].vertices[0]=0;
+		boundingBox->faces[9].vertices[1]=4;
+		boundingBox->faces[9].vertices[2]=7;
+
+		boundingBox->faces[10].triangle=1;
+		boundingBox->faces[10].vertices[0]=6;
+		boundingBox->faces[10].vertices[1]=5;
+		boundingBox->faces[10].vertices[2]=1;
+
+		boundingBox->faces[11].triangle=1;
+		boundingBox->faces[11].vertices[0]=1;
+		boundingBox->faces[11].vertices[1]=2;
+		boundingBox->faces[11].vertices[2]=6;
+
+		return boundingBox;
+	}
+
 	struct SM64SurfaceObject* marioLoadRoomMeshes(int roomId, int *room_meshes_count)
 	{
 		TR::Room &room = level->rooms[roomId];
@@ -1449,9 +1556,9 @@ struct Mario : Lara
 		{
 			TR::Room::Mesh &m  = room.meshes[j];
 			TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
-			if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) {
-				continue;
-			}
+			// if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) {
+			// 	continue;
+			// }
 
 			// define the surface object
 			struct SM64SurfaceObject obj;
@@ -1466,135 +1573,32 @@ struct Mario : Lara
 
 			switch(level->id)
 			{
-			case TR::LevelID::LVL_TR1_8B:
-				switch (m.meshID)
+			case TR::LevelID::LVL_TR1_GYM:
+				switch (m.meshIndex)
 				{
-				case 34: //Gates at the beginning
-					Box box;
-					sm->getBox(true, m.rotation, box);
-					
-					boundingBox = (TR::Mesh *) malloc(sizeof(TR::Mesh));
-					boundingBox->fCount = 12;
-					boundingBox->faces = (TR::Face *)malloc(sizeof(TR::Face)*boundingBox->fCount);
-
-					boundingBox->vCount = 8;
-					boundingBox->vertices = (TR::Mesh::Vertex *)malloc(sizeof(TR::Mesh::Vertex)*boundingBox->vCount);
-
-					// const int boundingBoxPad = 20;
-					// if(box.min.x==box.max.x) {
-					// 	box.min.x-=boundingBoxPad;
-					// 	box.max.x+=boundingBoxPad;
-					// }
-
-					// if(box.min.y==box.max.y) {
-					// 	box.min.y-=boundingBoxPad;
-					// 	box.max.y+=boundingBoxPad;
-					// }
-
-					// if(box.min.z==box.max.z) {
-					// 	box.min.z-=boundingBoxPad;
-					// 	box.max.z+=boundingBoxPad;
-					// }
-
-					boundingBox->vertices[0].coord.x=box.min.x;
-					boundingBox->vertices[0].coord.y=box.min.y;
-					boundingBox->vertices[0].coord.z=box.min.z;
-
-					boundingBox->vertices[1].coord.x=box.min.x;
-					boundingBox->vertices[1].coord.y=box.max.y;
-					boundingBox->vertices[1].coord.z=box.min.z;
-
-					boundingBox->vertices[2].coord.x=box.max.x;
-					boundingBox->vertices[2].coord.y=box.max.y;
-					boundingBox->vertices[2].coord.z=box.min.z;
-
-					boundingBox->vertices[3].coord.x=box.max.x;
-					boundingBox->vertices[3].coord.y=box.min.y;
-					boundingBox->vertices[3].coord.z=box.min.z;
-
-					boundingBox->vertices[4].coord.x=box.min.x;
-					boundingBox->vertices[4].coord.y=box.min.y;
-					boundingBox->vertices[4].coord.z=box.max.z;
-
-					boundingBox->vertices[5].coord.x=box.min.x;
-					boundingBox->vertices[5].coord.y=box.max.y;
-					boundingBox->vertices[5].coord.z=box.max.z;
-
-					boundingBox->vertices[6].coord.x=box.max.x;
-					boundingBox->vertices[6].coord.y=box.max.y;
-					boundingBox->vertices[6].coord.z=box.max.z;
-					
-					boundingBox->vertices[7].coord.x=box.max.x;
-					boundingBox->vertices[7].coord.y=box.min.y;
-					boundingBox->vertices[7].coord.z=box.max.z;
-
-					boundingBox->faces[0].triangle=1;
-					boundingBox->faces[0].vertices[0]=2;
-					boundingBox->faces[0].vertices[1]=1;
-					boundingBox->faces[0].vertices[2]=0;
-
-					boundingBox->faces[1].triangle=1;
-					boundingBox->faces[1].vertices[0]=0;
-					boundingBox->faces[1].vertices[1]=3;
-					boundingBox->faces[1].vertices[2]=2;
-
-					boundingBox->faces[2].triangle=1;
-					boundingBox->faces[2].vertices[0]=2;
-					boundingBox->faces[2].vertices[1]=3;
-					boundingBox->faces[2].vertices[2]=7;
-
-					boundingBox->faces[3].triangle=1;
-					boundingBox->faces[3].vertices[0]=7;
-					boundingBox->faces[3].vertices[1]=6;
-					boundingBox->faces[3].vertices[2]=2;
-
-					boundingBox->faces[4].triangle=1;
-					boundingBox->faces[4].vertices[0]=6;
-					boundingBox->faces[4].vertices[1]=7;
-					boundingBox->faces[4].vertices[2]=4;
-
-					boundingBox->faces[5].triangle=1;
-					boundingBox->faces[5].vertices[0]=4;
-					boundingBox->faces[5].vertices[1]=5;
-					boundingBox->faces[5].vertices[2]=6;
-
-					boundingBox->faces[6].triangle=1;
-					boundingBox->faces[6].vertices[0]=5;
-					boundingBox->faces[6].vertices[1]=4;
-					boundingBox->faces[6].vertices[2]=0;
-
-					boundingBox->faces[7].triangle=1;
-					boundingBox->faces[7].vertices[0]=0;
-					boundingBox->faces[7].vertices[1]=1;
-					boundingBox->faces[7].vertices[2]=5;
-
-					boundingBox->faces[8].triangle=1;
-					boundingBox->faces[8].vertices[0]=7;
-					boundingBox->faces[8].vertices[1]=3;
-					boundingBox->faces[8].vertices[2]=0;
-
-					boundingBox->faces[9].triangle=1;
-					boundingBox->faces[9].vertices[0]=0;
-					boundingBox->faces[9].vertices[1]=4;
-					boundingBox->faces[9].vertices[2]=7;
-
-					boundingBox->faces[10].triangle=1;
-					boundingBox->faces[10].vertices[0]=6;
-					boundingBox->faces[10].vertices[1]=5;
-					boundingBox->faces[10].vertices[2]=1;
-
-					boundingBox->faces[11].triangle=1;
-					boundingBox->faces[11].vertices[0]=1;
-					boundingBox->faces[11].vertices[1]=2;
-					boundingBox->faces[11].vertices[2]=6;					
-					
+				case 7: //harp
+				case 8: //piano	
+				case 13: //handcart
+				//case 15: //stair horizontal rails
+				//case 18: //stair rails pillars
+					boundingBox = generateMeshBoundingBox(sm);					
 					break;
 				}
-
+			case TR::LevelID::LVL_TR1_8B:
+				switch (m.meshIndex)
+				{
+				case 10: // Iron Bars with only 1 face										
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
+				}
 			}
-
+			
 			if(boundingBox)
 				d=boundingBox;
+			else if(d->fCount==0){
+				boundingBox = generateMeshBoundingBox(sm);
+				d=boundingBox;
+			}
 
 			// increment the surface count for this
 			for (int k = 0; k < d->fCount; k++)
@@ -1628,6 +1632,8 @@ struct Mario : Lara
 			{
 				free(boundingBox->faces);
 				free(boundingBox->vertices);
+				free(boundingBox);
+				boundingBox=NULL;
 			}
 
 			meshes[(*room_meshes_count)++]=obj;

@@ -2772,7 +2772,18 @@ namespace TR {
             ASSERT(m.minX <= m.maxX && m.minY <= m.maxY && m.minZ <= m.maxZ);
 
             box = ::Box(m.min(), m.max());
-            //box.rotate90(k);
+            box.rotate90(k);
+
+            ASSERT(box.min.x <= box.max.x && box.min.y <= box.max.y && box.min.z <= box.max.z);
+        }
+
+        void getBox(bool collision, ::Box &box) {
+
+            MinMax &m = collision ? cbox : vbox;
+
+            ASSERT(m.minX <= m.maxX && m.minY <= m.maxY && m.minZ <= m.maxZ);
+
+            box = ::Box(m.min(), m.max());
 
             ASSERT(box.min.x <= box.max.x && box.min.y <= box.max.y && box.min.z <= box.max.z);
         }
