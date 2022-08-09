@@ -1576,9 +1576,16 @@ struct Mario : Lara
 			case TR::LevelID::LVL_TR1_GYM:
 				switch (m.meshIndex)
 				{
-				case 7: //harp
-				case 8: //piano	
-				case 13: //handcart
+				case 0:	// plant - Mario can get stuck
+				case 1:	// plant - Mario can get stuck
+				case 2: // plant - Mario can get stuck
+				case 3: // plant - Mario can get stuck
+				case 4: // branches - Mario can get stuck
+					continue;
+				case 7: //harp - Mario can get stuck
+				case 8: //piano	- Martio can get stuck
+				case 11: //pedestal - Mario can get stuck between it and the columns
+				case 13: //handcart - Mario can get stuck
 					boundingBox = generateMeshBoundingBox(sm);					
 					break;
 				}
@@ -1586,9 +1593,9 @@ struct Mario : Lara
 			case TR::LevelID::LVL_TR1_1: //Caves
 				switch (m.meshIndex)
 				{
-				case 0:	// branches
-				case 1:	// branches	
-				case 7:	// ice stalactite
+				case 0:	// branches - Mario stumbles
+				case 1:	// branches	- Mario stumbles
+				case 7:	// ice stalactite - Mario stumbles
 					continue;
 				// case 2: //wood fence blocking path to exit - solved by viewbox size
 				// 	boundingBox = generateMeshBoundingBox(sm);					
@@ -1598,8 +1605,8 @@ struct Mario : Lara
 			case TR::LevelID::LVL_TR1_2: //City of Vilcabamba
 				switch (m.meshIndex)
 				{
-				case 0:	// branches	
-				case 1:	// branches	
+				case 0:	// branches - Mario stumbles
+				case 1:	// branches - Mario stumbles
 					continue;
 				case 3: // barn animal food holder - Mario can get stuck on it.
 				case 7:	// Stone Statues - Mario can clip through them and fall into the void.
@@ -1610,18 +1617,18 @@ struct Mario : Lara
 			case TR::LevelID::LVL_TR1_3A: //The Lost Valley
 				switch (m.meshIndex)
 				{
-				case 0:	// branches
-				case 1:	// branches
-				case 2: // tree/bushes
-				case 3: // tree/bushes
-				case 4: // tree/bushes
-				case 5: // tree/bushes
+				case 0:	// branches - Mario stumbles
+				case 1:	// branches - Mario stumbles
+				case 2: // tree/bushes - Mario can get stuck
+				case 3: // tree/bushes - Mario can get stuck
+				case 4: // tree/bushes - Mario can get stuck
+				case 5: // tree/bushes - Mario can get stuck
 				case 6: // dead tree trunk get mario stuck. we will ignore it.
-				case 7: // trees
-				case 8: // trees
+				case 7: // trees - Mario can get stuck
+				case 8: // trees - Mario can get stuck
 					continue;
-				case 12: // skeleton
-				case 13: // skeleton
+				case 12: // skeleton - Mario stumbles
+				case 13: // skeleton - Mario stumbles
 					boundingBox = generateMeshBoundingBox(sm);
 					break;
 				}
