@@ -1584,18 +1584,25 @@ struct Mario : Lara
 					boundingBox = generateMeshBoundingBox(sm);					
 					break;
 				}
-			case TR::LevelID::LVL_TR1_8B:
+			case TR::LevelID::LVL_TR1_1: //Caves
 				switch (m.meshIndex)
 				{
-				case 10: // Iron Bars with only 1 face										
-					boundingBox = generateMeshBoundingBox(sm);
-					break;
+				// case 2: //wood fence blocking path to exit - solved by viewbox size
+				// 	boundingBox = generateMeshBoundingBox(sm);					
+				// 	break;
+				}
+			case TR::LevelID::LVL_TR1_8B: //Obelisk of Khamoon
+				switch (m.meshIndex)
+				{
+				// case 10: // Iron Bars with only 1 face - solved by viewbox size										
+				// 	boundingBox = generateMeshBoundingBox(sm);
+				// 	break;
 				}
 			}
 			
 			if(boundingBox)
 				d=boundingBox;
-			else if(d->fCount==0){
+			else if(d->fCount==0 || sm->vbox.minX==sm->vbox.maxX || sm->vbox.minY==sm->vbox.maxY || sm->vbox.minZ==sm->vbox.maxZ){
 				boundingBox = generateMeshBoundingBox(sm);
 				d=boundingBox;
 			}
