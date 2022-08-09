@@ -1584,6 +1584,7 @@ struct Mario : Lara
 					boundingBox = generateMeshBoundingBox(sm);					
 					break;
 				}
+				break;
 			case TR::LevelID::LVL_TR1_1: //Caves
 				switch (m.meshIndex)
 				{
@@ -1591,6 +1592,7 @@ struct Mario : Lara
 				// 	boundingBox = generateMeshBoundingBox(sm);					
 				// 	break;
 				}
+				break;
 			case TR::LevelID::LVL_TR1_3A: //The Lost Valley
 				switch (m.meshIndex)
 				{
@@ -1609,6 +1611,7 @@ struct Mario : Lara
 					boundingBox = generateMeshBoundingBox(sm);
 					break;
 				}
+				break;
 			case TR::LevelID::LVL_TR1_8B: //Obelisk of Khamoon
 				switch (m.meshIndex)
 				{
@@ -1616,6 +1619,7 @@ struct Mario : Lara
 				// 	boundingBox = generateMeshBoundingBox(sm);
 				// 	break;
 				}
+				break;
 			}
 			
 			if(boundingBox)
