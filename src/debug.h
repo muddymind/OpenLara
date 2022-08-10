@@ -208,6 +208,32 @@ namespace Debug {
             glLineWidth(1.0f);
         }
 
+        void staticface(const vec3 &a, const vec3 &b, const vec3 &c, const vec3 &d, const vec4 &linecolor, const vec4 &facecolor) {
+            glLineWidth(2.0f);
+            //Core::setDepthTest(false);
+            glColor4fv((GLfloat*)&linecolor);
+            glBegin(GL_LINES);                
+                glVertex3fv((GLfloat*)&a);
+                glVertex3fv((GLfloat*)&b);
+                glVertex3fv((GLfloat*)&b);
+                glVertex3fv((GLfloat*)&c);
+                glVertex3fv((GLfloat*)&c);
+                glVertex3fv((GLfloat*)&d);
+                glVertex3fv((GLfloat*)&d);
+                glVertex3fv((GLfloat*)&a);
+            glEnd();
+
+            glColor4fv((GLfloat*)&facecolor);
+            glBegin(GL_QUADS);                
+                glVertex3fv((GLfloat*)&a);
+                glVertex3fv((GLfloat*)&b);
+                glVertex3fv((GLfloat*)&c);
+                glVertex3fv((GLfloat*)&d);                
+            glEnd();
+            //Core::setDepthTest(true);
+            glLineWidth(1.0f);
+        }
+
         void textColor(const vec2 &pos, const vec4 &color, const char *str) {
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
@@ -642,6 +668,60 @@ namespace Debug {
             }
 
             Core::setDepthTest(true);            
+        }
+
+        void sm64debugrooms(TR::Level *level, int roomIndex) {
+
+            TR::Room &room = level->rooms[roomIndex];
+            TR::Room::Data &d = room.data;
+
+            printf("room: %d\n", roomIndex);
+            Core::setDepthTest(false); 
+            // Count the number of static surface triangles
+            for (int j = 0; j < d.fCount; j++)
+            {
+                TR::Face &f = d.faces[j];
+                if (!f.triangle)
+                {
+                    Debug::Draw::staticface(
+                        vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
+                        vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+
+                    
+                    char buf[255];
+                    sprintf(buf, "Room: %d Id: %d", roomIndex, j);
+                    Debug::Draw::text(
+                        vec3(
+                            (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+d.vertices[f.vertices[3]].pos.x+(4*room.info.x))/4.0f,
+                            (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y+d.vertices[f.vertices[3]].pos.y)/4.0f,
+                            (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+d.vertices[f.vertices[3]].pos.z+(4*room.info.z))/4.0f
+                            ), vec4(0.5, 0.5, 1.0, 1), buf);
+                }
+                else
+                {
+                    Debug::Draw::staticface(
+                        vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
+                        vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+
+                    
+                    char buf[255];
+                    sprintf(buf, "Room: %d Id: %d", roomIndex, j);
+                    Debug::Draw::text(
+                        vec3(
+                            (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+(3*room.info.x))/3.0f,
+                            (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y)/3.0f,
+                            (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+(3*room.info.z))/3.0f
+                            ), vec4(0.5, 0.5, 1.0, 1), buf);
+                }
+                
+            }
+            Core::setDepthTest(true);                        
         }
 
         void lights(const TR::Level &level, int room, Controller *lara) {

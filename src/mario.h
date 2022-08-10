@@ -143,7 +143,7 @@ struct Mario : Lara
 
 		int nearRooms[256];
 		int nearRoomsCount=0;
-		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+		levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
 		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
 	}
@@ -1174,7 +1174,7 @@ struct Mario : Lara
 		
 		int nearRooms[256];
 		int nearRoomsCount=0;
-		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 2);
+		levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 2);
 
 
 		#ifdef DEBUG_RENDER			
@@ -1203,7 +1203,7 @@ struct Mario : Lara
 			printf("actual mario loading\n");
 			int nearRooms[256];
 			int nearRoomsCount=0;
-			game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+			levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
 			marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 			if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 		}
