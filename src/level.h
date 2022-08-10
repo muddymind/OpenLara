@@ -473,6 +473,48 @@ struct Level : IGame {
         return (players[0]->pos - pos).length2() < (players[1]->pos - pos).length2() ? players[0] : players[1];
     }
 
+    virtual void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0) {
+        if (count>maxDepth) {
+            return;
+        }
+
+		// if we are starting to search we set all levels visibility to false
+		if(count==0)
+		{
+			for (int i = 0; i < getLevel()->roomsCount; i++)
+				getLevel()->rooms[i].flags.visible = false;
+		}
+
+		//Hardcoded exceptions to avoid invisible collisions
+		switch (getLevel()->id)
+		{
+		case TR::LVL_TR1_10B: //Atlantis
+			switch (currentRoomIndex)
+			{
+			case 47: //room with blocks and switches to trapdoors
+				if(to==84)
+					return;
+			}
+		}
+
+		count++;
+
+        TR::Room &room = getLevel()->rooms[to];
+
+		if(!room.flags.visible){
+			room.flags.visible = true;
+			roomsList[*roomsCount] = to;
+			*roomsCount+=1;
+		}
+
+		if(*roomsCount == 256)
+			return;
+
+		for (int i = 0; i < room.portalsCount; i++) {
+			getCurrentAndAdjacentRooms(roomsList, roomsCount, currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
+		}
+    }
+
     virtual bool isCutscene() {
         if (level.isTitle()) return false;
         return camera->mode == Camera::MODE_CUTSCENE;

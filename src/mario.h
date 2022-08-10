@@ -123,16 +123,20 @@ struct Mario : Lara
 		
 		if (!game->getLara(0) || !game->getLara(0)->isMario) 
 		{
-			printf("Loading level %d", level->id);
+			#ifdef DEBUG_RENDER	
+			printf("Loading level %d\n", level->id);
+			#endif
 			sm64_level_init(level->roomsCount);
 			for(int i=0; i< level->roomsCount; i++)
 			{
 				marioLoadRoom(i);	
 			}
-			updateMarioVisibleRooms();
 		}
-		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
-		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+
+		int nearRooms[256];
+		int nearRoomsCount=0;
+		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 
 		lastPos[0] = currPos[0] = pos.x;
@@ -171,10 +175,12 @@ struct Mario : Lara
 	{
 		Lara::reset(room, pos, angle, forceStand);
 
-		updateMarioVisibleRooms();
-
 		if (marioId != -1) sm64_mario_delete(marioId);
-		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
+
+		int nearRooms[256];
+		int nearRoomsCount=0;
+		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
 	}
 
@@ -1354,41 +1360,6 @@ struct Mario : Lara
 		}
 	}
 
-	void getNearVisibleRooms(int *roomsList, int *roomsCount, int to, int count = 0) {
-        if (count>2) {
-            return;
-        }
-
-		//Hardcoded exceptions to avoid invisible collisions
-		switch (level->id)
-		{
-		case TR::LVL_TR1_10B: //Atlantis
-			switch (getRoomIndex())
-			{
-			case 47: //room with blocks and switches to trapdoors
-				if(to==84)
-					return;
-			}
-		}
-
-		count++;
-
-        TR::Room &room = level->rooms[to];
-
-		if(!room.flags.visible){
-			room.flags.visible = true;
-			roomsList[*roomsCount] = to;
-			*roomsCount+=1;
-		}
-
-		if(*roomsCount == 256)
-			return;
-
-		for (int i = 0; i < room.portalsCount; i++) {
-			getNearVisibleRooms(roomsList, roomsCount, room.portals[i].roomIndex, count);
-		}
-    }
-
 	struct SM64Surface* marioLoadRoomSurfaces(int roomId, int *room_surfaces_count)
 	{
 		*room_surfaces_count = 0;
@@ -1556,9 +1527,9 @@ struct Mario : Lara
 		{
 			TR::Room::Mesh &m  = room.meshes[j];
 			TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
-			// if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) {
-			// 	continue;
-			// }
+			if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) {
+				continue;
+			}
 
 			// define the surface object
 			struct SM64SurfaceObject obj;
@@ -1731,8 +1702,10 @@ struct Mario : Lara
 		return true;
 	}
 
+	#ifdef DEBUG_RENDER	
 	int oldViewedRooms[256];
 	int oldViewedRoomsCount=0;
+	#endif
 
 	void updateMarioVisibleRooms()
 	{
@@ -1743,42 +1716,29 @@ struct Mario : Lara
 			marioWaterLevel = (getRoom().flags.water || dozy) ? ((getRoom().waterLevelSurface != TR::NO_WATER) ? -getRoom().waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
 			sm64_set_mario_water_level(marioId, marioWaterLevel);
 		}
-
-		// mark all rooms as invisible
-		for (int i = 0; i < level->roomsCount; i++)
-			level->rooms[i].flags.visible = false;
 		
-		int result[256];
-		int resultCount=0;
+		int nearRooms[256];
+		int nearRoomsCount=0;
+		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 2);
 
-		//TODO
-		// for (int M=0; M<2; M++) (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario))
-		getNearVisibleRooms(result, &resultCount, getRoomIndex());
 
-		//Make sure doppleganger has room to spawn in atlantis
-		if(level->id == TR::LVL_TR1_10B)
-		for (int i=0; i<level->entitiesCount; i++)
+		#ifdef DEBUG_RENDER			
+		if(surfaceDebuggerEnabled)
 		{
-			if (level->entities[i].type != TR::Entity::ENEMY_DOPPELGANGER) continue;
-
-			TR::Room &roomD = level->rooms[level->entities[i].room];
-			getNearVisibleRooms(result, &resultCount, level->entities[i].room, 1);
-		}
-
-
-		if(oldViewedRoomsCount != resultCount || !areArraysEqual(oldViewedRooms, result, resultCount))
-		{
-			oldViewedRoomsCount=0;
-			printf("rooms:");
-			for(int i=0;i<resultCount; i++){
-				printf(" %d", result[i]);
-				oldViewedRooms[oldViewedRoomsCount++]=result[i];
+			if(oldViewedRoomsCount != nearRoomsCount || !areArraysEqual(oldViewedRooms, nearRooms, nearRoomsCount))
+			{
+				oldViewedRoomsCount=0;
+				printf("rooms:");
+				for(int i=0;i<nearRoomsCount; i++){
+					printf(" %d", nearRooms[i]);
+					oldViewedRooms[oldViewedRoomsCount++]=nearRooms[i];
+				}
+				printf("\n");			
 			}
-			printf("\n");
-			
 		}
+		#endif
 
-		sm64_level_update_loaded_rooms_list(result, resultCount);
+		sm64_level_update_loaded_rooms_list(marioId, nearRooms, nearRoomsCount);
 	}
 
 	void update()
@@ -2025,11 +1985,6 @@ struct Mario : Lara
 				if (p != pos && updateZone())
 					updateLights();
 			}
-
-			#ifdef DEBUG_RENDER
-			debug_get_sm64_collisions();
-			#endif
-
         }
         
         camera->update();
@@ -2117,112 +2072,6 @@ struct Mario : Lara
 	void updateVelocity()
 	{
 		//Lara::updateVelocity();
-	}
-
-	void reset_vertex_array_coordinates(vec3 *v)
-	{
-		v[0].x=0.0f;
-		v[0].y=0.0f;
-		v[0].z=0.0f;
-		v[1].x=0.0f;
-		v[1].y=0.0f;
-		v[1].z=0.0f;
-		v[2].x=0.0f;
-		v[2].y=0.0f;
-		v[2].z=0.0f;
-	}
-
-	void init_sm64_debug_surfaces(){
-		sm64DebugSurfaces = (sm64DebugSurfacesSt*)malloc(sizeof(sm64DebugSurfacesSt));
-		sm64DebugSurfaces->wall.surfacePointer=0;
-		sm64DebugSurfaces->ceiling.surfacePointer=0;
-		sm64DebugSurfaces->floor.surfacePointer=0;
-		sm64DebugSurfaces->allGeometry = NULL;
-		sm64DebugSurfaces->allGeometryCount=0;
-		sm64DebugSurfaces->colliderGeometry=NULL;
-		sm64DebugSurfaces->allGeometryCount=0;
-
-		reset_vertex_array_coordinates(sm64DebugSurfaces->wall.v);
-		reset_vertex_array_coordinates(sm64DebugSurfaces->ceiling.v);
-		reset_vertex_array_coordinates(sm64DebugSurfaces->floor.v);
-	}
-
-	void importSM64debugSurface(struct sm64DebugGenericSurface *dst, struct SM64DebugSurface src)
-	{
-		if(dst->surfacePointer != src.surfacePointer)
-		{
-			dst->color = src.color;
-			dst->surfacePointer = src.surfacePointer;
-			dst->v[0] = vec3((float)src.v1[0]*IMARIO_SCALE, (float)-src.v1[1]*IMARIO_SCALE, (float)-src.v1[2]*IMARIO_SCALE);
-			dst->v[1] = vec3((float)src.v2[0]*IMARIO_SCALE, (float)-src.v2[1]*IMARIO_SCALE, (float)-src.v2[2]*IMARIO_SCALE);
-			dst->v[2] = vec3((float)src.v3[0]*IMARIO_SCALE, (float)-src.v3[1]*IMARIO_SCALE, (float)-src.v3[2]*IMARIO_SCALE);
-		}
-	}
-
-	virtual void debug_get_sm64_collisions()
-	{
-		if(!surfaceDebuggerEnabled)
-		{
-			return;
-		}
-
-		if(sm64DebugSurfaces == NULL)
-		{
-			init_sm64_debug_surfaces();
-		}
-
-		struct SM64DebugSurface floor;
-		floor.surfacePointer = sm64DebugSurfaces->floor.surfacePointer;
-
-		struct SM64DebugSurface wall;
-		wall.surfacePointer = sm64DebugSurfaces->wall.surfacePointer;
-
-		struct SM64DebugSurface ceiling;
-		ceiling.surfacePointer = sm64DebugSurfaces->ceiling.surfacePointer;
-
-		struct SM64DebugSurface *imported = sm64_get_collision_surfaces(&floor, &ceiling, &wall, &(sm64DebugSurfaces->colliderGeometryCount));
-		importSM64debugSurface(&(sm64DebugSurfaces->wall), wall);
-		importSM64debugSurface(&(sm64DebugSurfaces->floor), floor);
-		importSM64debugSurface(&(sm64DebugSurfaces->ceiling), ceiling);
-
-		if(sm64DebugSurfaces->colliderGeometry!=NULL) {
-			free(sm64DebugSurfaces->colliderGeometry);
-		}
-
-		sm64DebugSurfaces->colliderGeometry = (struct sm64DebugGenericSurface*) malloc(sizeof(struct sm64DebugGenericSurface)*sm64DebugSurfaces->colliderGeometryCount);
-
-		for(int i=0; i<sm64DebugSurfaces->colliderGeometryCount; i++){
-			importSM64debugSurface(&(sm64DebugSurfaces->colliderGeometry[i]), imported[i]);
-		}
-
-		debug_get_sm64_all_surfaces();
-	}
-
-	virtual void debug_get_sm64_all_surfaces()
-	{
-		if(!surfaceDebuggerEnabled)
-		{
-			return;
-		}
-	
-		if(sm64DebugSurfaces == NULL)
-		{
-			init_sm64_debug_surfaces();
-		}
-
-		if(sm64DebugSurfaces->allGeometry!=NULL) {
-			free(sm64DebugSurfaces->allGeometry);
-		}
-
-		struct SM64DebugSurface *imported = sm64_get_all_surfaces(&(sm64DebugSurfaces->allGeometryCount));
-
-		sm64DebugSurfaces->allGeometry = (struct sm64DebugGenericSurface*) malloc(sizeof(struct sm64DebugGenericSurface)*sm64DebugSurfaces->allGeometryCount);
-
-		for(int i=0; i<sm64DebugSurfaces->allGeometryCount; i++){
-			importSM64debugSurface(&(sm64DebugSurfaces->allGeometry[i]), imported[i]);
-		}
-
-		return;
 	}
 };
 

@@ -329,29 +329,6 @@ struct Lara : Character {
 
     int32       networkInput;
 
-    struct sm64DebugSurface{
-        bool isValid=false;
-        vec3 v[3];
-    };
-
-    struct sm64DebugGenericSurface{
-        vec3 v[3];
-        uintptr_t surfacePointer;
-        int color;
-    };
-
-    struct sm64DebugSurfacesSt{
-        struct sm64DebugGenericSurface floor;
-        struct sm64DebugGenericSurface wall;
-        struct sm64DebugGenericSurface ceiling;
-        struct sm64DebugGenericSurface *allGeometry;
-        int allGeometryCount;
-        struct sm64DebugGenericSurface *colliderGeometry;
-        int colliderGeometryCount;
-    };
-
-    struct sm64DebugSurfacesSt *sm64DebugSurfaces = NULL;
-
     bool surfaceDebuggerEnabled = false;
 
 #ifdef _DEBUG

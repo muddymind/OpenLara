@@ -39,6 +39,11 @@ extern "C" {
 		}}; \
 	}
 
+#define CONVERT_DEBUG_FACE_COORDINATES(src) \
+	vec3(src.v1[0]*IMARIO_SCALE, -src.v1[1]*IMARIO_SCALE, -src.v1[2]*IMARIO_SCALE), \
+	vec3(src.v2[0]*IMARIO_SCALE, -src.v2[1]*IMARIO_SCALE, -src.v2[2]*IMARIO_SCALE), \
+	vec3(src.v3[0]*IMARIO_SCALE, -src.v3[1]*IMARIO_SCALE, -src.v3[2]*IMARIO_SCALE)
+
 #define COUNT_ROOM_SECTORS(level, surfaces_count, room) \
 	COUNT_ROOM_SECTORS_UP(level, surfaces_count, room);\
 	COUNT_ROOM_SECTORS_DOWN(level, surfaces_count, room);

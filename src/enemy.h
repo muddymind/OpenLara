@@ -2548,10 +2548,21 @@ struct MarioDoppelganger: Enemy
 	{
 		if (!target)
 		{
-			marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
+            int nearRooms[256];
+            int nearRoomsCount=0;
+            game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+			marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 			sm64_set_mario_state(marioId, 0); // remove cap
 			target = (Character*)game->getLara(0);
 		}
+
+        if(marioId!=-1)
+        {
+            int nearRooms[256];
+            int nearRoomsCount=0;
+            game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+            sm64_level_update_loaded_rooms_list(marioId, nearRooms, nearRoomsCount);
+        }
 
 		if (stand != STAND_AIR && tickedOnce)
 		{

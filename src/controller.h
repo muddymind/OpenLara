@@ -103,6 +103,7 @@ struct IGame {
     virtual Sound::Sample* playSound(int id, const vec3 &pos = vec3(0.0f), int flags = 0) const { return NULL; }
     virtual void playTrack(uint8 track, bool background = false) {}
     virtual void stopTrack()                                     {}
+    virtual void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0){}
 };
 
 struct Controller {
