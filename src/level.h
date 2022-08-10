@@ -2462,15 +2462,19 @@ struct Level : IGame {
             Input::down[ikF2] = false;
         }
         if (Input::down[ikF3]) {
-            Lara *lara = (Lara *)getLara();
-            if(lara!=NULL)
+            for(int i =0; i<2; i++)
             {
-                lara->surfaceDebuggerEnabled=!lara->surfaceDebuggerEnabled;
-
-                if(lara->surfaceDebuggerEnabled && lara->isMario)
+                Lara *lara = (Lara *)getLara(i);
+                if(lara!=NULL && lara->isMario)
                 {
-                    lara->debug_get_sm64_collisions();
-                    lara->debug_get_sm64_all_surfaces();
+                    lara->surfaceDebuggerEnabled=!lara->surfaceDebuggerEnabled;
+
+                    if(lara->surfaceDebuggerEnabled && lara->isMario)
+                    {
+                        lara->debug_get_sm64_collisions();
+                        lara->debug_get_sm64_all_surfaces();
+                    }
+                    break;
                 }
             }
             Input::down[ikF3] = false;
@@ -3183,7 +3187,15 @@ struct Level : IGame {
         //    Debug::Level::path(level, (Enemy*)level.entities[21].controller);
         //    Debug::Level::debugOverlaps(level, players[0]->box);
         //    Debug::Level::debugBoxes(level, lara->dbgBoxes, lara->dbgBoxesCount);
-            Debug::Level::sm64debug(players[0], &level);
+            for(int i=0; i<2; i++)
+            {
+                Lara *lara = (Lara *)getLara(i);
+                if(lara->isMario){
+                    Debug::Level::sm64debug(players[i], &level);
+                    break;
+                }
+            }
+            
             Core::setDepthTest(true);
             Core::setBlendMode(bmNone);
         /*// render ambient cube
