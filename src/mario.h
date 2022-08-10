@@ -1612,11 +1612,20 @@ struct Mario : Lara
 				// 	break;
 				}
 				break;
+			case TR::LevelID::LVL_TR1_10B: //Atlantis
+				switch (m.meshIndex)
+				{
+				case 0:	// weird flesh 1 surface walls
+				case 1:	// weird flesh 1 surface walls
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
+				}
+				break;
 			}
 			
 			if(boundingBox)
 				d=boundingBox;
-			else if(d->fCount==0 || sm->vbox.minX==sm->vbox.maxX || sm->vbox.minY==sm->vbox.maxY || sm->vbox.minZ==sm->vbox.maxZ){
+			else if(d->fCount<2 || sm->vbox.minX==sm->vbox.maxX || sm->vbox.minY==sm->vbox.maxY || sm->vbox.minZ==sm->vbox.maxZ){
 				boundingBox = generateMeshBoundingBox(sm);
 				d=boundingBox;
 			}
