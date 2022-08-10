@@ -272,7 +272,10 @@ struct Level : IGame {
             }
 
             if (level.state.flags.flipped) {
-                flipMap();
+                int roomsSwitched[level.roomsCount][2];
+                int roomsSwitchedCount=0;
+                flipMap(roomsSwitched, roomsSwitchedCount);
+                sm64_level_rooms_switch(roomsSwitched, roomsSwitchedCount);
                 level.state.flags.flipped = true;
             }
 
