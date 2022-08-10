@@ -164,7 +164,7 @@ struct Controller : IController {
 
     bool isMario;
 
-    Controller(IGame *game, int entity) : next(NULL), game(game), level(game->getLevel()), entity(entity), animation(level, getModel(), level->entities[entity].flags.smooth), state(animation.state), invertAim(false), layers(0), explodeMask(0), explodeParts(0), lastPos(0) {
+    Controller(IGame *game, int entity) : next(NULL), game(game), level(game->getLevel()), levelSM64(game->getLevelSM64()), entity(entity), animation(level, getModel(), level->entities[entity].flags.smooth), state(animation.state), invertAim(false), layers(0), explodeMask(0), explodeParts(0), lastPos(0) {
         isMario = false;
 
         const TR::Entity &e = getEntity();
