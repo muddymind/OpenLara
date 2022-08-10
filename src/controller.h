@@ -5,6 +5,7 @@
 #include "frustum.h"
 #include "mesh.h"
 #include "animation.h"
+#include "levelsm64.h"
 
 #define GRAVITY     6.0f
 #define SPRITE_FPS  10.0f
@@ -63,6 +64,7 @@ struct IGame {
     virtual void         applySettings(const Core::Settings &settings)  {}
 
     virtual TR::Level*   getLevel()     { return NULL; }
+    virtual LevelSM64*   getLevelSM64() { return NULL; }
     virtual MeshBuilder* getMesh()      { return NULL; }
     virtual ICamera*     getCamera(int index = -1)  { return NULL; }
     virtual Controller*  getLara(int index = 0)     { return NULL; }
@@ -106,13 +108,14 @@ struct IGame {
     virtual void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0){}
 };
 
-struct Controller {
+struct Controller : IController {
 
     static Controller *first;
     Controller  *next;
 
     IGame       *game;
     TR::Level   *level;
+    LevelSM64   *levelSM64;
     int         entity;
     
     Animation   animation;
@@ -235,7 +238,7 @@ struct Controller {
         return false;
     }
 
-    void getFloorInfo(int roomIndex, const vec3 &pos, TR::Level::FloorInfo &info) const {
+    virtual void getFloorInfo(int roomIndex, const vec3 &pos, TR::Level::FloorInfo &info) const {
         int x = int(pos.x);
         int y = int(pos.y);
         int z = int(pos.z);

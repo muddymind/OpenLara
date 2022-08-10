@@ -4,6 +4,7 @@
 #include "core.h"
 #include "utils.h"
 #include "format.h"
+#include "levelsm64.h"
 #include "cache.h"
 #include "enemy.h"
 #include "camera.h"
@@ -35,6 +36,8 @@ extern int loadSlot;
 struct Level : IGame {
 
     TR::Level   level;
+    LevelSM64   *levelSM64;
+
     Texture     *atlasRooms;
     Texture     *atlasObjects;
     Texture     *atlasSprites;
@@ -259,9 +262,6 @@ struct Level : IGame {
                         lara->camera->reset();
                     if (lara->isMario)
                     {
-                        sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
-                        sm64_set_mario_faceangle( ((Mario*)lara)->marioId, (int16_t)((-lara->angle.y + M_PI) / M_PI * 32768.0f));
-                        ((Mario*)lara)->updateMarioVisibleRooms();
                         ((Mario*)lara)->currPos[0] = ((Mario*)lara)->lastPos[0] = lara->pos.x;
                         ((Mario*)lara)->currPos[1] = ((Mario*)lara)->lastPos[1] = -lara->pos.y;
                         ((Mario*)lara)->currPos[2] = ((Mario*)lara)->lastPos[2] = -lara->pos.z;
@@ -448,6 +448,11 @@ struct Level : IGame {
 
     virtual TR::Level* getLevel() {
         return &level;
+    }
+
+    virtual LevelSM64* getLevelSM64() 
+    { 
+        return levelSM64; 
     }
 
     virtual MeshBuilder* getMesh() {
@@ -1046,6 +1051,7 @@ struct Level : IGame {
 
     Level(Stream &stream) : level(stream), waitTrack(false), isEnded(false), cutsceneWaitTimer(0.0f), animTexTimer(0.0f), statsTimeDelta(0.0f) {
         paused = false;
+        levelSM64 = new LevelSM64();
 
         level.simpleItems = Core::settings.detail.simple == 1;
         level.initModelIndices();
@@ -1147,6 +1153,7 @@ struct Level : IGame {
         loadNextLevel();
     #endif
 
+        levelSM64->loadSM64Level(getLevel(), player);
         saveResult = SAVE_RESULT_SUCCESS;
         if (loadSlot != -1 && saveSlots[loadSlot].getLevelID() == level.id) {
             parseSaveSlot(saveSlots[loadSlot]);
@@ -1156,13 +1163,11 @@ struct Level : IGame {
         Network::start(this);
 
         Core::resetTime();
-
-        if (player && player->isMario) ((Mario*)player)->updateMarioVisibleRooms();
     }
 
     virtual ~Level() {
         UI::init(NULL);
-
+        delete levelSM64;
         Network::stop();
 
         for (int i = 0; i < level.entitiesCount; i++)
