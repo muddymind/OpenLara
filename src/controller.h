@@ -71,6 +71,7 @@ struct IGame {
     virtual uint16       getRandomBox(uint16 zone, uint16 *zones) { return 0; }
     virtual uint16       findPath(int ascend, int descend, bool big, int boxStart, int boxEnd, uint16 *zones, uint16 **boxes) { return 0; }
     virtual void         flipMap(bool water = true) {}
+    virtual void         flipMap(int roomsSwitched[][2], int &roomsSwitchedCount, bool water = true) {}
     virtual void setWaterParams(float height) {}
     virtual void waterDrop(const vec3 &pos, float radius, float strength) {}
     virtual void setShader(Core::Pass pass, Shader::Type type, bool underwater = false, bool alphaTest = false) {}
@@ -102,6 +103,7 @@ struct IGame {
     virtual Sound::Sample* playSound(int id, const vec3 &pos = vec3(0.0f), int flags = 0) const { return NULL; }
     virtual void playTrack(uint8 track, bool background = false) {}
     virtual void stopTrack()                                     {}
+    virtual void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0){}
 };
 
 struct Controller {

@@ -261,7 +261,7 @@ struct Level : IGame {
                     {
                         sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
                         sm64_set_mario_faceangle( ((Mario*)lara)->marioId, (int16_t)((-lara->angle.y + M_PI) / M_PI * 32768.0f));
-                        ((Mario*)lara)->marioUpdateRoom(TR::NO_ROOM);
+                        ((Mario*)lara)->updateMarioVisibleRooms();
                         ((Mario*)lara)->currPos[0] = ((Mario*)lara)->lastPos[0] = lara->pos.x;
                         ((Mario*)lara)->currPos[1] = ((Mario*)lara)->lastPos[1] = -lara->pos.y;
                         ((Mario*)lara)->currPos[2] = ((Mario*)lara)->lastPos[2] = -lara->pos.z;
@@ -272,7 +272,10 @@ struct Level : IGame {
             }
 
             if (level.state.flags.flipped) {
-                flipMap();
+                int roomsSwitched[level.roomsCount][2];
+                int roomsSwitchedCount=0;
+                flipMap(roomsSwitched, roomsSwitchedCount);
+                sm64_level_rooms_switch(roomsSwitched, roomsSwitchedCount);
                 level.state.flags.flipped = true;
             }
 
@@ -473,6 +476,48 @@ struct Level : IGame {
         return (players[0]->pos - pos).length2() < (players[1]->pos - pos).length2() ? players[0] : players[1];
     }
 
+    virtual void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0) {
+        if (count>maxDepth) {
+            return;
+        }
+
+		// if we are starting to search we set all levels visibility to false
+		if(count==0)
+		{
+			for (int i = 0; i < getLevel()->roomsCount; i++)
+				getLevel()->rooms[i].flags.visible = false;
+		}
+
+		//Hardcoded exceptions to avoid invisible collisions
+		switch (getLevel()->id)
+		{
+		case TR::LVL_TR1_10B: //Atlantis
+			switch (currentRoomIndex)
+			{
+			case 47: //room with blocks and switches to trapdoors
+				if(to==84)
+					return;
+			}
+		}
+
+		count++;
+
+        TR::Room &room = getLevel()->rooms[to];
+
+		if(!room.flags.visible){
+			room.flags.visible = true;
+			roomsList[*roomsCount] = to;
+			*roomsCount+=1;
+		}
+
+		if(*roomsCount == 256)
+			return;
+
+		for (int i = 0; i < room.portalsCount; i++) {
+			getCurrentAndAdjacentRooms(roomsList, roomsCount, currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
+		}
+    }
+
     virtual bool isCutscene() {
         if (level.isTitle()) return false;
         return camera->mode == Camera::MODE_CUTSCENE;
@@ -510,7 +555,16 @@ struct Level : IGame {
         updateBlocks(false);
         if (water && waterCache) waterCache->flipMap();
         mesh->flipMap();
-        level.flipMap();
+        level.flipMap();        
+        updateBlocks(true);
+    }
+
+    virtual void flipMap(int roomsSwitched[][2], int &roomsSwitchedCount, bool water = true) 
+    {
+        updateBlocks(false);
+        if (water && waterCache) waterCache->flipMap();
+        mesh->flipMap();
+        level.flipMap(roomsSwitched, roomsSwitchedCount);        
         updateBlocks(true);
     }
 
@@ -1103,7 +1157,7 @@ struct Level : IGame {
 
         Core::resetTime();
 
-        if (player && player->isMario) ((Mario*)player)->marioUpdateRoom(TR::NO_ROOM);
+        if (player && player->isMario) ((Mario*)player)->updateMarioVisibleRooms();
     }
 
     virtual ~Level() {
@@ -2408,15 +2462,19 @@ struct Level : IGame {
             Input::down[ikF2] = false;
         }
         if (Input::down[ikF3]) {
-            Lara *lara = (Lara *)getLara();
-            if(lara!=NULL)
+            for(int i =0; i<2; i++)
             {
-                lara->surfaceDebuggerEnabled=!lara->surfaceDebuggerEnabled;
-
-                if(lara->surfaceDebuggerEnabled && lara->isMario)
+                Lara *lara = (Lara *)getLara(i);
+                if(lara!=NULL && lara->isMario)
                 {
-                    lara->debug_get_sm64_collisions();
-                    lara->debug_get_sm64_all_surfaces();
+                    lara->surfaceDebuggerEnabled=!lara->surfaceDebuggerEnabled;
+
+                    if(lara->surfaceDebuggerEnabled && lara->isMario)
+                    {
+                        lara->debug_get_sm64_collisions();
+                        lara->debug_get_sm64_all_surfaces();
+                    }
+                    break;
                 }
             }
             Input::down[ikF3] = false;
@@ -3129,7 +3187,15 @@ struct Level : IGame {
         //    Debug::Level::path(level, (Enemy*)level.entities[21].controller);
         //    Debug::Level::debugOverlaps(level, players[0]->box);
         //    Debug::Level::debugBoxes(level, lara->dbgBoxes, lara->dbgBoxesCount);
-            Debug::Level::sm64debug(players[0]);
+            for(int i=0; i<2; i++)
+            {
+                Lara *lara = (Lara *)getLara(i);
+                if(lara->isMario){
+                    Debug::Level::sm64debug(players[i], &level);
+                    break;
+                }
+            }
+            
             Core::setDepthTest(true);
             Core::setBlendMode(bmNone);
         /*// render ambient cube

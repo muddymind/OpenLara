@@ -329,26 +329,6 @@ struct Lara : Character {
 
     int32       networkInput;
 
-    struct sm64DebugSurface{
-        bool isValid=false;
-        vec3 v[3];
-    };
-
-    struct sm64DebugGenericSurface{
-        vec3 v[3];
-        uintptr_t surfacePointer;
-    };
-
-    struct sm64DebugSurfacesSt{
-        struct sm64DebugGenericSurface floor;
-        struct sm64DebugGenericSurface wall;
-        struct sm64DebugGenericSurface ceiling;
-        struct sm64DebugGenericSurface *allGeometry;
-        int allGeometryCount;
-    };
-
-    struct sm64DebugSurfacesSt *sm64DebugSurfaces = NULL;
-
     bool surfaceDebuggerEnabled = false;
 
 #ifdef _DEBUG
@@ -2291,8 +2271,11 @@ struct Lara : Character {
         }
 
         if (needFlip) {
-            game->flipMap();
+            int roomsSwitched[level->roomsCount][2];
+			int roomsSwitchedCount=0;
+            game->flipMap(roomsSwitched, roomsSwitchedCount);
             game->setEffect(this, effect);
+            sm64_level_rooms_switch(roomsSwitched, roomsSwitchedCount);
         }
     }
 

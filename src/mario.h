@@ -3,6 +3,7 @@
 
 extern "C" {
 	#include <libsm64/src/libsm64.h>
+	#include <libsm64/src/decomp/include/external_types.h>
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 	#include <libsm64/src/decomp/include/PR/ultratypes.h>
 	#include <libsm64/src/decomp/include/audio_defines.h>
@@ -19,6 +20,7 @@ extern "C" {
 #include "enemy.h"
 #include "inventory.h"
 #include "mesh.h"
+#include "format.h"
 
 #include "marioMacros.h"
 
@@ -118,9 +120,23 @@ struct Mario : Lara
 		TRmarioMesh = new Mesh((Index*)marioRenderState.mario.index, marioRenderState.mario.num_vertices, NULL, 0, 1, true, true);
 		TRmarioMesh->initMario(&marioGeometry);
 
-		if (!game->getLara(0) || !game->getLara(0)->isMario) marioUpdateRoom(TR::NO_ROOM);
-		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
-		printf("%.2f %.2f %.2f\n", pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+		
+		if (!game->getLara(0) || !game->getLara(0)->isMario) 
+		{
+			#ifdef DEBUG_RENDER	
+			printf("Loading level %d\n", level->id);
+			#endif
+			sm64_level_init(level->roomsCount);
+			for(int i=0; i< level->roomsCount; i++)
+			{
+				marioLoadRoom(i);	
+			}
+		}
+
+		int nearRooms[256];
+		int nearRoomsCount=0;
+		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 
 		lastPos[0] = currPos[0] = pos.x;
@@ -147,13 +163,7 @@ struct Mario : Lara
 		free(marioRenderState.mario.index);
 		delete TRmarioMesh;
 
-		for (int i=0; i<objCount; i++)
-		{
-			if (objs[i].spawned) sm64_surface_object_delete(objs[i].ID);
-		}
-
-		for (int i=0; i<staticObjCount; i++)
-			sm64_surface_object_delete(staticObjs[i].ID);
+		sm64_level_unload();
 
 		for (int i=0; i<0x22; i++)
 			sm64_stop_background_music(i);
@@ -166,7 +176,11 @@ struct Mario : Lara
 		Lara::reset(room, pos, angle, forceStand);
 
 		if (marioId != -1) sm64_mario_delete(marioId);
-		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0);
+
+		int nearRooms[256];
+		int nearRoomsCount=0;
+		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
+		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
 	}
 
@@ -317,7 +331,7 @@ struct Mario : Lara
 						{
 							TR::Face &f = d.faces[j];
 
-							if (doOffsetY) offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
+							if (!offset.y) offset.y = topPointSign * max(offset.y, (float)d.vertices[f.vertices[0]].coord.y, max((float)d.vertices[f.vertices[1]].coord.y, (float)d.vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d.vertices[f.vertices[3]].coord.y));
 
 							obj.surfaces[surface_ind] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
 								{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
@@ -464,7 +478,7 @@ struct Mario : Lara
 	void setDozy(bool enable)
 	{
 		dozy = enable;
-		marioUpdateRoom(TR::NO_ROOM);
+		updateMarioVisibleRooms();
 	}
 
 	int getInput()
@@ -1033,9 +1047,11 @@ struct Mario : Lara
 		}
 
 		if (needFlip) {
-			game->flipMap();
+			int roomsSwitched[level->roomsCount][2];
+			int roomsSwitchedCount=0;
+			game->flipMap(roomsSwitched, roomsSwitchedCount);
 			game->setEffect(this, effect);
-			marioUpdateRoom(TR::NO_ROOM);
+			sm64_level_rooms_switch(roomsSwitched, roomsSwitchedCount);
 		}
 	}
 
@@ -1344,32 +1360,176 @@ struct Mario : Lara
 		}
 	}
 
-	void marioUpdateRoom(int oldRoom)
+	struct SM64Surface* marioLoadRoomSurfaces(int roomId, int *room_surfaces_count)
 	{
-		TR::Room &myRoom = getRoom();
+		*room_surfaces_count = 0;
+		size_t level_surface_i = 0;
 
-		if (marioId >= 0)
+		TR::Room &room = level->rooms[roomId];
+		TR::Room::Data &d = room.data;
+
+		// Count the number of static surface triangles
+		for (int j = 0; j < d.fCount; j++)
 		{
-			marioWaterLevel = (myRoom.flags.water || dozy) ? ((myRoom.waterLevelSurface != TR::NO_WATER) ? -myRoom.waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
-			sm64_set_mario_water_level(marioId, marioWaterLevel);
-			/*if (room.waterLevelSurface != TR::NO_WATER) sm64_set_mario_water_level(marioId, -room.waterLevelSurface/IMARIO_SCALE);
-			else if (room.flags.water) sm64_set_mario_water_level(marioId, (oldRoom != TR::NO_ROOM && level->rooms[oldRoom].waterLevelSurface != TR::NO_WATER) ? -level->rooms[oldRoom].waterLevelSurface/IMARIO_SCALE : 32767);
-			else sm64_set_mario_water_level(marioId, -32768);*/
+			TR::Face &f = d.faces[j];
+			if (f.water) continue;
+
+			*room_surfaces_count += (f.triangle) ? 1 : 2;
 		}
 
-		//printf("new room %d (%.2f %.2f %.2f - %.2f %.2f %.2f)\n", getRoomIndex(), pos.x, pos.y, pos.z, marioState.position[0], marioState.position[1], marioState.position[2]);
+		struct SM64Surface *collision_surfaces = (struct SM64Surface *)malloc(sizeof(struct SM64Surface) * (*room_surfaces_count));
 
-		// delete old static meshes
-		for (int i=0; i<staticObjCount; i++)
-			sm64_surface_object_delete(staticObjs[i].ID);
-		staticObjCount = 0;
-
-		// create collisions from static meshes (objects like the fence at lara's home, the chairs/table, the music instruments etc.)
-		for (int j = 0; j < myRoom.meshesCount; j++)
+		// Generate all static surface triangles
+		for (int cface = 0; cface < d.fCount; cface++)
 		{
-			TR::Room::Mesh &m  = myRoom.meshes[j];
+			TR::Face &f = d.faces[cface];
+				if (f.water) continue;
+
+			int16 x[2] = {d.vertices[f.vertices[0]].pos.x, 0};
+			int16 z[2] = {d.vertices[f.vertices[0]].pos.z, 0};
+			for (int j=1; j<3; j++)
+			{
+				if (x[0] != d.vertices[f.vertices[j]].pos.x) x[1] = d.vertices[f.vertices[j]].pos.x;
+				if (z[0] != d.vertices[f.vertices[j]].pos.z) z[1] = d.vertices[f.vertices[j]].pos.z;
+			}
+
+			float midX = (x[0] + x[1]) / 2.f;
+			float topY = max(d.vertices[f.vertices[0]].pos.y, max(d.vertices[f.vertices[1]].pos.y, d.vertices[f.vertices[2]].pos.y));
+			float midZ = (z[0] + z[1]) / 2.f;
+
+			TR::Level::FloorInfo info;
+			getFloorInfo(roomId, vec3(room.info.x + midX, topY, room.info.z + midZ), info);
+			bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
+
+			ADD_FACE(collision_surfaces, level_surface_i, room, d, f, slippery);
+		}
+
+		return collision_surfaces;
+	}
+
+	TR::Mesh *generateMeshBoundingBox(TR::StaticMesh *sm)
+	{
+		Box box;
+		sm->getBox(true, box);
+		
+		TR::Mesh *boundingBox = (TR::Mesh *) malloc(sizeof(TR::Mesh));
+		boundingBox->fCount = 12;
+		boundingBox->faces = (TR::Face *)malloc(sizeof(TR::Face)*boundingBox->fCount);
+
+		boundingBox->vCount = 8;
+		boundingBox->vertices = (TR::Mesh::Vertex *)malloc(sizeof(TR::Mesh::Vertex)*boundingBox->vCount);
+
+		boundingBox->vertices[0].coord.x=box.min.x;
+		boundingBox->vertices[0].coord.y=box.min.y;
+		boundingBox->vertices[0].coord.z=box.min.z;
+
+		boundingBox->vertices[1].coord.x=box.min.x;
+		boundingBox->vertices[1].coord.y=box.max.y;
+		boundingBox->vertices[1].coord.z=box.min.z;
+
+		boundingBox->vertices[2].coord.x=box.max.x;
+		boundingBox->vertices[2].coord.y=box.max.y;
+		boundingBox->vertices[2].coord.z=box.min.z;
+
+		boundingBox->vertices[3].coord.x=box.max.x;
+		boundingBox->vertices[3].coord.y=box.min.y;
+		boundingBox->vertices[3].coord.z=box.min.z;
+
+		boundingBox->vertices[4].coord.x=box.min.x;
+		boundingBox->vertices[4].coord.y=box.min.y;
+		boundingBox->vertices[4].coord.z=box.max.z;
+
+		boundingBox->vertices[5].coord.x=box.min.x;
+		boundingBox->vertices[5].coord.y=box.max.y;
+		boundingBox->vertices[5].coord.z=box.max.z;
+
+		boundingBox->vertices[6].coord.x=box.max.x;
+		boundingBox->vertices[6].coord.y=box.max.y;
+		boundingBox->vertices[6].coord.z=box.max.z;
+		
+		boundingBox->vertices[7].coord.x=box.max.x;
+		boundingBox->vertices[7].coord.y=box.min.y;
+		boundingBox->vertices[7].coord.z=box.max.z;
+
+		boundingBox->faces[0].triangle=1;
+		boundingBox->faces[0].vertices[0]=2;
+		boundingBox->faces[0].vertices[1]=1;
+		boundingBox->faces[0].vertices[2]=0;
+
+		boundingBox->faces[1].triangle=1;
+		boundingBox->faces[1].vertices[0]=0;
+		boundingBox->faces[1].vertices[1]=3;
+		boundingBox->faces[1].vertices[2]=2;
+
+		boundingBox->faces[2].triangle=1;
+		boundingBox->faces[2].vertices[0]=2;
+		boundingBox->faces[2].vertices[1]=3;
+		boundingBox->faces[2].vertices[2]=7;
+
+		boundingBox->faces[3].triangle=1;
+		boundingBox->faces[3].vertices[0]=7;
+		boundingBox->faces[3].vertices[1]=6;
+		boundingBox->faces[3].vertices[2]=2;
+
+		boundingBox->faces[4].triangle=1;
+		boundingBox->faces[4].vertices[0]=6;
+		boundingBox->faces[4].vertices[1]=7;
+		boundingBox->faces[4].vertices[2]=4;
+
+		boundingBox->faces[5].triangle=1;
+		boundingBox->faces[5].vertices[0]=4;
+		boundingBox->faces[5].vertices[1]=5;
+		boundingBox->faces[5].vertices[2]=6;
+
+		boundingBox->faces[6].triangle=1;
+		boundingBox->faces[6].vertices[0]=4;
+		boundingBox->faces[6].vertices[1]=0;
+		boundingBox->faces[6].vertices[2]=5;
+
+		boundingBox->faces[7].triangle=1;
+		boundingBox->faces[7].vertices[0]=0;
+		boundingBox->faces[7].vertices[1]=1;
+		boundingBox->faces[7].vertices[2]=5;
+
+		boundingBox->faces[8].triangle=1;
+		boundingBox->faces[8].vertices[0]=7;
+		boundingBox->faces[8].vertices[1]=3;
+		boundingBox->faces[8].vertices[2]=0;
+
+		boundingBox->faces[9].triangle=1;
+		boundingBox->faces[9].vertices[0]=0;
+		boundingBox->faces[9].vertices[1]=4;
+		boundingBox->faces[9].vertices[2]=7;
+
+		boundingBox->faces[10].triangle=1;
+		boundingBox->faces[10].vertices[0]=6;
+		boundingBox->faces[10].vertices[1]=5;
+		boundingBox->faces[10].vertices[2]=1;
+
+		boundingBox->faces[11].triangle=1;
+		boundingBox->faces[11].vertices[0]=1;
+		boundingBox->faces[11].vertices[1]=2;
+		boundingBox->faces[11].vertices[2]=6;
+
+		return boundingBox;
+	}
+
+	struct SM64SurfaceObject* marioLoadRoomMeshes(int roomId, int *room_meshes_count)
+	{
+		TR::Room &room = level->rooms[roomId];
+		TR::Room::Data &d = room.data;
+
+		*room_meshes_count = 0;
+
+		struct SM64SurfaceObject *meshes = (struct SM64SurfaceObject*)malloc(sizeof(struct SM64SurfaceObject)*room.meshesCount);
+
+		for (int j = 0; j < room.meshesCount; j++)
+		{
+			TR::Room::Mesh &m  = room.meshes[j];
 			TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
-			if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) continue;
+			if (sm->flags != 2 || !level->meshOffsets[sm->mesh]) {
+				continue;
+			}
 
 			// define the surface object
 			struct SM64SurfaceObject obj;
@@ -1379,315 +1539,220 @@ struct Mario : Lara
 			obj.transform.position[2] = -m.z / MARIO_SCALE;
 			for (int k=0; k<3; k++) obj.transform.eulerRotation[k] = (k == 1) ? float(m.rotation) / M_PI * 180.f : 0;
 
-			TR::Mesh &d = level->meshes[level->meshOffsets[sm->mesh]];
+			TR::Mesh *d = &(level->meshes[level->meshOffsets[sm->mesh]]);
+			TR::Mesh *boundingBox = NULL;
+
+			switch(level->id)
+			{
+			case TR::LevelID::LVL_TR1_GYM:
+				switch (m.meshIndex)
+				{
+				case 0:	// plant - Mario can get stuck
+				case 1:	// plant - Mario can get stuck
+				case 2: // plant - Mario can get stuck
+				case 3: // plant - Mario can get stuck
+				case 4: // branches - Mario can get stuck
+					continue;
+				case 7: //harp - Mario can get stuck
+				case 8: //piano	- Martio can get stuck
+				case 11: //pedestal - Mario can get stuck between it and the columns
+				case 13: //handcart - Mario can get stuck
+					boundingBox = generateMeshBoundingBox(sm);					
+					break;
+				}
+				break;
+			case TR::LevelID::LVL_TR1_1: //Caves
+				switch (m.meshIndex)
+				{
+				case 0:	// branches - Mario stumbles
+				case 1:	// branches	- Mario stumbles
+				case 7:	// ice stalactite - Mario stumbles
+					continue;
+				// case 2: //wood fence blocking path to exit - solved by viewbox size
+				// 	boundingBox = generateMeshBoundingBox(sm);					
+				// 	break;
+				}
+				break;
+			case TR::LevelID::LVL_TR1_2: //City of Vilcabamba
+				switch (m.meshIndex)
+				{
+				case 0:	// branches - Mario stumbles
+				case 1:	// branches - Mario stumbles
+					continue;
+				case 3: // barn animal food holder - Mario can get stuck on it.
+				case 7:	// Stone Statues - Mario can clip through them and fall into the void.
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
+				}
+				break;
+			case TR::LevelID::LVL_TR1_3A: //The Lost Valley
+				switch (m.meshIndex)
+				{
+				case 0:	// branches - Mario stumbles
+				case 1:	// branches - Mario stumbles
+				case 2: // tree/bushes - Mario can get stuck
+				case 3: // tree/bushes - Mario can get stuck
+				case 4: // tree/bushes - Mario can get stuck
+				case 5: // tree/bushes - Mario can get stuck
+				case 6: // dead tree trunk get mario stuck. we will ignore it.
+				case 7: // trees - Mario can get stuck
+				case 8: // trees - Mario can get stuck
+					continue;
+				case 12: // skeleton - Mario stumbles
+				case 13: // skeleton - Mario stumbles
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
+				}
+				break;
+			case TR::LevelID::LVL_TR1_8B: //Obelisk of Khamoon
+				switch (m.meshIndex)
+				{
+				// case 10: // Iron Bars with only 1 face - solved by viewbox size										
+				// 	boundingBox = generateMeshBoundingBox(sm);
+				// 	break;
+				}
+				break;
+			case TR::LevelID::LVL_TR1_10B: //Atlantis
+				switch (m.meshIndex)
+				{
+				case 0:	// weird flesh 1 surface walls
+				case 1:	// weird flesh 1 surface walls
+					boundingBox = generateMeshBoundingBox(sm);
+					break;
+				}
+				break;
+			}
+			
+			if(boundingBox)
+				d=boundingBox;
+			else if(d->fCount<2 || sm->vbox.minX==sm->vbox.maxX || sm->vbox.minY==sm->vbox.maxY || sm->vbox.minZ==sm->vbox.maxZ){
+				boundingBox = generateMeshBoundingBox(sm);
+				d=boundingBox;
+			}
 
 			// increment the surface count for this
-			for (int k = 0; k < d.fCount; k++)
-				obj.surfaceCount += (d.faces[k].triangle) ? 1 : 2;
+			for (int k = 0; k < d->fCount; k++)
+				obj.surfaceCount += (d->faces[k].triangle) ? 1 : 2;
 
 			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
 
 			// add the faces
-			for (int k = 0; k < d.fCount; k++)
+			for (int k = 0; k < d->fCount; k++)
 			{
-				TR::Face &f = d.faces[k];
+				TR::Face &f = d->faces[k];
 
 				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-					{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
-					{(d.vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
-					{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+					{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+					{(d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.y)/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE},
+					{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
 				}};
 
 				if (!f.triangle)
 				{
 					obj.surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-						{(d.vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
-						{(d.vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
-						{(d.vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d.vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
+						{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.y)/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE},
+						{(d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.y)/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE},
+						{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.y)/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE},
 					}};
 				}
 			}
 
-			// create the final object and put it in the objs[] array
-			struct MarioStaticMeshObj mObj;
-			mObj.ID = sm64_surface_object_create(&obj);
-			mObj.transform = obj.transform;
-			mObj.staticMesh = sm;
+			if(boundingBox!=NULL)
+			{
+				free(boundingBox->faces);
+				free(boundingBox->vertices);
+				free(boundingBox);
+				boundingBox=NULL;
+			}
 
-			staticObjs[staticObjCount++] = mObj;
-			free(obj.surfaces);
+			meshes[(*room_meshes_count)++]=obj;
 		}
 
-		// load sm64surfaces
-		size_t surfaces_count = 0;
-		size_t surface_ind = 0;
+		return meshes;
+	}
 
-		// find doppelganger's room and add meshes from its' room so mario doppelganger can spawn
-		for (int i=0; i<level->entitiesCount; i++)
+	void marioLoadRoom(int roomId)
+	{
+		int staticSurfacesCount;
+		struct SM64Surface *staticSurfaces = marioLoadRoomSurfaces(roomId, &staticSurfacesCount);
+
+		int roomMeshesCount;
+		struct SM64SurfaceObject *roomMeshes = marioLoadRoomMeshes(roomId, &roomMeshesCount);
+
+		sm64_level_load_room(roomId, staticSurfaces, staticSurfacesCount, roomMeshes, roomMeshesCount);
+
+		free(staticSurfaces);
+		for(int i=0; i<roomMeshesCount; i++)
 		{
-			if (level->entities[i].type != TR::Entity::ENEMY_DOPPELGANGER) continue;
-
-			TR::Room &roomD = level->rooms[level->entities[i].room];
-			TR::Room::Data &dD = roomD.data;
-			for (int j = 0; j < dD.fCount; j++)
-			{
-				TR::Face &f = dD.faces[j];
-				if (f.water) continue;
-
-				surfaces_count += (f.triangle) ? 1 : 2;
-			}
-
-			COUNT_ROOM_SECTORS(level, surfaces_count, roomD);
+			free(roomMeshes[i].surfaces);
 		}
+		free(roomMeshes);
+		
+	}
 
-		// for all marios
-		for (int M=0; M<2; M++)
+
+	bool arrayContainsValue(int val, int *array, int arraySize){
+		for(int i=0; i<arraySize; i++)
 		{
-			if (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
-
-			TR::Room &room = (M == marioId || marioId == -1) ? myRoom : game->getLara(M)->getRoom();
-
-			// get meshes from this room
-			TR::Room::Data &d = room.data;
-			for (int i = 0; i < d.fCount; i++)
-			{
-				TR::Face &f = d.faces[i];
-				if (f.water) continue;
-
-				surfaces_count += (f.triangle) ? 1 : 2;
-			}
-
-			COUNT_ROOM_SECTORS(level, surfaces_count, room);
-
-			// get meshes from this room's portals to adjacent rooms
-			/*
-			for (int i = 0; i < room.portalsCount; i++)
-			{
-				TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
-				TR::Room::Data &d2 = room2.data;
-
-				for (int j = 0; j < d2.fCount; j++)
-				{
-					TR::Face &f = d2.faces[j];
-					if (f.water) continue;
-
-					surfaces_count += (f.triangle) ? 1 : 2;
-				}
-
-				COUNT_ROOM_SECTORS(level, surfaces_count, room2);
-
-				for (int j = 0; j < room2.portalsCount; j++)
-				{
-					if (room2.portals[j].roomIndex == getRoomIndex()) continue;
-					TR::Room &room3 = level->rooms[room2.portals[j].roomIndex];
-					TR::Room::Data &d3 = room3.data;
-
-					for (int k = 0; k < d3.fCount; k++)
-					{
-						TR::Face &f = d3.faces[k];
-						if (f.water) continue;
-
-						surfaces_count += (f.triangle) ? 1 : 2;
-					}
-
-					COUNT_ROOM_SECTORS(level, surfaces_count, room3);
-
-					for (int k = 0; k < room3.portalsCount; k++)
-					{
-						if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
-						TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
-						TR::Room::Data &d4 = room4.data;
-
-						for (int l = 0; l < d4.fCount; l++)
-						{
-							TR::Face &f = d4.faces[l];
-							if (f.water) continue;
-
-							surfaces_count += (f.triangle) ? 1 : 2;
-						}
-					}
-				}
-			}
-			*/
-
-			// HACK: create a big floor surface so that mario doesn't hit invisible walls
-			surfaces_count += 2;
+			if(array[i]==val)
+				return true;
 		}
+		return false;
+	}
 
-		struct SM64Surface surfaces[surfaces_count];
-
-		for (int i=0; i<level->entitiesCount; i++)
+	bool areArraysEqual(int *a, int *b, int size)
+	{
+		for(int i=0; i<size; i++)
 		{
-			if (level->entities[i].type != TR::Entity::ENEMY_DOPPELGANGER) continue;
-
-			TR::Room &roomD = level->rooms[level->entities[i].room];
-			TR::Room::Data &dD = roomD.data;
-			for (int j = 0; j < dD.fCount; j++)
-			{
-				TR::Face &f = dD.faces[j];
-				if (f.water) continue;
-
-				int16 x[2] = {dD.vertices[f.vertices[0]].pos.x, 0};
-				int16 z[2] = {dD.vertices[f.vertices[0]].pos.z, 0};
-				for (int j=1; j<3; j++)
-				{
-					if (x[0] != dD.vertices[f.vertices[j]].pos.x) x[1] = dD.vertices[f.vertices[j]].pos.x;
-					if (z[0] != dD.vertices[f.vertices[j]].pos.z) z[1] = dD.vertices[f.vertices[j]].pos.z;
-				}
-
-				float midX = (x[0] + x[1]) / 2.f;
-				float topY = max(dD.vertices[f.vertices[0]].pos.y, max(dD.vertices[f.vertices[1]].pos.y, dD.vertices[f.vertices[2]].pos.y));
-				float midZ = (z[0] + z[1]) / 2.f;
-
-				TR::Level::FloorInfo info;
-				getFloorInfo(level->entities[i].room, vec3(roomD.info.x + midX, topY, roomD.info.z + midZ), info);
-				bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
-
-				ADD_FACE(surfaces, surface_ind, roomD, dD, f, slippery);
-			}
-
-			ADD_ROOM_SECTORS(level, surfaces, surface_ind, roomD);
+			if(!arrayContainsValue(a[i], b, size))
+				return false;
 		}
+		return true;
+	}
 
-		for (int M=0; M<2; M++)
+	#ifdef DEBUG_RENDER	
+	int oldViewedRooms[256];
+	int oldViewedRoomsCount=0;
+	#endif
+
+	void updateMarioVisibleRooms()
+	{
+
+		// Set the water level to SM64
+		if (marioId >= 0)
 		{
-			if (M == 1-marioId && (!game->getLara(M) || !game->getLara(M)->isMario)) continue;
-
-			TR::Room &room = (M == marioId || marioId == -1) ? myRoom : game->getLara(M)->getRoom();
-			TR::Room::Data &d = room.data;
-
-			for (int i = 0; i < d.fCount; i++)
-			{
-				TR::Face &f = d.faces[i];
-				if (f.water) continue;
-
-				int16 x[2] = {d.vertices[f.vertices[0]].pos.x, 0};
-				int16 z[2] = {d.vertices[f.vertices[0]].pos.z, 0};
-				for (int j=1; j<3; j++)
-				{
-					if (x[0] != d.vertices[f.vertices[j]].pos.x) x[1] = d.vertices[f.vertices[j]].pos.x;
-					if (z[0] != d.vertices[f.vertices[j]].pos.z) z[1] = d.vertices[f.vertices[j]].pos.z;
-				}
-
-				float midX = (x[0] + x[1]) / 2.f;
-				float topY = max(d.vertices[f.vertices[0]].pos.y, max(d.vertices[f.vertices[1]].pos.y, d.vertices[f.vertices[2]].pos.y));
-				float midZ = (z[0] + z[1]) / 2.f;
-
-				TR::Level::FloorInfo info;
-				getFloorInfo(getRoomIndex(), vec3(room.info.x + midX, topY, room.info.z + midZ), info);
-				bool slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
-
-				ADD_FACE(surfaces, surface_ind, room, d, f, slippery);
-			}
-
-			ADD_ROOM_SECTORS(level, surfaces, surface_ind, room);
-
-			/*
-			for (int i=0; i<room.portalsCount; i++)
-			{
-				vec3 portalCenter = room.portals[i].getCenter();
-				printf("room %d, your pos %.2f %.2f %.2f, portal %d: %.2f %.2f %.2f\n", getRoomIndex(), pos.x, pos.y, pos.z, room.portals[i].roomIndex, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
-
-				int sx = portalCenter.x/1024;
-				int sz = portalCenter.z/1024;
-
-				TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
-				//printf("%d %d - %d %d\n", sx, sz, room2.xSectors, room2.zSectors);
-
-				TR::Room::Data &d2 = room2.data;
-
-				int addFaces[d2.fCount] = {-1};
-				int addFaceInd = 0;
-
-				for (int j = 0; j < d2.fCount; j++)
-				{
-					TR::Face &f = d2.faces[j];
-					int vertices = (f.triangle) ? 3 : 4;
-					if (d2.vertices[f.vertices[0]].pos.y == portalCenter.y + room.portals[i].getSize().y &&
-						(room2.info.x + d2.vertices[f.vertices[0]].pos.x) - (room.info.x + portalCenter.x) == 512 &&
-						((room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == -1023 || (room2.info.z + d2.vertices[f.vertices[0]].pos.z) - (room.info.z + portalCenter.z) == 0)
-						)
-					{
-						printf("face %d: %.2f %.2f %.2f - ", j, room.info.x + portalCenter.x, portalCenter.y + room.portals[i].getSize().y, room.info.z + portalCenter.z);
-						for (int k=0; k<vertices; k++)
-							printf("%d %d %d%s", room2.info.x + d2.vertices[f.vertices[k]].pos.x, d2.vertices[f.vertices[k]].pos.y, room2.info.z + d2.vertices[f.vertices[k]].pos.z, (k==vertices-1) ? "\n" : " - ");
-					}
-				}
-			}*/
-
-			/*
-			for (int i = 0; i < room.portalsCount; i++)
-			{
-				TR::Room &room2 = level->rooms[room.portals[i].roomIndex];
-				TR::Room::Data &d2 = room2.data;
-
-				for (int j = 0; j < d2.fCount; j++)
-				{
-					TR::Face &f = d2.faces[j];
-					if (f.water) continue;
-
-					ADD_FACE(surfaces, surface_ind, room2, d2, f);
-				}
-
-				ADD_ROOM_SECTORS(level, surfaces, surface_ind, room2);
-
-				for (int j = 0; j < room2.portalsCount; j++)
-				{
-					if (room2.portals[j].roomIndex == getRoomIndex()) continue;
-					TR::Room &room3 = level->rooms[room2.portals[j].roomIndex];
-					TR::Room::Data &d3 = room3.data;
-
-					for (int k = 0; k < d3.fCount; k++)
-					{
-						TR::Face &f = d3.faces[k];
-						if (f.water) continue;
-
-						ADD_FACE(surfaces, surface_ind, room3, d3, f);
-					}
-
-					ADD_ROOM_SECTORS(level, surfaces, surface_ind, room3);
-
-					for (int k = 0; k < room3.portalsCount; k++)
-					{
-						if (room3.portals[k].roomIndex == room2.portals[j].roomIndex) continue;
-						TR::Room &room4 = level->rooms[room3.portals[k].roomIndex];
-						TR::Room::Data &d4 = room4.data;
-
-						for (int l = 0; l < d4.fCount; l++)
-						{
-							TR::Face &f = d4.faces[l];
-							if (f.water) continue;
-
-							ADD_FACE(surfaces, surface_ind, room4, d4, f);
-						}
-					}
-				}
-			}
-			*/
-
-			vec3 center = room.getCenter();
-			surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-				{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
-				{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
-				{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
-			}};
-			surfaces[surface_ind++] = {SURFACE_DEFAULT, 0, TERRAIN_STONE, {
-				{(int(center.x) - 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
-				{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) + 32768)/IMARIO_SCALE},
-				{(int(center.x) + 32768)/IMARIO_SCALE, (-room.info.yBottom - 8192)/IMARIO_SCALE, (-int(center.z) - 32768)/IMARIO_SCALE},
-			}};
+			marioWaterLevel = (getRoom().flags.water || dozy) ? ((getRoom().waterLevelSurface != TR::NO_WATER) ? -getRoom().waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
+			sm64_set_mario_water_level(marioId, marioWaterLevel);
 		}
+		
+		int nearRooms[256];
+		int nearRoomsCount=0;
+		game->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 2);
 
-		sm64_static_surfaces_load((const struct SM64Surface*)&surfaces, surfaces_count);
 
-		#ifdef DEBUG_RENDER
-			debug_get_sm64_all_surfaces();
+		#ifdef DEBUG_RENDER			
+		if(surfaceDebuggerEnabled)
+		{
+			if(oldViewedRoomsCount != nearRoomsCount || !areArraysEqual(oldViewedRooms, nearRooms, nearRoomsCount))
+			{
+				oldViewedRoomsCount=0;
+				printf("rooms:");
+				for(int i=0;i<nearRoomsCount; i++){
+					printf(" %d", nearRooms[i]);
+					oldViewedRooms[oldViewedRoomsCount++]=nearRooms[i];
+				}
+				printf("\n");			
+			}
+		}
 		#endif
+
+		sm64_level_update_loaded_rooms_list(marioId, nearRooms, nearRoomsCount);
 	}
 
 	void update()
-	{
+	{		
+		updateMarioVisibleRooms();
 		if (level->isCutsceneLevel()) {
 			updateAnimation(true);
 
@@ -1715,9 +1780,7 @@ struct Mario : Lara
 				default : ;
 			}
 
-			int oldRoom = getRoomIndex();
 			updateRoom();
-			if (getRoomIndex() != oldRoom) marioUpdateRoom(oldRoom);
 
 			if (animation.index != ANIM_STAND && state != STATE_PICK_UP) animation.setAnim(ANIM_STAND);
 
@@ -1931,11 +1994,6 @@ struct Mario : Lara
 				if (p != pos && updateZone())
 					updateLights();
 			}
-
-			#ifdef DEBUG_RENDER
-			debug_get_sm64_collisions();
-			#endif
-
         }
         
         camera->update();
@@ -2023,97 +2081,6 @@ struct Mario : Lara
 	void updateVelocity()
 	{
 		//Lara::updateVelocity();
-	}
-
-	void reset_vertex_array_coordinates(vec3 *v)
-	{
-		v[0].x=0.0f;
-		v[0].y=0.0f;
-		v[0].z=0.0f;
-		v[1].x=0.0f;
-		v[1].y=0.0f;
-		v[1].z=0.0f;
-		v[2].x=0.0f;
-		v[2].y=0.0f;
-		v[2].z=0.0f;
-	}
-
-	void init_sm64_debug_surfaces(){
-		sm64DebugSurfaces = (sm64DebugSurfacesSt*)malloc(sizeof(sm64DebugSurfacesSt));
-		sm64DebugSurfaces->wall.surfacePointer=0;
-		sm64DebugSurfaces->ceiling.surfacePointer=0;
-		sm64DebugSurfaces->floor.surfacePointer=0;
-		sm64DebugSurfaces->allGeometry = NULL;
-		sm64DebugSurfaces->allGeometryCount=0;
-
-		reset_vertex_array_coordinates(sm64DebugSurfaces->wall.v);
-		reset_vertex_array_coordinates(sm64DebugSurfaces->ceiling.v);
-		reset_vertex_array_coordinates(sm64DebugSurfaces->floor.v);
-	}
-
-	void importSM64debugSurface(struct sm64DebugGenericSurface *dst, struct SM64DebugSurface src)
-	{
-		if(dst->surfacePointer != src.surfacePointer)
-		{
-			dst->surfacePointer = src.surfacePointer;
-			dst->v[0] = vec3((float)src.v1[0]*IMARIO_SCALE, (float)-src.v1[1]*IMARIO_SCALE, (float)-src.v1[2]*IMARIO_SCALE);
-			dst->v[1] = vec3((float)src.v2[0]*IMARIO_SCALE, (float)-src.v2[1]*IMARIO_SCALE, (float)-src.v2[2]*IMARIO_SCALE);
-			dst->v[2] = vec3((float)src.v3[0]*IMARIO_SCALE, (float)-src.v3[1]*IMARIO_SCALE, (float)-src.v3[2]*IMARIO_SCALE);
-		}
-	}
-
-virtual void debug_get_sm64_collisions()
-	{
-		if(!surfaceDebuggerEnabled)
-		{
-			return;
-		}
-
-		if(sm64DebugSurfaces == NULL)
-		{
-			init_sm64_debug_surfaces();
-		}
-
-		struct SM64DebugSurface floor;
-		floor.surfacePointer = sm64DebugSurfaces->floor.surfacePointer;
-
-		struct SM64DebugSurface wall;
-		wall.surfacePointer = sm64DebugSurfaces->wall.surfacePointer;
-
-		struct SM64DebugSurface ceiling;
-		ceiling.surfacePointer = sm64DebugSurfaces->ceiling.surfacePointer;
-
-		sm64_get_collision_surfaces(&floor, &ceiling, &wall);
-		importSM64debugSurface(&(sm64DebugSurfaces->wall), wall);
-		importSM64debugSurface(&(sm64DebugSurfaces->floor), floor);
-		importSM64debugSurface(&(sm64DebugSurfaces->ceiling), ceiling);
-	}
-
-	virtual void debug_get_sm64_all_surfaces()
-	{
-		if(!surfaceDebuggerEnabled)
-		{
-			return;
-		}
-		printf("all\n");
-		if(sm64DebugSurfaces == NULL)
-		{
-			init_sm64_debug_surfaces();
-		}
-
-		if(sm64DebugSurfaces->allGeometry!=NULL) {
-			free(sm64DebugSurfaces->allGeometry);
-		}
-
-		struct SM64DebugSurface *imported = sm64_get_all_surfaces(&(sm64DebugSurfaces->allGeometryCount));
-
-		sm64DebugSurfaces->allGeometry = (struct sm64DebugGenericSurface*) malloc(sizeof(struct sm64DebugGenericSurface)*sm64DebugSurfaces->allGeometryCount);
-
-		for(int i=0; i<sm64DebugSurfaces->allGeometryCount; i++){
-			importSM64debugSurface(&(sm64DebugSurfaces->allGeometry[i]), imported[i]);
-		}
-
-		return;
 	}
 };
 

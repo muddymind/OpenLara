@@ -1,10 +1,21 @@
 #ifndef H_DEBUG
 #define H_DEBUG
 
+extern "C" {
+    #include <libsm64/src/libsm64.h>
+	#include <libsm64/src/decomp/include/external_types.h>
+	#include <libsm64/src/decomp/include/surface_terrains.h>
+	#include <libsm64/src/decomp/include/PR/ultratypes.h>
+	#include <libsm64/src/decomp/include/audio_defines.h>
+	#include <libsm64/src/decomp/include/seq_ids.h>
+	#include <libsm64/src/decomp/include/mario_animation_ids.h>
+}
+
 #include "core.h"
 #include "format.h"
 #include "controller.h"
 #include "mesh.h"
+#include "marioMacros.h"
 
 namespace Debug {
 
@@ -567,21 +578,67 @@ namespace Debug {
             }
         }
 
-        void sm64debug(Lara *lara) {
+        void sm64debug(Lara *lara, TR::Level *level) {
 
-            if(lara->sm64DebugSurfaces == NULL || !lara->surfaceDebuggerEnabled || !lara->isMario)
+            if(!lara->surfaceDebuggerEnabled || !lara->isMario || !level)
             {
                 return;
             }
+
+            struct SM64DebugSurface floor;
+            struct SM64DebugSurface ceiling;
+            struct SM64DebugSurface wall;
+
+            int facesCount=sm64_get_collision_surfaces_count(((Mario*)lara)->marioId);
+            struct SM64DebugSurface faces[facesCount];
+            sm64_get_collision_surfaces(((Mario*)lara)->marioId, &floor, &ceiling, &wall, faces);
             
             Core::setDepthTest(false);
 
-            Debug::Draw::triangle(lara->sm64DebugSurfaces->wall.v[0], lara->sm64DebugSurfaces->wall.v[1], lara->sm64DebugSurfaces->wall.v[2], vec4(0.0f, 0.0f, 1.0f, 1.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f));
-            Debug::Draw::triangle(lara->sm64DebugSurfaces->ceiling.v[0], lara->sm64DebugSurfaces->ceiling.v[1], lara->sm64DebugSurfaces->ceiling.v[2], vec4(0.0f, 1.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 0.5f));
-            Debug::Draw::triangle(lara->sm64DebugSurfaces->floor.v[0], lara->sm64DebugSurfaces->floor.v[1], lara->sm64DebugSurfaces->floor.v[2], vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f));
+            Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(wall), vec4(0.0f, 0.0f, 1.0f, 1.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f));
+            Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(ceiling), vec4(0.0f, 1.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 0.5f));
+            Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(floor), vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f));
 
-            for(int i=0; i<lara->sm64DebugSurfaces->allGeometryCount; i++){
-                Debug::Draw::triangle(lara->sm64DebugSurfaces->allGeometry[i].v[0], lara->sm64DebugSurfaces->allGeometry[i].v[1], lara->sm64DebugSurfaces->allGeometry[i].v[2], vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+            for(int i=0; i<facesCount; i++)
+            {
+                switch(faces[i].color)
+                {
+                    case EXTERNAL_SURFACE_TYPE_STATIC_SURFACE:
+                        Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(faces[i]), vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+                        break;
+                    case EXTERNAL_SURFACE_TYPE_STATIC_MESH:
+                        Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(faces[i]), vec4(1.0f, 0.9f, 0.0f, 0.5f), vec4(1.0f, 0.9f, 0.0f, 0.3f));
+                        break;
+                    case EXTERNAL_SURFACE_TYPE_DYNAMIC_OBJECT:
+                        Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(faces[i]), vec4(0.9f, 0.0f, 0.9f, 0.5f), vec4(0.9f, 0.0f, 0.9f, 0.3f));
+                        break;
+                }
+            }
+
+            for (int i = 0; i < level->roomsCount; i++) {
+                TR::Room &r = level->rooms[i];
+ 
+                for (int j = 0; j < r.meshesCount; j++) {
+                    TR::Room::Mesh &m  = r.meshes[j];
+                    TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
+
+                    // if (sm->flags != 2 || !level->meshOffsets[sm->mesh])
+                    // {
+                    //     continue;
+                    // }
+
+                    Box box;
+                    vec3 offset = vec3(float(m.x), float(m.y), float(m.z));
+                    sm->getBox(false, m.rotation, box); // visible box
+                    
+                    {
+                        char buf[255];
+                        sprintf(buf, "ID: %d", (int)m.meshIndex);
+                        Debug::Draw::text(offset + (box.min + box.max) * 0.5f, vec4(0.5, 0.5, 1.0, 1), buf);
+                    }
+                    
+                    
+                }
             }
 
             Core::setDepthTest(true);            
