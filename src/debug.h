@@ -589,9 +589,9 @@ namespace Debug {
             struct SM64DebugSurface ceiling;
             struct SM64DebugSurface wall;
 
-            int facesCount=0;
-
-            struct SM64DebugSurface *faces = sm64_get_collision_surfaces(((Mario*)lara)->marioId, &floor, &ceiling, &wall, &facesCount);
+            int facesCount=sm64_get_collision_surfaces_count(((Mario*)lara)->marioId);
+            struct SM64DebugSurface faces[facesCount];
+            sm64_get_collision_surfaces(((Mario*)lara)->marioId, &floor, &ceiling, &wall, faces);
             
             Core::setDepthTest(false);
 
