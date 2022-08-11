@@ -3159,7 +3159,7 @@ struct Level : IGame {
             for(int i=0; i<2; i++)
             {
                 Lara *lara = (Lara *)getLara(i);
-                if(lara->isMario){
+                if(lara && lara->isMario){
                     Debug::Level::sm64debug(players[i], &level);
                     break;
                 }
