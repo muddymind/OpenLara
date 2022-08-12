@@ -638,6 +638,9 @@ namespace Debug {
                     case EXTERNAL_SURFACE_TYPE_DYNAMIC_OBJECT:
                         Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(faces[i]), vec4(0.9f, 0.0f, 0.9f, 0.5f), vec4(0.9f, 0.0f, 0.9f, 0.3f));
                         break;
+                    case EXTERNAL_SURFACE_TYPE_WALL_CLIPPER:
+                        Debug::Draw::triangle(CONVERT_DEBUG_FACE_COORDINATES(faces[i]), vec4(0.9f, 0.0f, 0.0f, 0.5f), vec4(0.9f, 0.0f, 0.0f, 0.3f));
+                        break;
                 }
             }
 
@@ -670,56 +673,55 @@ namespace Debug {
             Core::setDepthTest(true);            
         }
 
-        void sm64debugrooms(TR::Level *level, int roomIndex) {
+        void sm64debugrooms(TR::Level *level, int *roomslist, int roomscount) {
 
-            TR::Room &room = level->rooms[roomIndex];
-            TR::Room::Data &d = room.data;
-
-            printf("room: %d\n", roomIndex);
-            Core::setDepthTest(false); 
-            // Count the number of static surface triangles
-            for (int j = 0; j < d.fCount; j++)
+            for(int roomIndex=0; roomIndex<roomscount; roomIndex++)
             {
-                TR::Face &f = d.faces[j];
-                if (!f.triangle)
-                {
-                    Debug::Draw::staticface(
-                        vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
-                        vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
-                        vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
-                        vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
-                        vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+                TR::Room &room = level->rooms[roomslist[roomIndex]];
+                TR::Room::Data &d = room.data;
 
-                    
-                    char buf[255];
-                    sprintf(buf, "Room: %d Id: %d", roomIndex, j);
-                    Debug::Draw::text(
-                        vec3(
-                            (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+d.vertices[f.vertices[3]].pos.x+(4*room.info.x))/4.0f,
-                            (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y+d.vertices[f.vertices[3]].pos.y)/4.0f,
-                            (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+d.vertices[f.vertices[3]].pos.z+(4*room.info.z))/4.0f
-                            ), vec4(0.5, 0.5, 1.0, 1), buf);
-                }
-                else
+                Core::setDepthTest(false); 
+                for (int j = 0; j < d.fCount; j++)
                 {
-                    Debug::Draw::staticface(
-                        vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
-                        vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
-                        vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
-                        vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
-                        vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+                    TR::Face &f = d.faces[j];
+                    if (!f.triangle)
+                    {
+                        Debug::Draw::staticface(
+                            vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
+                            vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
+                            vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
+                            vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
+                            vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
 
-                    
-                    char buf[255];
-                    sprintf(buf, "Room: %d Id: %d", roomIndex, j);
-                    Debug::Draw::text(
-                        vec3(
-                            (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+(3*room.info.x))/3.0f,
-                            (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y)/3.0f,
-                            (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+(3*room.info.z))/3.0f
-                            ), vec4(0.5, 0.5, 1.0, 1), buf);
+                        
+                        char buf[255];
+                        sprintf(buf, "Room: %d Id: %d", roomslist[roomIndex], j);
+                        Debug::Draw::text(
+                            vec3(
+                                (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+d.vertices[f.vertices[3]].pos.x+(4*room.info.x))/4.0f,
+                                (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y+d.vertices[f.vertices[3]].pos.y)/4.0f,
+                                (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+d.vertices[f.vertices[3]].pos.z+(4*room.info.z))/4.0f
+                                ), vec4(0.5, 0.5, 1.0, 1), buf);
+                    }
+                    else
+                    {
+                        Debug::Draw::triangle(
+                            vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
+                            vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
+                            vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
+                            vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+
+                        
+                        char buf[255];
+                        sprintf(buf, "Room: %d Id: %d", roomslist[roomIndex], j);
+                        Debug::Draw::text(
+                            vec3(
+                                (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+(3*room.info.x))/3.0f,
+                                (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y)/3.0f + (roomslist[roomIndex]==50 ? 20 : 0),
+                                (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+(3*room.info.z))/3.0f
+                                ), vec4(0.5, 0.5, 1.0, 1), buf);
+                    }                    
                 }
-                
             }
             Core::setDepthTest(true);                        
         }

@@ -60,6 +60,7 @@ struct Mario : Lara
 	bool reverseAnim;
 	float marioTicks;
 	bool postInit;
+	int previousRoomIndex=-1;
 
 	Mesh* TRmarioMesh;
 
@@ -141,10 +142,7 @@ struct Mario : Lara
 
 		if (marioId != -1) sm64_mario_delete(marioId);
 
-		int nearRooms[256];
-		int nearRoomsCount=0;
-		levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
-		marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
+		marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
 	}
 
@@ -1164,7 +1162,6 @@ struct Mario : Lara
 
 	void updateMarioVisibleRooms()
 	{
-
 		// Set the water level to SM64
 		if (marioId >= 0)
 		{
@@ -1172,39 +1169,23 @@ struct Mario : Lara
 			sm64_set_mario_water_level(marioId, marioWaterLevel);
 		}
 		
-		int nearRooms[256];
-		int nearRoomsCount=0;
-		levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 2);
-
-
-		#ifdef DEBUG_RENDER			
-		if(surfaceDebuggerEnabled)
+		// We only need to update loaded rooms when we change rooms.
+		// Map flips are handled elsewhere and transparently
+		if(getRoomIndex()!=previousRoomIndex)
 		{
-			if(oldViewedRoomsCount != nearRoomsCount || !areArraysEqual(oldViewedRooms, nearRooms, nearRoomsCount))
-			{
-				oldViewedRoomsCount=0;
-				printf("rooms:");
-				for(int i=0;i<nearRoomsCount; i++){
-					printf(" %d", nearRooms[i]);
-					oldViewedRooms[oldViewedRoomsCount++]=nearRooms[i];
-				}
-				printf("\n");			
-			}
+			previousRoomIndex = getRoomIndex();
+			levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, getRoomIndex(), getRoomIndex(), 2, true);
 		}
-		#endif
-
-		sm64_level_update_loaded_rooms_list(marioId, nearRooms, nearRoomsCount);
 	}
 
 	void update()
 	{
 		if(marioId==-1)
 		{
+			#ifdef DEBUG_RENDER	
 			printf("actual mario loading\n");
-			int nearRooms[256];
-			int nearRoomsCount=0;
-			levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
-			marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
+			#endif
+			marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
 			if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 		}
 

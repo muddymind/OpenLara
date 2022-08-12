@@ -1113,7 +1113,10 @@ struct Level : IGame {
         loadNextLevel();
     #endif
 
-        levelSM64->loadSM64Level(getLevel(), player);
+
+        levelSM64->loadSM64Level(getLevel(), player, player ? player->getRoomIndex() : 0);
+
+
         saveResult = SAVE_RESULT_SUCCESS;
         if (loadSlot != -1 && saveSlots[loadSlot].getLevelID() == level.id) {
             parseSaveSlot(saveSlots[loadSlot]);
@@ -1127,7 +1130,8 @@ struct Level : IGame {
 
     virtual ~Level() {
         UI::init(NULL);
-        delete levelSM64;
+        if(levelSM64!=NULL)
+            delete levelSM64;
         Network::stop();
 
         for (int i = 0; i < level.entitiesCount; i++)
@@ -3168,7 +3172,13 @@ struct Level : IGame {
             if(surfaceDebugger)
             {
                 Lara *lara = (Lara *)getLara(0);
-                Debug::Level::sm64debugrooms(&level, lara->getRoomIndex());
+
+                if(lara && levelSM64){
+                    int nearRooms[256];
+                    int nearRoomsCount=0;
+                    levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, lara->getRoomIndex(), lara->getRoomIndex(), 0);
+                    Debug::Level::sm64debugrooms(&level, nearRooms, nearRoomsCount);
+                }
             }
             
             Core::setDepthTest(true);
