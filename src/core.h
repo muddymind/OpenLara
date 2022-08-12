@@ -43,6 +43,10 @@
 
     //#define _NAPI_SOCKET
 
+    // M_PI support
+    #define _USE_MATH_DEFINES
+    #include <cmath>
+
     #include <windows.h>
 
     #undef OS_PTHREAD_MT

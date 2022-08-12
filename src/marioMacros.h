@@ -55,6 +55,21 @@ extern "C" {
 		}}; \
 	}
 
+#define ADD_MESH_FACE_RELATIVE_SCALED(surfaces, surface_ind, d, f) \
+	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, -1, -1, { \
+		{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
+		{(d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
+		{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
+	}}; \
+	if (!f.triangle) \
+	{ \
+		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, -1, -1, { \
+			{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
+			{(d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
+			{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
+		}}; \
+	}
+
 #define CREATE_BOUNDING_BOX(boundingBox, minx, maxx, miny, maxy, minz, maxz) \
 	boundingBox->vertices[0].coord.x=minx; \
 	boundingBox->vertices[0].coord.y=miny; \
@@ -153,5 +168,14 @@ extern "C" {
 	vec3(src.v2[0]*IMARIO_SCALE, -src.v2[1]*IMARIO_SCALE, -src.v2[2]*IMARIO_SCALE), \
 	vec3(src.v3[0]*IMARIO_SCALE, -src.v3[1]*IMARIO_SCALE, -src.v3[2]*IMARIO_SCALE)
 
+
+#define TEST_FACE_OVERLAP(face1, face2, mainAxis, otherAxis) \
+	face1.positive != face2.positive && face1.mainAxis[0] == face2.mainAxis[0] && \
+	!(\
+		((face1.otherAxis[0] == face2.otherAxis[0] && face1.otherAxis[1] == face2.otherAxis[1]) ? \
+			face1.y[0] > face2.y[1] || face1.y[1] < face2.y[0] : \
+			face1.y[0] >= face2.y[1] || face1.y[1] <= face2.y[0] ) \
+		|| face1.otherAxis[0] >= face2.otherAxis[1] || face1.otherAxis[1] <= face2.otherAxis[0] \
+	)\
 
 #endif // H_MARIOMACROS

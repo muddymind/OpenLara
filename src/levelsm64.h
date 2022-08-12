@@ -614,20 +614,6 @@ struct LevelSM64
 		}
 	}
 
-    // void getFaceMiddlePoint(int roomIdx, int faceIdx, struct FacesToEvaluate *face)
-	// {
-	// 	TR::Room &room = level->rooms[roomIdx];
-	// 	TR::Room::Data &d = room.data;
-	// 	TR::Face &f = d.faces[faceIdx];
-
-	// 	face->roomIdx = roomIdx;
-	// 	face->faceIdx = faceIdx;
-	// 	face->average = vec3(
-	// 		(d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+d.vertices[f.vertices[3]].pos.x+(4*room.info.x))/4.0f,
-	// 		(d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y+d.vertices[f.vertices[3]].pos.y)/4.0f,
-	// 		(d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+d.vertices[f.vertices[3]].pos.z+(4*room.info.z))/4.0f
-	// 	);
-	// }
 
 	void printface(int roomIdx, int faceIdx)
 	{
@@ -655,7 +641,7 @@ struct LevelSM64
 		TR::Face &f = d.faces[faceIdx];
 
 		// We only want vertical surfaces
-		if(f.normal.y != 0)
+		if(f.normal.y != 0 || f.normal.z!=0)
 		{
 			return false;
 		}
@@ -665,35 +651,32 @@ struct LevelSM64
 			return false;	
 		}
 
-		float x = d.vertices[f.vertices[0]].pos.x;
-		if(d.vertices[f.vertices[1]].pos.x == x && d.vertices[f.vertices[2]].pos.x == x && d.vertices[f.vertices[3]].pos.x==x)
+		float x = d.vertices[f.vertices[0]].pos.x+room.info.x;
+
+		float miny = d.vertices[f.vertices[0]].pos.y;
+		float maxy = d.vertices[f.vertices[0]].pos.y;
+		float minz = d.vertices[f.vertices[0]].pos.z;
+		float maxz = d.vertices[f.vertices[0]].pos.z;
+
+		for(int i=1; i<4; i++)
 		{
-			float miny = d.vertices[f.vertices[0]].pos.y;
-			float maxy = d.vertices[f.vertices[0]].pos.y;
-			float minz = d.vertices[f.vertices[0]].pos.z;
-			float maxz = d.vertices[f.vertices[0]].pos.z;
-
-			for(int i=1; i<4; i++)
-			{
-				if(d.vertices[f.vertices[i]].pos.y<miny) miny=d.vertices[f.vertices[i]].pos.y;
-				if(d.vertices[f.vertices[i]].pos.y>maxy) maxy=d.vertices[f.vertices[i]].pos.y;
-				if(d.vertices[f.vertices[i]].pos.z<minz) minz=d.vertices[f.vertices[i]].pos.z;
-				if(d.vertices[f.vertices[i]].pos.z>maxz) maxz=d.vertices[f.vertices[i]].pos.z;
-			}
-			x+=room.info.x;
-			xfaces[xfacesCount++] = {
-				roomIdx,
-				faceIdx,
-				f.normal.x > 0 ? true : false,
-				{x, x},
-				{miny, maxy},
-				{minz+room.info.z, maxz+room.info.z},
-			};
-
-			//getFaceMiddlePoint(roomIdx, faceIdx, &(xfaces[xfacesCount++]));
-			return true;
+			if(d.vertices[f.vertices[i]].pos.y<miny) miny=d.vertices[f.vertices[i]].pos.y;
+			if(d.vertices[f.vertices[i]].pos.y>maxy) maxy=d.vertices[f.vertices[i]].pos.y;
+			if(d.vertices[f.vertices[i]].pos.z<minz) minz=d.vertices[f.vertices[i]].pos.z;
+			if(d.vertices[f.vertices[i]].pos.z>maxz) maxz=d.vertices[f.vertices[i]].pos.z;
 		}
-		return false;
+
+		xfaces[xfacesCount++] = {
+			roomIdx,
+			faceIdx,
+			f.normal.x > 0 ? true : false,
+			{x, x},
+			{miny, maxy},
+			{minz+room.info.z, maxz+room.info.z},
+		};
+
+		return true;
+
 	}
 
 	bool evalZface(int roomIdx, int faceIdx)
@@ -702,40 +685,43 @@ struct LevelSM64
 		TR::Room::Data &d = room.data;
 		TR::Face &f = d.faces[faceIdx];
 
+		// We only want vertical surfaces
+		if(f.normal.y != 0 || f.normal.x!=0)
+		{
+			return false;
+		}
+
 		if(f.water || f.triangle)
 		{
 			return false;	
 		}
 
-		float z = d.vertices[f.vertices[0]].pos.z;
-		if(d.vertices[f.vertices[1]].pos.z == z && d.vertices[f.vertices[2]].pos.z == z && d.vertices[f.vertices[3]].pos.z==z)
+		float z = d.vertices[f.vertices[0]].pos.z+room.info.z;
+
+		float miny = d.vertices[f.vertices[0]].pos.y;
+		float maxy = d.vertices[f.vertices[0]].pos.y;
+		float minx = d.vertices[f.vertices[0]].pos.x;
+		float maxx = d.vertices[f.vertices[0]].pos.x;
+
+		for(int i=1; i<4; i++)
 		{
-			float miny = d.vertices[f.vertices[0]].pos.y;
-			float maxy = d.vertices[f.vertices[0]].pos.y;
-			float minx = d.vertices[f.vertices[0]].pos.x;
-			float maxx = d.vertices[f.vertices[0]].pos.x;
-
-			for(int i=1; i<4; i++)
-			{
-				if(d.vertices[f.vertices[i]].pos.y<miny) miny=d.vertices[f.vertices[i]].pos.y;
-				if(d.vertices[f.vertices[i]].pos.y>maxy) maxy=d.vertices[f.vertices[i]].pos.y;
-				if(d.vertices[f.vertices[i]].pos.x<minx) minx=d.vertices[f.vertices[i]].pos.x;
-				if(d.vertices[f.vertices[i]].pos.x>maxx) maxx=d.vertices[f.vertices[i]].pos.x;
-			}
-			z+=room.info.z;
-			xfaces[xfacesCount++] = {
-				roomIdx,
-				faceIdx,
-				f.normal.z > 0 ? true : false,
-				{minx+room.info.x, maxx+room.info.x},
-				{miny, maxy},
-				{z, z}
-			};
-
-			//getFaceMiddlePoint(roomIdx, faceIdx, &(zfaces[zfacesCount++]));
-			return true;
+			if(d.vertices[f.vertices[i]].pos.y<miny) miny=d.vertices[f.vertices[i]].pos.y;
+			if(d.vertices[f.vertices[i]].pos.y>maxy) maxy=d.vertices[f.vertices[i]].pos.y;
+			if(d.vertices[f.vertices[i]].pos.x<minx) minx=d.vertices[f.vertices[i]].pos.x;
+			if(d.vertices[f.vertices[i]].pos.x>maxx) maxx=d.vertices[f.vertices[i]].pos.x;
 		}
-		return false;
+
+		zfaces[zfacesCount++] = {
+			roomIdx,
+			faceIdx,
+			f.normal.z > 0 ? true : false,
+			{minx+room.info.x, maxx+room.info.x},
+			{miny, maxy},
+			{z, z}
+		};
+
+		return true;
+
 	}
 
 	float crudeDistance(vec3 v1, vec3 v2)
@@ -752,30 +738,26 @@ struct LevelSM64
 		{
 			for(int faceId=0; faceId<level->rooms[roomsList[roomId]].data.fCount; faceId++)
 			{
-				//if((roomsList[roomId]==68 && faceId==36) || (roomsList[roomId]==69 && faceId==96))
-					if(!evalXface(roomsList[roomId], faceId))
-					{
-						evalZface(roomsList[roomId], faceId);
-					}
+				if(!evalXface(roomsList[roomId], faceId))
+				{
+					evalZface(roomsList[roomId], faceId);
+				}
 			}
 		}
 
-		//printf("xfaces: %d\tzfaces: %d\n", xfacesCount, zfacesCount);
-
-		//printf("Evaluating clips...\n");
 		clipsCount = 0;
 		for(int i=0; i<xfacesCount-1; i++)
 		{
 			for(int j=i+1; j<xfacesCount; j++)
 			{
-				if( xfaces[i].positive != xfaces[j].positive && !(xfaces[i].y[0] > xfaces[j].y[1] || xfaces[i].y[1] < xfaces[j].y[0] || xfaces[i].z[0] > xfaces[j].z[1] || xfaces[i].z[1] < xfaces[j].z[0]) )
+				if( TEST_FACE_OVERLAP(xfaces[i], xfaces[j], x, z) )
 				{
 					bool found=false;
 					for(int w=0; w<clipsCount; w++)
 					{
 						struct ClipsDetected *clip = &(clips[w]);
 						//We need to check if this is really a new clip that hasn't been found before
-						if(clip->face1 == &xfaces[i] || clip->face1 == &xfaces[j] || clip->face2 == &xfaces[i] || clip->face2 == &xfaces[j])
+						if(clip->face1 == &xfaces[i] || clip->face1 == &xfaces[j])
 						{
 							found=true;
 							break;
@@ -792,14 +774,15 @@ struct LevelSM64
 		{
 			for(int j=i+1; j<zfacesCount; j++)
 			{
-				if( zfaces[i].positive != zfaces[j].positive && !(zfaces[i].y[0] > zfaces[j].y[1] || zfaces[i].y[1] < zfaces[j].y[0] || zfaces[i].x[0] > zfaces[j].x[1] || zfaces[i].x[1] < zfaces[j].x[0] ))
+
+				if( TEST_FACE_OVERLAP(zfaces[i], zfaces[j], z, x) )
 				{
 					bool found=false;
 					for(int w=0; w<clipsCount; w++)
 					{
 						struct ClipsDetected *clip = &(clips[w]);
 						//We need to check if this is really a new clip that hasn't been found before
-						if(clip->face1 == &zfaces[i] || clip->face1 == &zfaces[j] || clip->face2 == &zfaces[i] || clip->face2 == &zfaces[j])
+						if(clip->face1 == &zfaces[i] || clip->face1 == &zfaces[j])
 						{
 							found=true;
 							break;
@@ -813,7 +796,7 @@ struct LevelSM64
 			}
 		}
 
-		printf("%d\n", clipsCount);
+		printf("clips found: %d\n", clipsCount);
 	}
 
 	void createClipBlockers()
@@ -822,15 +805,10 @@ struct LevelSM64
 
 		for(int i=0; i<clipsCount; i++)
 		{
-			// printface(clips[i].face1->roomIdx, clips[i].face1->faceIdx);
-			// printface(clips[i].face2->roomIdx, clips[i].face2->faceIdx);
-
 			FacesToEvaluate *e = clips[i].face1;
 			TR::Room &room = level->rooms[e->roomIdx];
 			TR::Room::Data &d = room.data;
 			TR::Face &f = d.faces[e->faceIdx];
-
-			//printface(clips[i].room1, clips[i].face1);
 
 			int minx = d.vertices[f.vertices[0]].pos.x;
 			int maxx = d.vertices[f.vertices[0]].pos.x;
@@ -867,6 +845,18 @@ struct LevelSM64
 				minz-=CLIPPER_DISPLACEMENT;
 				maxz+=CLIPPER_DISPLACEMENT;
 			}
+
+			// if(e->x[0] == e->x[1])
+			// {
+			// 	e->x[0]-=CLIPPER_DISPLACEMENT;
+			// 	e->x[1]+=CLIPPER_DISPLACEMENT;
+			// }
+
+			// if(e->z[0] == e->z[1])
+			// {
+			// 	e->z[0]-=CLIPPER_DISPLACEMENT;
+			// 	e->z[1]+=CLIPPER_DISPLACEMENT;
+			// }
 
 			TR::Mesh *mesh = generateRawMeshBoundingBox(minx, maxx, miny, maxy, minz, maxz);
 
