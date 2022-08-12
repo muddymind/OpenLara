@@ -9,15 +9,15 @@ extern "C" {
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 }
 
-#define ADD_ROOM_FACE_ABSOLUTE(surfaces, surface_ind, room, d, f, slippery, roomIndex, faceIndex) \
-	surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, roomIndex, faceIndex, { \
+#define ADD_ROOM_FACE_ABSOLUTE(surfaces, surface_ind, room, d, f, slippery) \
+	surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, { \
 		{(room.info.x + d->vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
 		{(room.info.x + d->vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[1]].pos.z)/IMARIO_SCALE}, \
 		{(room.info.x + d->vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
 	}}; \
 	if (!f.triangle) \
 	{ \
-		surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, roomIndex, faceIndex, { \
+		surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, { \
 			{(room.info.x + d->vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
 			{(room.info.x + d->vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[3]].pos.z)/IMARIO_SCALE}, \
 			{(room.info.x + d->vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
@@ -26,14 +26,14 @@ extern "C" {
 
 
 #define ADD_MESH_FACE_RELATIVE(surfaces, surface_ind, d, f) \
-	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, -1, -1, { \
+	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
 		{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
 		{(d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
 		{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 	}}; \
 	if (!f.triangle) \
 	{ \
-		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, -1, -1, { \
+		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
 			{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 			{(d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
 			{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
@@ -41,14 +41,14 @@ extern "C" {
 	}
 
 #define ADD_MESH_FACE_ABSOLUTE(surfaces, surface_ind, room, d, f) \
-	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, -1, -1, { \
+	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
 		{(room.info.x + d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
 		{(room.info.x + d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
 		{(room.info.x + d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 	}}; \
 	if (!f.triangle) \
 	{ \
-		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, -1, -1, { \
+		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
 			{(room.info.x + d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 			{(room.info.x + d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
 			{(room.info.x + d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
@@ -56,14 +56,14 @@ extern "C" {
 	}
 
 #define ADD_MESH_FACE_RELATIVE_SCALED(surfaces, surface_ind, d, f) \
-	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, -1, -1, { \
+	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
 		{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
 		{(d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
 		{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 	}}; \
 	if (!f.triangle) \
 	{ \
-		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, -1, -1, { \
+		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
 			{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 			{(d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
 			{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
@@ -102,66 +102,88 @@ extern "C" {
 	boundingBox->vertices[7].coord.x=maxx; \
 	boundingBox->vertices[7].coord.y=miny; \
 	boundingBox->vertices[7].coord.z=maxz; \
- \
+ /*face1*/\  
 	boundingBox->faces[0].triangle=1; \
-	boundingBox->faces[0].vertices[0]=2; \
+	boundingBox->faces[0].vertices[0]=2; \ 
 	boundingBox->faces[0].vertices[1]=1; \
 	boundingBox->faces[0].vertices[2]=0; \
- \
+ /*face2*/\
 	boundingBox->faces[1].triangle=1; \
 	boundingBox->faces[1].vertices[0]=0; \
 	boundingBox->faces[1].vertices[1]=3; \
 	boundingBox->faces[1].vertices[2]=2; \
-\
+/*face3*/\
 	boundingBox->faces[2].triangle=1; \
 	boundingBox->faces[2].vertices[0]=2; \
 	boundingBox->faces[2].vertices[1]=3; \
 	boundingBox->faces[2].vertices[2]=7; \
-\
+/*face4*/\
 	boundingBox->faces[3].triangle=1; \
 	boundingBox->faces[3].vertices[0]=7; \
 	boundingBox->faces[3].vertices[1]=6; \
 	boundingBox->faces[3].vertices[2]=2; \
-\
+/*face5*/\
 	boundingBox->faces[4].triangle=1; \
 	boundingBox->faces[4].vertices[0]=6; \
 	boundingBox->faces[4].vertices[1]=7; \
 	boundingBox->faces[4].vertices[2]=4; \
-\
+/*face6*/\
 	boundingBox->faces[5].triangle=1; \
 	boundingBox->faces[5].vertices[0]=4; \
 	boundingBox->faces[5].vertices[1]=5; \
 	boundingBox->faces[5].vertices[2]=6; \
-\
+/*face7*/\
 	boundingBox->faces[6].triangle=1; \
 	boundingBox->faces[6].vertices[0]=4; \
 	boundingBox->faces[6].vertices[1]=0; \
 	boundingBox->faces[6].vertices[2]=5; \
-\
+/*face8*/\
 	boundingBox->faces[7].triangle=1; \
 	boundingBox->faces[7].vertices[0]=0; \
 	boundingBox->faces[7].vertices[1]=1; \
 	boundingBox->faces[7].vertices[2]=5; \
-\
+/*face9*/\
 	boundingBox->faces[8].triangle=1; \
 	boundingBox->faces[8].vertices[0]=7; \
 	boundingBox->faces[8].vertices[1]=3; \
 	boundingBox->faces[8].vertices[2]=0; \
-\
+/*face10*/\
 	boundingBox->faces[9].triangle=1; \
 	boundingBox->faces[9].vertices[0]=0; \
 	boundingBox->faces[9].vertices[1]=4; \
 	boundingBox->faces[9].vertices[2]=7; \
-\
+/*face11*/\
 	boundingBox->faces[10].triangle=1; \
 	boundingBox->faces[10].vertices[0]=6; \
 	boundingBox->faces[10].vertices[1]=5; \
 	boundingBox->faces[10].vertices[2]=1; \
-\
+/*face12*/\
 	boundingBox->faces[11].triangle=1; \
 	boundingBox->faces[11].vertices[0]=1; \
 	boundingBox->faces[11].vertices[1]=2; \
 	boundingBox->faces[11].vertices[2]=6; 
+
+#define ADD_CUBE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, maxx, miny, maxy, minz, maxz) \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, minz, minx, maxy, minz, minx, miny, minz) /*face1*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, minz, maxx, miny, minz, maxx, maxy, minz) /*face2*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, minz, maxx, miny, minz, maxx, miny, maxz) /*face3*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, miny, maxz, maxx, maxy, maxz, maxx, maxy, minz) /*face4*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, maxz, maxx, miny, maxz, minx, miny, maxz) /*face5*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, maxz, minx, maxy, maxz, maxx, maxy, maxz) /*face6*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, maxz, minx, miny, minz, minx, maxy, maxz) /*face7*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, minz, minx, maxy, minz, minx, maxy, maxz) /*face8*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, miny, maxz, maxx, miny, minz, minx, miny, minz) /*face9*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, minz, minx, miny, maxz, maxx, miny, maxz) /*face10*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, maxz, minx, maxy, maxz, minx, maxy, minz) /*face11*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, maxy, minz, maxx, maxy, minz, maxx, maxy, maxz) /*face12*/
+
+
+#define ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z) \
+	container[container_index++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
+		{( xDisplacement + v2x ) / IMARIO_SCALE, -v2y / IMARIO_SCALE, -( zDisplacement + v2z ) / IMARIO_SCALE}, \
+		{( xDisplacement + v1x ) / IMARIO_SCALE, -v1y / IMARIO_SCALE, -( zDisplacement + v1z ) / IMARIO_SCALE}, \
+		{( xDisplacement + v0x ) / IMARIO_SCALE, -v0y / IMARIO_SCALE, -( zDisplacement + v0z ) / IMARIO_SCALE}, \
+	}};
 
 #define CONVERT_DEBUG_FACE_COORDINATES(src) \
 	vec3(src.v1[0]*IMARIO_SCALE, -src.v1[1]*IMARIO_SCALE, -src.v1[2]*IMARIO_SCALE), \

@@ -57,11 +57,9 @@ struct LevelSM64
 		//vec3 average;
 		bool positive;
 
-		float x[2];
-		float y[2];
-		float z[2];
-
-		
+		int32 x[2];
+		int32 y[2];
+		int32 z[2];
 	};
 
 	struct ClipsDetected
@@ -95,7 +93,7 @@ struct LevelSM64
         sm64_level_unload();
     }
 
-	    void loadSM64Level(TR::Level *newLevel, IController *player, int initRoom=0)
+	void loadSM64Level(TR::Level *newLevel, IController *player, int initRoom=0)
     {
 		level=newLevel;
 		controller = player;
@@ -170,7 +168,7 @@ struct LevelSM64
 				slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
 			}
 
-			ADD_ROOM_FACE_ABSOLUTE(collision_surfaces, level_surface_i, room, d, f, slippery, roomId, cface);
+			ADD_ROOM_FACE_ABSOLUTE(collision_surfaces, level_surface_i, room, d, f, slippery);
 		}
 
 		return collision_surfaces;
@@ -550,33 +548,33 @@ struct LevelSM64
 			if (e->isBlock())
 			{
 				// bottom of block
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
 
 				// left (Z+)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 0, 128}, {128, 256, 128}, {-128, 256, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 256, 128}, {-128, 0, 128}, {128, 0, 128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, 128}, {128, 256, 128}, {-128, 256, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 256, 128}, {-128, 0, 128}, {128, 0, 128}}}; // top right, bottom left, bottom right
 
 				// right (Z-)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 0, -128}, {-128, 256, -128}, {128, 256, -128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 256, -128}, {128, 0, -128}, {-128, 0, -128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, -128}, {-128, 256, -128}, {128, 256, -128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 256, -128}, {128, 0, -128}, {-128, 0, -128}}}; // top right, bottom left, bottom right
 
 				// back (X+)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 0, -128}, {128, 256, -128}, {128, 256, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 256, 128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, -128}, {128, 256, -128}, {128, 256, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 256, 128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
 
 				// front (X-)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 0, 128}, {-128, 256, 128}, {-128, 256, -128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 256, -128}, {-128, 0, -128}, {-128, 0, 128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, 128}, {-128, 256, 128}, {-128, 256, -128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 256, -128}, {-128, 0, -128}, {-128, 0, 128}}}; // top right, bottom left, bottom right
 
 				// top of block
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 256, 128}, {-128, 256, -128}, {-128, 256, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 256, -128}, {128, 256, 128}, {128, 256, -128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 256, 128}, {-128, 256, -128}, {-128, 256, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 256, -128}, {128, 256, 128}, {128, 256, -128}}}; // top right, bottom left, bottom right
 			}
 			else if (e->type == TR::Entity::TRAP_FLOOR)
 			{
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, -1, -1, {{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
+				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
 			}
 			else
 			{
@@ -651,12 +649,12 @@ struct LevelSM64
 			return false;	
 		}
 
-		float x = d.vertices[f.vertices[0]].pos.x+room.info.x;
+		int32 x = d.vertices[f.vertices[0]].pos.x+room.info.x;
 
-		float miny = d.vertices[f.vertices[0]].pos.y;
-		float maxy = d.vertices[f.vertices[0]].pos.y;
-		float minz = d.vertices[f.vertices[0]].pos.z;
-		float maxz = d.vertices[f.vertices[0]].pos.z;
+		int32 miny = d.vertices[f.vertices[0]].pos.y;
+		int32 maxy = d.vertices[f.vertices[0]].pos.y;
+		int32 minz = d.vertices[f.vertices[0]].pos.z;
+		int32 maxz = d.vertices[f.vertices[0]].pos.z;
 
 		for(int i=1; i<4; i++)
 		{
@@ -696,12 +694,12 @@ struct LevelSM64
 			return false;	
 		}
 
-		float z = d.vertices[f.vertices[0]].pos.z+room.info.z;
+		int32 z = d.vertices[f.vertices[0]].pos.z+room.info.z;
 
-		float miny = d.vertices[f.vertices[0]].pos.y;
-		float maxy = d.vertices[f.vertices[0]].pos.y;
-		float minx = d.vertices[f.vertices[0]].pos.x;
-		float maxx = d.vertices[f.vertices[0]].pos.x;
+		int32 miny = d.vertices[f.vertices[0]].pos.y;
+		int32 maxy = d.vertices[f.vertices[0]].pos.y;
+		int32 minx = d.vertices[f.vertices[0]].pos.x;
+		int32 maxx = d.vertices[f.vertices[0]].pos.x;
 
 		for(int i=1; i<4; i++)
 		{
@@ -806,94 +804,20 @@ struct LevelSM64
 		for(int i=0; i<clipsCount; i++)
 		{
 			FacesToEvaluate *e = clips[i].face1;
-			TR::Room &room = level->rooms[e->roomIdx];
-			TR::Room::Data &d = room.data;
-			TR::Face &f = d.faces[e->faceIdx];
 
-			int minx = d.vertices[f.vertices[0]].pos.x;
-			int maxx = d.vertices[f.vertices[0]].pos.x;
-			for(int i=1; i<4; i++){
-				if(d.vertices[f.vertices[i]].pos.x > maxx) maxx = d.vertices[f.vertices[i]].pos.x;
-				if(d.vertices[f.vertices[i]].pos.x < minx) minx = d.vertices[f.vertices[i]].pos.x;				
-			}
-			if(minx == maxx)
+			if(e->x[0] == e->x[1])
 			{
-				minx-=CLIPPER_DISPLACEMENT;
-				maxx+=CLIPPER_DISPLACEMENT;
+				e->x[0]-=CLIPPER_DISPLACEMENT;
+				e->x[1]+=CLIPPER_DISPLACEMENT;
 			}
 
-			int miny = d.vertices[f.vertices[0]].pos.y;
-			int maxy = d.vertices[f.vertices[0]].pos.y;
-			for(int i=1; i<4; i++){
-				if(d.vertices[f.vertices[i]].pos.y > maxy) maxy = d.vertices[f.vertices[i]].pos.y;
-				if(d.vertices[f.vertices[i]].pos.y < miny) miny = d.vertices[f.vertices[i]].pos.y;
-			}
-			if(miny == maxy)
+			if(e->z[0] == e->z[1])
 			{
-				miny-=CLIPPER_DISPLACEMENT;
-				maxy+=CLIPPER_DISPLACEMENT;
+				e->z[0]-=CLIPPER_DISPLACEMENT;
+				e->z[1]+=CLIPPER_DISPLACEMENT;
 			}
 
-			int minz = d.vertices[f.vertices[0]].pos.z;
-			int maxz = d.vertices[f.vertices[0]].pos.z;
-			for(int i=1; i<4; i++){
-				if(d.vertices[f.vertices[i]].pos.z > maxz) maxz = d.vertices[f.vertices[i]].pos.z;
-				if(d.vertices[f.vertices[i]].pos.z < minz) minz = d.vertices[f.vertices[i]].pos.z;				
-			}
-			if(minz == maxz)
-			{
-				minz-=CLIPPER_DISPLACEMENT;
-				maxz+=CLIPPER_DISPLACEMENT;
-			}
-
-			// if(e->x[0] == e->x[1])
-			// {
-			// 	e->x[0]-=CLIPPER_DISPLACEMENT;
-			// 	e->x[1]+=CLIPPER_DISPLACEMENT;
-			// }
-
-			// if(e->z[0] == e->z[1])
-			// {
-			// 	e->z[0]-=CLIPPER_DISPLACEMENT;
-			// 	e->z[1]+=CLIPPER_DISPLACEMENT;
-			// }
-
-			TR::Mesh *mesh = generateRawMeshBoundingBox(minx, maxx, miny, maxy, minz, maxz);
-
-			for(int i=0; i<mesh->fCount; i++)
-			{		
-				ADD_MESH_FACE_ABSOLUTE(clipBlockers,clipBlockersCount, room, mesh, mesh->faces[i] );
-			}
-			
-			free(mesh->faces);
-			free(mesh);
-
-			// FacesToEvaluate *e = clips[i].face1;
-			// TR::Room &room = level->rooms[e->roomIdx];
-			// TR::Room::Data &d = room.data;
-			// TR::Face &f = d.faces[e->faceIdx];
-
-			// if(e->x[0] == e->x[1])
-			// {
-			// 	e->x[0]-=CLIPPER_DISPLACEMENT;
-			// 	e->x[1]+=CLIPPER_DISPLACEMENT;
-			// }
-
-			// if(e->z[0] == e->z[1])
-			// {
-			// 	e->z[0]-=CLIPPER_DISPLACEMENT;
-			// 	e->z[1]+=CLIPPER_DISPLACEMENT;
-			// }
-
-			// TR::Mesh *mesh = generateRawMeshBoundingBox(e->x[0], e->x[1], e->y[0], e->y[1], e->z[0], e->z[1]);
-
-			// for(int i=0; i<mesh->fCount; i++)
-			// {		
-			// 	ADD_MESH_FACE_RELATIVE_SCALED(clipBlockers,clipBlockersCount, mesh, mesh->faces[i] );
-			// }
-			
-			// free(mesh->faces);
-			// free(mesh);
+			ADD_CUBE_GEOMETRY(clipBlockers, clipBlockersCount, 0, 0, e->x[0], e->x[1], e->y[0], e->y[1], e->z[0], e->z[1]);
 		}
 	}
 
@@ -902,7 +826,7 @@ struct LevelSM64
 		int nearRooms[256];
 		int nearRoomsCount=0;
 
-		getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, currentRoomIndex, to, 2);
+		getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, currentRoomIndex, to, maxDepth);
 
 		if(evaluateClips)
 		{
