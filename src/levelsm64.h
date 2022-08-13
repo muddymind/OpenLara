@@ -45,7 +45,6 @@ struct LevelSM64
 	{
 		int roomIdx;
 		int faceIdx;
-		//vec3 average;
 		bool positive;
 
 		int32 x[2];
@@ -64,10 +63,10 @@ struct LevelSM64
     struct MarioControllerObj dynamicObjects[4096];
 	int dynamicObjectsCount=0;
 
-	struct FacesToEvaluate xfaces[18192];
+	struct FacesToEvaluate xfaces[4096];
 	int xfacesCount=0;
 
-	struct FacesToEvaluate zfaces[18192];
+	struct FacesToEvaluate zfaces[4096];
 	int zfacesCount=0;
 
 	struct ClipsDetected clips[MAX_CLIPPER_BLOCKS];
@@ -582,7 +581,6 @@ struct LevelSM64
 		}
 	}
 
-
 	void printface(int roomIdx, int faceIdx)
 	{
 		TR::Room &room = level->rooms[roomIdx];
@@ -691,11 +689,6 @@ struct LevelSM64
 		return true;
 
 	}
-
-	float crudeDistance(vec3 v1, vec3 v2)
-	{
-		return abs(v1.x-v2.x)+abs(v1.y-v2.y)+abs(v1.z-v2.z);
-	}
 	
 	void evaluateClippingSurfaces(int *roomsList, int roomsCount)
 	{
@@ -712,6 +705,10 @@ struct LevelSM64
 				}
 			}
 		}
+
+		#ifdef DEBUG_RENDER	
+		printf("%d xfaces to evaluate\n%d zfaces to evaluate\n", xfacesCount, zfacesCount);
+		#endif
 
 		clipsCount = 0;
 		for(int i=0; i<xfacesCount-1; i++)
