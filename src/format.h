@@ -1603,7 +1603,7 @@ namespace TR {
         };
 
         Limit KEY_HOLE_MARIO = { 
-            0, 362, 30,     ::Box(vec3(-200, 0, 290), vec3(200, 0, 512)), true, true
+            0, 362, 30,     ::Box(vec3(-200, 0, 210), vec3(200, 0, 512)), true, true
         };
 
         Limit PUZZLE_HOLE_MARIO = { 
