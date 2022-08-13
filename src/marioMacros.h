@@ -124,7 +124,7 @@ extern "C" {
 	boundingBox->vertices[7].coord.z=maxz; \
  /*face1*/\  
 	boundingBox->faces[0].triangle=1; \
-	boundingBox->faces[0].vertices[0]=2; \ 
+	boundingBox->faces[0].vertices[0]=2; \
 	boundingBox->faces[0].vertices[1]=1; \
 	boundingBox->faces[0].vertices[2]=0; \
  /*face2*/\

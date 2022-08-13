@@ -227,7 +227,9 @@ struct LevelSM64
 			switch (meshIndex)
 			{
 				case 3: // barn animal food holder - Mario can get stuck on it.
+				case 4: // Meat holder - Thin geometry and mario can get stuck
 				case 7:	// Stone Statues - Mario can clip through them and fall into the void.
+				case 8: // Meat holder - Thin geometry and mario can get stuck
 					return MESH_LOADING_BOUNDING_BOX;
 				case 6: // platform with small statue - wihtout it mario falls into the void.
 					return MESH_LOADING_NORMAL;
@@ -240,19 +242,19 @@ struct LevelSM64
 				return MESH_LOADING_DISCARD;
 			}
 			break;
-		case TR::LevelID::LVL_TR1_3B:
+		case TR::LevelID::LVL_TR1_3B: //Tomb of Qualopec
+			switch (meshIndex)
+			{
+
+			}
+			break;
+		case TR::LevelID::LVL_TR1_CUT_1: // cut scene after Larson's fight
 			switch (meshIndex)
 			{
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_CUT_1:
-			switch (meshIndex)
-			{
-				
-			}
-			break;
-		case TR::LevelID::LVL_TR1_4:
+		case TR::LevelID::LVL_TR1_4: //St Francis' Folly
 			switch (meshIndex)
 			{
 				
