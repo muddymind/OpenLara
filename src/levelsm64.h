@@ -11,7 +11,7 @@ extern "C" {
 	#include <libsm64/src/decomp/include/mario_animation_ids.h>
 }
 
-
+#include <time.h>
 #include "core.h"
 #include "format.h"
 #include "controller.h"
@@ -74,6 +74,12 @@ struct LevelSM64
 
 	SM64Surface clipBlockers[MAX_CLIPPER_BLOCKS_FACES];
 	int clipBlockersCount = 0;
+
+	int loadedRooms[256];
+	int loadedRoomsCount=0;
+
+	int lastClipsFound = 0;
+	double clipsTimeTaken = 0.0;
 
     LevelSM64()
     {
@@ -461,27 +467,6 @@ struct LevelSM64
 			obj.transform.position[2] = -e->z / MARIO_SCALE;
 			for (int j=0; j<3; j++) obj.transform.eulerRotation[j] = (j == 1) ? float(e->rotation) / M_PI * 180.f : 0;
 
-			// some code taken from extension.h below
-
-			// first increment the surface count
-			if (e->isBlock()) obj.surfaceCount += 12; // 6 sides, 2 triangles per side to form a quad
-			else if (e->type == TR::Entity::TRAP_FLOOR) obj.surfaceCount += 2; // floor
-			else
-			{
-				for (int c = 0; c < model->mCount; c++)
-				{
-					int index = level->meshOffsets[model->mStart + c];
-					if (index || model->mStart + c <= 0)
-					{
-						TR::Mesh &d = level->meshes[index];
-						for (int j = 0; j < d.fCount; j++)
-							obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
-					}
-				}
-			}
-
-			// then create the surface and add the objects
-			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 			size_t surface_ind = 0;
 			vec3 offset(0,0,0);
 			bool doOffsetY = true;
@@ -541,14 +526,30 @@ struct LevelSM64
 
 			if (e->isBlock())
 			{
+				obj.surfaceCount = 12;
+				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, 0, 256, -128, 128);
 			}
 			else if (e->type == TR::Entity::TRAP_FLOOR)
 			{
-				ADD_RECTANGLE_HORIZONTAL_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -128, 128);
+				obj.surfaceCount = 12;
+				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -10, 0, -128, 128);
 			}
 			else
 			{
+				for (int c = 0; c < model->mCount; c++)
+				{
+					int index = level->meshOffsets[model->mStart + c];
+					if (index || model->mStart + c <= 0)
+					{
+						TR::Mesh &d = level->meshes[index];
+						for (int j = 0; j < d.fCount; j++)
+							obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+					}
+				}
+				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+
 				for (int c = 0; c < model->mCount; c++)
 				{
 					int index = level->meshOffsets[model->mStart + c];
@@ -692,18 +693,18 @@ struct LevelSM64
 
 	}
 	
-	void evaluateClippingSurfaces(int *roomsList, int roomsCount)
+	void evaluateClippingSurfaces()
 	{
 
 		xfacesCount=0;
 		zfacesCount=0;
-		for(int roomId=0; roomId<roomsCount; roomId++)
+		for(int roomId=0; roomId<loadedRoomsCount; roomId++)
 		{
-			for(int faceId=0; faceId<level->rooms[roomsList[roomId]].data.fCount; faceId++)
+			for(int faceId=0; faceId<level->rooms[loadedRooms[roomId]].data.fCount; faceId++)
 			{
-				if(!evalXface(roomsList[roomId], faceId))
+				if(!evalXface(loadedRooms[roomId], faceId))
 				{
-					evalZface(roomsList[roomId], faceId);
+					evalZface(loadedRooms[roomId], faceId);
 				}
 			}
 		}
@@ -763,6 +764,7 @@ struct LevelSM64
 			}
 		}
 		#ifdef DEBUG_RENDER	
+		lastClipsFound = clipsCount;
 		printf("clips found: %d\n", clipsCount);
 		#endif
 	}
@@ -793,27 +795,40 @@ struct LevelSM64
 
 	void getCurrentAndAdjacentRoomsWithClips(int marioId, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false) 
 	{
-		int nearRooms[256];
-		int nearRoomsCount=0;
-
-		getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, currentRoomIndex, to, maxDepth);
+		getCurrentAndAdjacentRooms(currentRoomIndex, to, maxDepth);
 
 		if(evaluateClips)
 		{
-			evaluateClippingSurfaces(nearRooms, nearRoomsCount);
+			#ifdef DEBUG_RENDER	
+			struct timespec start, stop;
+			clock_gettime( CLOCK_REALTIME, &start);
+			#endif
+
+			evaluateClippingSurfaces();
 			createClipBlockers();
-			sm64_level_update_player_loaded_Rooms_with_clippers(marioId, nearRooms, nearRoomsCount, clipBlockers, clipBlockersCount);
+
+			#ifdef DEBUG_RENDER
+			clock_gettime( CLOCK_REALTIME, &stop);
+			clipsTimeTaken = (stop.tv_nsec - start.tv_nsec)/1E6L;
+			#endif
+
+			sm64_level_update_player_loaded_Rooms_with_clippers(marioId, loadedRooms, loadedRoomsCount, clipBlockers, clipBlockersCount);
 		}
 		else
 		{
-			sm64_level_update_loaded_rooms_list(marioId, nearRooms, nearRoomsCount);
+			sm64_level_update_loaded_rooms_list(marioId, loadedRooms, loadedRoomsCount);
 		}
 
 		return;			
 	}
 
-	void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0) {
-        if (count>maxDepth || *roomsCount == 256) {
+	void getCurrentAndAdjacentRooms(int currentRoomIndex, int to, int maxDepth, int count=0) {
+		if(count==0)
+		{
+			loadedRoomsCount=0;
+		}
+
+        if (count>maxDepth || loadedRoomsCount == 256) {
             return;
         }
 
@@ -858,24 +873,19 @@ struct LevelSM64
 
 		if(!room.flags.visible){
 			room.flags.visible = true;
-			roomsList[*roomsCount] = to;
-			*roomsCount+=1;
+			loadedRooms[loadedRoomsCount++] = to;
 		}
 
 		for (int i = 0; i < room.portalsCount; i++) {
-			getCurrentAndAdjacentRooms(roomsList, roomsCount, currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
+			getCurrentAndAdjacentRooms(currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
 		}
     }
 
 	int createMarioInstance(int roomIndex, vec3(pos))
 	{
-		int nearRooms[256];
-		int nearRoomsCount=0;
-		getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, roomIndex, roomIndex, 2);
-		return sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, nearRooms, nearRoomsCount);
+		getCurrentAndAdjacentRooms(roomIndex, roomIndex, 2);
+		return sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, loadedRooms, loadedRoomsCount);
 	}
-
-
 };
 
 #endif
