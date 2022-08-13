@@ -40,35 +40,55 @@ extern "C" {
 		}}; \
 	}
 
-#define ADD_MESH_FACE_ABSOLUTE(surfaces, surface_ind, room, d, f) \
-	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
-		{(room.info.x + d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		{(room.info.x + d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
-		{(room.info.x + d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-	}}; \
-	if (!f.triangle) \
-	{ \
-		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
-			{(room.info.x + d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-			{(room.info.x + d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
-			{(room.info.x + d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		}}; \
-	}
 
-#define ADD_MESH_FACE_RELATIVE_SCALED(surfaces, surface_ind, d, f) \
-	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
-		{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		{(d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
-		{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-	}}; \
-	if (!f.triangle) \
-	{ \
-		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
-			{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-			{(d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
-			{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		}}; \
-	}
+#define X_GEOMETRY_TRANSFORMATION(x, displacement) (x+displacement)/IMARIO_SCALE
+#define Y_GEOMETRY_TRANSFORMATION(y) -y/IMARIO_SCALE
+#define Z_GEOMETRY_TRANSFORMATION(z, displacement) -(z+displacement)/IMARIO_SCALE
+
+
+#define ADD_CUBE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, maxx, miny, maxy, minz, maxz) \
+	ADD_CUBE_GEOMETRY_NON_TRANSFORMED( \
+		container, container_index, \
+		X_GEOMETRY_TRANSFORMATION(minx, xDisplacement), X_GEOMETRY_TRANSFORMATION(maxx, xDisplacement), \
+		Y_GEOMETRY_TRANSFORMATION(miny), Y_GEOMETRY_TRANSFORMATION(maxy), \
+		Z_GEOMETRY_TRANSFORMATION(minz, zDisplacement), Z_GEOMETRY_TRANSFORMATION(maxz, zDisplacement) \
+	)
+
+
+#define ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z) \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED( \
+		container, container_index, \
+		X_GEOMETRY_TRANSFORMATION(v0x, xDisplacement), Y_GEOMETRY_TRANSFORMATION(v0y), Z_GEOMETRY_TRANSFORMATION(v0z, zDisplacement), \
+		X_GEOMETRY_TRANSFORMATION(v1x, xDisplacement), Y_GEOMETRY_TRANSFORMATION(v1y), Z_GEOMETRY_TRANSFORMATION(v1z, zDisplacement), \
+		X_GEOMETRY_TRANSFORMATION(v2x, xDisplacement), Y_GEOMETRY_TRANSFORMATION(v2y), Z_GEOMETRY_TRANSFORMATION(v2z, zDisplacement) \
+	)
+
+
+#define ADD_CUBE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, maxx, miny, maxy, minz, maxz) \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, maxy, minz, minx, maxy, minz, minx, miny, minz) /*face1*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, miny, minz, maxx, miny, minz, maxx, maxy, minz) /*face2*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, maxy, minz, maxx, miny, minz, maxx, miny, maxz) /*face3*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, miny, maxz, maxx, maxy, maxz, maxx, maxy, minz) /*face4*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, maxy, maxz, maxx, miny, maxz, minx, miny, maxz) /*face5*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, miny, maxz, minx, maxy, maxz, maxx, maxy, maxz) /*face6*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, miny, maxz, minx, miny, minz, minx, maxy, maxz) /*face7*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, miny, minz, minx, maxy, minz, minx, maxy, maxz) /*face8*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, miny, maxz, maxx, miny, minz, minx, miny, minz) /*face9*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, miny, minz, minx, miny, maxz, maxx, miny, maxz) /*face10*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, maxy, maxz, minx, maxy, maxz, minx, maxy, minz) /*face11*/ \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, maxy, minz, maxx, maxy, minz, maxx, maxy, maxz) /*face12*/
+
+#define ADD_RECTANGLE_HORIZONTAL_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, maxx, minz, maxz) \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, 0, maxz, minx, 0, minz, maxx, 0, maxz) \
+	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, 0, minz, maxx, 0, maxz, minx, 0, minz)
+
+#define ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z) \
+	container[container_index++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
+		{ v2x , v2y, v2z }, \
+		{ v1x , v1y, v1z }, \
+		{ v0x , v0y, v0z } \
+	}};
+
 
 #define CREATE_BOUNDING_BOX(boundingBox, minx, maxx, miny, maxy, minz, maxz) \
 	boundingBox->vertices[0].coord.x=minx; \
@@ -163,27 +183,6 @@ extern "C" {
 	boundingBox->faces[11].vertices[1]=2; \
 	boundingBox->faces[11].vertices[2]=6; 
 
-#define ADD_CUBE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, maxx, miny, maxy, minz, maxz) \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, minz, minx, maxy, minz, minx, miny, minz) /*face1*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, minz, maxx, miny, minz, maxx, maxy, minz) /*face2*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, minz, maxx, miny, minz, maxx, miny, maxz) /*face3*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, miny, maxz, maxx, maxy, maxz, maxx, maxy, minz) /*face4*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, maxz, maxx, miny, maxz, minx, miny, maxz) /*face5*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, maxz, minx, maxy, maxz, maxx, maxy, maxz) /*face6*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, maxz, minx, miny, minz, minx, maxy, maxz) /*face7*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, minz, minx, maxy, minz, minx, maxy, maxz) /*face8*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, miny, maxz, maxx, miny, minz, minx, miny, minz) /*face9*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, miny, minz, minx, miny, maxz, maxx, miny, maxz) /*face10*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, maxx, maxy, maxz, minx, maxy, maxz, minx, maxy, minz) /*face11*/ \
-	ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, maxy, minz, maxx, maxy, minz, maxx, maxy, maxz) /*face12*/
-
-
-#define ADD_TRIANGLE_FACE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, v0x, v0y, v0z, v1x, v1y, v1z, v2x, v2y, v2z) \
-	container[container_index++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
-		{( xDisplacement + v2x ) / IMARIO_SCALE, -v2y / IMARIO_SCALE, -( zDisplacement + v2z ) / IMARIO_SCALE}, \
-		{( xDisplacement + v1x ) / IMARIO_SCALE, -v1y / IMARIO_SCALE, -( zDisplacement + v1z ) / IMARIO_SCALE}, \
-		{( xDisplacement + v0x ) / IMARIO_SCALE, -v0y / IMARIO_SCALE, -( zDisplacement + v0z ) / IMARIO_SCALE}, \
-	}};
 
 #define CONVERT_DEBUG_FACE_COORDINATES(src) \
 	vec3(src.v1[0]*IMARIO_SCALE, -src.v1[1]*IMARIO_SCALE, -src.v1[2]*IMARIO_SCALE), \

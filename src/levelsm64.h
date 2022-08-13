@@ -13,17 +13,8 @@ extern "C" {
 
 
 #include "core.h"
-// #include "game.h"
-// #include "lara.h"
-// #include "objects.h"
-// #include "sprite.h"
-// #include "enemy.h"
-// #include "inventory.h"
-// #include "mesh.h"
 #include "format.h"
-// #include "level.h"
 #include "controller.h"
-
 #include "marioMacros.h"
 
 struct MarioControllerObj
@@ -277,9 +268,11 @@ struct LevelSM64
 		case TR::LevelID::LVL_TR1_6:// Palace Midas
 			switch (meshIndex)
 			{
+				case 6: //railings at the balcony at the final level are 1 face thick and mario clips
+					return MESH_LOADING_BOUNDING_BOX;
 				case 14: // bushes - mario gets stuck
 				case 19: // small tree - mario gets stuck
-				return MESH_LOADING_DISCARD;
+					return MESH_LOADING_DISCARD;
 			}
 			break;
 		case TR::LevelID::LVL_TR1_7A:
@@ -547,34 +540,11 @@ struct LevelSM64
 
 			if (e->isBlock())
 			{
-				// bottom of block
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
-
-				// left (Z+)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, 128}, {128, 256, 128}, {-128, 256, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 256, 128}, {-128, 0, 128}, {128, 0, 128}}}; // top right, bottom left, bottom right
-
-				// right (Z-)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, -128}, {-128, 256, -128}, {128, 256, -128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 256, -128}, {128, 0, -128}, {-128, 0, -128}}}; // top right, bottom left, bottom right
-
-				// back (X+)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, -128}, {128, 256, -128}, {128, 256, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 256, 128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
-
-				// front (X-)
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, 128}, {-128, 256, 128}, {-128, 256, -128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 256, -128}, {-128, 0, -128}, {-128, 0, 128}}}; // top right, bottom left, bottom right
-
-				// top of block
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 256, 128}, {-128, 256, -128}, {-128, 256, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 256, -128}, {128, 256, 128}, {128, 256, -128}}}; // top right, bottom left, bottom right
+				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, 0, 256, -128, 128);
 			}
 			else if (e->type == TR::Entity::TRAP_FLOOR)
 			{
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{128, 0, 128}, {-128, 0, -128}, {-128, 0, 128}}}; // bottom left, top right, top left
-				obj.surfaces[surface_ind++] = {SURFACE_DEFAULT,0,TERRAIN_STONE, {{-128, 0, -128}, {128, 0, 128}, {128, 0, -128}}}; // top right, bottom left, bottom right
+				ADD_RECTANGLE_HORIZONTAL_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -128, 128);
 			}
 			else
 			{
@@ -793,8 +763,9 @@ struct LevelSM64
 				}
 			}
 		}
-
+		#ifdef DEBUG_RENDER	
 		printf("clips found: %d\n", clipsCount);
+		#endif
 	}
 
 	void createClipBlockers()
@@ -857,13 +828,28 @@ struct LevelSM64
 		//Hardcoded exceptions to avoid invisible collisions
 		switch (level->id)
 		{
+		case TR::LevelID::LVL_TR1_6: //Palace Midas
+			switch (currentRoomIndex)
+			{
+			case 25: //room with huge pillar that goes down
+				if(to==63)
+					return;
+				break;
+			case 63: //corridor that goes down the huge pillar
+				if(to==25)
+					return;
+				break;
+			}
+			break;
 		case TR::LVL_TR1_10B: //Atlantis
 			switch (currentRoomIndex)
 			{
 			case 47: //room with blocks and switches to trapdoors
 				if(to==84)
 					return;
+				break;
 			}
+			break;
 		}
 		
 
