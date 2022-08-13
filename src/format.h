@@ -1583,7 +1583,7 @@ namespace TR {
         };
 
         Limit SWITCH_MARIO = {
-            0, 376, 30,     ::Box(vec3(-200, 0, 290), vec3(200, 0, 512)), true, false
+            0, 376, 30,     ::Box(vec3(-200, 0, 270), vec3(200, 0, 512)), true, false
         };
 
         Limit PICKUP = {
@@ -7028,5 +7028,9 @@ namespace TR {
 
     }; // struct Level
 }
+
+struct IController {
+    virtual void getFloorInfo(int roomIndex, const vec3 &pos, TR::Level::FloorInfo &info) const {}
+};
 
 #endif

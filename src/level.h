@@ -4,6 +4,7 @@
 #include "core.h"
 #include "utils.h"
 #include "format.h"
+#include "levelsm64.h"
 #include "cache.h"
 #include "enemy.h"
 #include "camera.h"
@@ -35,6 +36,8 @@ extern int loadSlot;
 struct Level : IGame {
 
     TR::Level   level;
+    LevelSM64   *levelSM64;
+
     Texture     *atlasRooms;
     Texture     *atlasObjects;
     Texture     *atlasSprites;
@@ -68,6 +71,8 @@ struct Level : IGame {
     bool showStats;
     bool skyIsVisible;
     bool paused;
+
+    bool surfaceDebugger=false;
 
     TR::LevelID nextLevel;
 
@@ -259,9 +264,6 @@ struct Level : IGame {
                         lara->camera->reset();
                     if (lara->isMario)
                     {
-                        sm64_set_mario_position( ((Mario*)lara)->marioId, lara->pos.x/MARIO_SCALE, -lara->pos.y/MARIO_SCALE, -lara->pos.z/MARIO_SCALE);
-                        sm64_set_mario_faceangle( ((Mario*)lara)->marioId, (int16_t)((-lara->angle.y + M_PI) / M_PI * 32768.0f));
-                        ((Mario*)lara)->updateMarioVisibleRooms();
                         ((Mario*)lara)->currPos[0] = ((Mario*)lara)->lastPos[0] = lara->pos.x;
                         ((Mario*)lara)->currPos[1] = ((Mario*)lara)->lastPos[1] = -lara->pos.y;
                         ((Mario*)lara)->currPos[2] = ((Mario*)lara)->lastPos[2] = -lara->pos.z;
@@ -450,6 +452,11 @@ struct Level : IGame {
         return &level;
     }
 
+    virtual LevelSM64* getLevelSM64() 
+    { 
+        return levelSM64; 
+    }
+
     virtual MeshBuilder* getMesh() {
         return mesh;
     }
@@ -474,48 +481,6 @@ struct Level : IGame {
         if (players[1]->health <= 0.0f)
             return players[0];
         return (players[0]->pos - pos).length2() < (players[1]->pos - pos).length2() ? players[0] : players[1];
-    }
-
-    virtual void getCurrentAndAdjacentRooms(int *roomsList, int *roomsCount, int currentRoomIndex, int to, int maxDepth, int count=0) {
-        if (count>maxDepth) {
-            return;
-        }
-
-		// if we are starting to search we set all levels visibility to false
-		if(count==0)
-		{
-			for (int i = 0; i < getLevel()->roomsCount; i++)
-				getLevel()->rooms[i].flags.visible = false;
-		}
-
-		//Hardcoded exceptions to avoid invisible collisions
-		switch (getLevel()->id)
-		{
-		case TR::LVL_TR1_10B: //Atlantis
-			switch (currentRoomIndex)
-			{
-			case 47: //room with blocks and switches to trapdoors
-				if(to==84)
-					return;
-			}
-		}
-
-		count++;
-
-        TR::Room &room = getLevel()->rooms[to];
-
-		if(!room.flags.visible){
-			room.flags.visible = true;
-			roomsList[*roomsCount] = to;
-			*roomsCount+=1;
-		}
-
-		if(*roomsCount == 256)
-			return;
-
-		for (int i = 0; i < room.portalsCount; i++) {
-			getCurrentAndAdjacentRooms(roomsList, roomsCount, currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
-		}
     }
 
     virtual bool isCutscene() {
@@ -1046,6 +1011,7 @@ struct Level : IGame {
 
     Level(Stream &stream) : level(stream), waitTrack(false), isEnded(false), cutsceneWaitTimer(0.0f), animTexTimer(0.0f), statsTimeDelta(0.0f) {
         paused = false;
+        levelSM64 = new LevelSM64();
 
         level.simpleItems = Core::settings.detail.simple == 1;
         level.initModelIndices();
@@ -1147,6 +1113,10 @@ struct Level : IGame {
         loadNextLevel();
     #endif
 
+
+        levelSM64->loadSM64Level(getLevel(), player, player ? player->getRoomIndex() : 0);
+
+
         saveResult = SAVE_RESULT_SUCCESS;
         if (loadSlot != -1 && saveSlots[loadSlot].getLevelID() == level.id) {
             parseSaveSlot(saveSlots[loadSlot]);
@@ -1156,13 +1126,12 @@ struct Level : IGame {
         Network::start(this);
 
         Core::resetTime();
-
-        if (player && player->isMario) ((Mario*)player)->updateMarioVisibleRooms();
     }
 
     virtual ~Level() {
         UI::init(NULL);
-
+        if(levelSM64!=NULL)
+            delete levelSM64;
         Network::stop();
 
         for (int i = 0; i < level.entitiesCount; i++)
@@ -2479,6 +2448,10 @@ struct Level : IGame {
             }
             Input::down[ikF3] = false;
         }
+        if (Input::down[ikF4]) {
+            surfaceDebugger=!surfaceDebugger;
+            Input::down[ikF4] = false;
+        }
     #endif
     }
 
@@ -3193,6 +3166,18 @@ struct Level : IGame {
                 if(lara && lara->isMario){
                     Debug::Level::sm64debug(players[i], &level);
                     break;
+                }
+            }
+
+            if(surfaceDebugger)
+            {
+                Lara *lara = (Lara *)getLara(0);
+
+                if(lara && levelSM64){
+                    int nearRooms[256];
+                    int nearRoomsCount=0;
+                    levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, lara->getRoomIndex(), lara->getRoomIndex(), 0);
+                    Debug::Level::sm64debugrooms(&level, nearRooms, nearRoomsCount);
                 }
             }
             
