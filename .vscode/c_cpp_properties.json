@@ -3,10 +3,11 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/src/libs/","${workspaceFolder}/src/","C:/msys64/mingw64/include"
+                "${workspaceFolder}/src/libs/",
+                "${workspaceFolder}/src/",
+                "C:/msys64/mingw64/include"
             ],
             "defines": [
-                "_DEBUG",
                 "UNICODE",
                 "_UNICODE",
                 "DWIN32",
@@ -19,8 +20,8 @@
                 "GEOMETRY_EXPORT"
             ],
             "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
-            "cStandard": "c99",
-            "cppStandard": "c++11",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
             "intelliSenseMode": "clang-x64",
             "configurationProvider": "ms-vscode.makefile-tools"
         }
