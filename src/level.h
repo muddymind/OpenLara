@@ -277,7 +277,7 @@ struct Level : IGame {
                 int roomsSwitched[level.roomsCount][2];
                 int roomsSwitchedCount=0;
                 flipMap(roomsSwitched, roomsSwitchedCount);
-                sm64_level_rooms_switch(roomsSwitched, roomsSwitchedCount);
+                levelSM64->flipMap(roomsSwitched, roomsSwitchedCount);
                 level.state.flags.flipped = true;
             }
 
@@ -2452,6 +2452,14 @@ struct Level : IGame {
             surfaceDebugger=!surfaceDebugger;
             Input::down[ikF4] = false;
         }
+        if (Input::down[ikF5]) {
+            Lara *lara = (Lara *)getLara(0);
+            if(lara!=NULL && lara->isMario)
+            {
+                lara->setDozy(true);
+            }
+            Input::down[ikF5] = false;
+        }
     #endif
     }
 
@@ -3173,11 +3181,8 @@ struct Level : IGame {
             {
                 Lara *lara = (Lara *)getLara(0);
 
-                if(lara && levelSM64){
-                    int nearRooms[256];
-                    int nearRoomsCount=0;
-                    levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, lara->getRoomIndex(), lara->getRoomIndex(), 0);
-                    Debug::Level::sm64debugrooms(&level, nearRooms, nearRoomsCount);
+                if(lara){
+                    Debug::Level::sm64debugrooms(&level, lara->getRoomIndex());
                 }
             }
             
@@ -3266,7 +3271,7 @@ struct Level : IGame {
             glLineWidth(1);           
         */
 
-            Debug::Level::info(this, player, player->animation);
+            Debug::Level::info(this, player, player->animation, levelSM64);
 
 
         Debug::end();

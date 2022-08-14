@@ -2555,10 +2555,7 @@ struct MarioDoppelganger: Enemy
 
         if(marioId!=-1)
         {
-            int nearRooms[256];
-            int nearRoomsCount=0;
-            levelSM64->getCurrentAndAdjacentRooms(nearRooms, &nearRoomsCount, getRoomIndex(), getRoomIndex(), 1);
-            sm64_level_update_loaded_rooms_list(marioId, nearRooms, nearRoomsCount);
+            levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, getRoomIndex(), getRoomIndex(), 1);
         }
 
 		if (stand != STAND_AIR && tickedOnce)

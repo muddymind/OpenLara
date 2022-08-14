@@ -17,13 +17,42 @@
                 "DGEOMETRY_EXPORT",
                 "WIN32",
                 "_WIN32",
-                "GEOMETRY_EXPORT"
+                "GEOMETRY_EXPORT",
+                "DECODE_VAG"
             ],
             "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
             "cStandard": "c17",
-            "cppStandard": "c++20",
-            "intelliSenseMode": "clang-x64",
-            "configurationProvider": "ms-vscode.makefile-tools"
+            "cppStandard": "c++11",
+            "intelliSenseMode": "clang-x86",
+            "compilerArgs": [
+                "-std=c++11",
+                "-g",
+                "-fno-exceptions",
+                "-fno-rtti",
+                "-ffunction-sections",
+                "-fdata-sections",
+                "-Wl,--gc-sections",
+                "-DWIN32",
+                "-DNDEBUG",
+                "-DDEBUG_RENDER",
+                "-DNO_TOUCH_SUPPORT",
+                "-DGEOMETRY_EXPORT",
+                "-I../../libs/",
+                "main.cpp",
+                "../../libs/stb_vorbis/stb_vorbis.c",
+                "../../libs/minimp3/minimp3.cpp",
+                "../../libs/tinf/tinflate.c",
+                "OpenLara.rc.o",
+                "-I../../",
+                "-o../../../bin/OpenLara_mingw.exe",
+                "-L../../libs/libsm64/dist",
+                "-lsm64",
+                "-lopengl32",
+                "-lwinmm",
+                "-lwsock32",
+                "-lgdi32",
+                "-lm"
+            ]
         }
     ],
     "version": 4

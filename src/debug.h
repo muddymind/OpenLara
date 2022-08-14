@@ -16,6 +16,7 @@ extern "C" {
 #include "controller.h"
 #include "mesh.h"
 #include "marioMacros.h"
+#include "enemy.h"
 
 namespace Debug {
 
@@ -673,56 +674,54 @@ namespace Debug {
             Core::setDepthTest(true);            
         }
 
-        void sm64debugrooms(TR::Level *level, int *roomslist, int roomscount) {
+        void sm64debugrooms(TR::Level *level, int roomIndex) 
+        {
+            TR::Room &room = level->rooms[roomIndex];
+            TR::Room::Data &d = room.data;
 
-            for(int roomIndex=0; roomIndex<roomscount; roomIndex++)
+            Core::setDepthTest(false); 
+            for (int j = 0; j < d.fCount; j++)
             {
-                TR::Room &room = level->rooms[roomslist[roomIndex]];
-                TR::Room::Data &d = room.data;
-
-                Core::setDepthTest(false); 
-                for (int j = 0; j < d.fCount; j++)
+                TR::Face &f = d.faces[j];
+                if (!f.triangle)
                 {
-                    TR::Face &f = d.faces[j];
-                    if (!f.triangle)
-                    {
-                        Debug::Draw::staticface(
-                            vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
-                            vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
-                            vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
-                            vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
-                            vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+                    Debug::Draw::staticface(
+                        vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[3]].pos.x+room.info.x, (float)d.vertices[f.vertices[3]].pos.y, (float)d.vertices[f.vertices[3]].pos.z+room.info.z),
+                        vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
 
-                        
-                        char buf[255];
-                        sprintf(buf, "Room: %d Id: %d", roomslist[roomIndex], j);
-                        Debug::Draw::text(
-                            vec3(
-                                (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+d.vertices[f.vertices[3]].pos.x+(4*room.info.x))/4.0f,
-                                (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y+d.vertices[f.vertices[3]].pos.y)/4.0f,
-                                (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+d.vertices[f.vertices[3]].pos.z+(4*room.info.z))/4.0f
-                                ), vec4(0.5, 0.5, 1.0, 1), buf);
-                    }
-                    else
-                    {
-                        Debug::Draw::triangle(
-                            vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
-                            vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
-                            vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
-                            vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
-
-                        
-                        char buf[255];
-                        sprintf(buf, "Room: %d Id: %d", roomslist[roomIndex], j);
-                        Debug::Draw::text(
-                            vec3(
-                                (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+(3*room.info.x))/3.0f,
-                                (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y)/3.0f + (roomslist[roomIndex]==50 ? 20 : 0),
-                                (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+(3*room.info.z))/3.0f
-                                ), vec4(0.5, 0.5, 1.0, 1), buf);
-                    }                    
+                    
+                    char buf[255];
+                    sprintf(buf, "Room: %d Id: %d", roomIndex, j);
+                    Debug::Draw::text(
+                        vec3(
+                            (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+d.vertices[f.vertices[3]].pos.x+(4*room.info.x))/4.0f,
+                            (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y+d.vertices[f.vertices[3]].pos.y)/4.0f,
+                            (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+d.vertices[f.vertices[3]].pos.z+(4*room.info.z))/4.0f
+                            ), vec4(0.5, 0.5, 1.0, 1), buf);
                 }
+                else
+                {
+                    Debug::Draw::triangle(
+                        vec3((float)d.vertices[f.vertices[0]].pos.x+room.info.x, (float)d.vertices[f.vertices[0]].pos.y, (float)d.vertices[f.vertices[0]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[1]].pos.x+room.info.x, (float)d.vertices[f.vertices[1]].pos.y, (float)d.vertices[f.vertices[1]].pos.z+room.info.z),
+                        vec3((float)d.vertices[f.vertices[2]].pos.x+room.info.x, (float)d.vertices[f.vertices[2]].pos.y, (float)d.vertices[f.vertices[2]].pos.z+room.info.z),
+                        vec4(0.3f, 0.2f, 0.5f, 0.5f), vec4(1.0f, 1.0f, 1.0f, 0.1f));
+
+                    
+                    char buf[255];
+                    sprintf(buf, "Room: %d Id: %d", roomIndex, j);
+                    Debug::Draw::text(
+                        vec3(
+                            (d.vertices[f.vertices[0]].pos.x+d.vertices[f.vertices[1]].pos.x+d.vertices[f.vertices[2]].pos.x+(3*room.info.x))/3.0f,
+                            (d.vertices[f.vertices[0]].pos.y+d.vertices[f.vertices[1]].pos.y+d.vertices[f.vertices[2]].pos.y)/3.0f,
+                            (d.vertices[f.vertices[0]].pos.z+d.vertices[f.vertices[1]].pos.z+d.vertices[f.vertices[2]].pos.z+(3*room.info.z))/3.0f
+                            ), vec4(0.5, 0.5, 1.0, 1), buf);
+                }                    
             }
+            
             Core::setDepthTest(true);                        
         }
 
@@ -911,7 +910,7 @@ namespace Debug {
             }
         }
 
-        void info(IGame *game, Controller *controller, Animation &anim) {
+        void info(IGame *game, Controller *controller, Animation &anim, LevelSM64 *levelSM64) {
             TR::Level &level = *game->getLevel();
 
             if (level.isCutsceneLevel()) return;
@@ -947,6 +946,17 @@ namespace Debug {
                 (saveStats.secrets & 2) ? '1' : '0',
                 (saveStats.secrets & 1) ? '1' : '0', saveStats.pickups, saveStats.mediUsed, saveStats.ammoUsed, saveStats.kills);
             Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
+
+            if(levelSM64)
+            {
+                int index = 0;
+                index = sprintf(buf, "SM64: clipBoxes = %d, clipTime: %.2fms, roomsLoaded:", levelSM64->clipsCount, levelSM64->clipsTimeTaken);
+                for (int i=0; i<levelSM64->loadedRoomsCount; i++)
+                {
+                    index += sprintf(&buf[index], " %d", levelSM64->loadedRooms[i]);
+                }
+                Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
+            }
 
             y += 16;
             if (info.lava)
