@@ -2275,7 +2275,7 @@ struct Lara : Character {
 			int roomsSwitchedCount=0;
             game->flipMap(roomsSwitched, roomsSwitchedCount);
             game->setEffect(this, effect);
-            sm64_level_rooms_switch(roomsSwitched, roomsSwitchedCount);
+            levelSM64->flipMap(roomsSwitched, roomsSwitchedCount);
         }
     }
 

@@ -41,21 +41,26 @@ struct LevelSM64
 		MESH_LOADING_BOUNDING_BOX
 	};
 
-	struct FacesToEvaluate
+	struct FaceLimits
 	{
-		int roomIdx;
-		int faceIdx;
+		int roomId, faceId; //only for debugging necessities
+		int limits[3][2];
 		bool positive;
-
-		int32 x[2];
-		int32 y[2];
-		int32 z[2];
 	};
+
+	struct RoomLimits
+	{
+		int limits[3][2];
+		struct FaceLimits *xfaces, *zfaces;
+		int xfacesCount, zfacesCount;
+	};
+
+	struct RoomLimits **roomLimits;
 
 	struct ClipsDetected
 	{
-		struct FacesToEvaluate *face1;
-		struct FacesToEvaluate *face2;
+		FaceLimits *face1;
+		FaceLimits *face2;
 	};
 
     TR::Level *level=NULL;
@@ -63,11 +68,11 @@ struct LevelSM64
     struct MarioControllerObj dynamicObjects[4096];
 	int dynamicObjectsCount=0;
 
-	struct FacesToEvaluate xfaces[4096];
-	int xfacesCount=0;
+	struct FaceLimits *totalXfaces[2048];
+	int totalXfacesCount=0;
 
-	struct FacesToEvaluate zfaces[4096];
-	int zfacesCount=0;
+	struct FaceLimits *totalZfaces[2048];
+	int totalZfacesCount=0;
 
 	struct ClipsDetected clips[MAX_CLIPPER_BLOCKS];
 	int clipsCount=0;
@@ -83,9 +88,23 @@ struct LevelSM64
 
     LevelSM64()
     {
+		roomLimits=NULL;
     }
     ~LevelSM64()
     {
+		for(int i=0; i<level->roomsCount; i++)
+		{
+			if(roomLimits[i]->xfaces!=NULL)
+			{
+				free(roomLimits[i]->xfaces);
+			}
+			if(roomLimits[i]->zfaces!=NULL)
+			{
+				free(roomLimits[i]->zfaces);
+			}
+			free(roomLimits[i]);
+		}
+		free(roomLimits);
         sm64_level_unload();
     }
 
@@ -98,8 +117,12 @@ struct LevelSM64
         #endif
         sm64_level_init(level->roomsCount);
 
+		roomLimits= (struct RoomLimits **)malloc(sizeof(struct RoomLimits *)*level->roomsCount);
+
         for(int roomId=0; roomId< level->roomsCount; roomId++)
         {
+			precacheRoomAndFacesLimits(roomId);
+
             int staticSurfacesCount;
             struct SM64Surface *staticSurfaces = marioLoadRoomSurfaces(roomId, &staticSurfacesCount);
 
@@ -126,6 +149,7 @@ struct LevelSM64
 
 		TR::Room &room = level->rooms[roomId];
 		TR::Room::Data *d = &room.data;
+		TR::Room::Info *info = &room.info;
 
 		// Count the number of static surface triangles
 		for (int j = 0; j < d->fCount; j++)
@@ -141,9 +165,11 @@ struct LevelSM64
 		// Generate all static surface triangles
 		for (int cface = 0; cface < d->fCount; cface++)
 		{
+			
 			TR::Face &f = d->faces[cface];
 				if (f.water) continue;
 
+			// now adding the faces to SM64
 			int16 x[2] = {d->vertices[f.vertices[0]].pos.x, 0};
 			int16 z[2] = {d->vertices[f.vertices[0]].pos.z, 0};
 			for (int j=1; j<3; j++)
@@ -168,6 +194,122 @@ struct LevelSM64
 		}
 
 		return collision_surfaces;
+	}
+
+	// used for speedup clip discovery calculations
+	void precacheRoomAndFacesLimits(int roomId)
+	{
+		struct RoomLimits *rl = (struct RoomLimits *)malloc(sizeof(struct RoomLimits));
+		roomLimits[roomId] = rl;
+
+		TR::Room &room = level->rooms[roomId];
+		TR::Room::Data *d = &room.data;
+		TR::Room::Info *info = &room.info;
+		
+		// Initialize room boundaries values
+		rl->limits[0][0]=info->x;
+		rl->limits[0][1]=info->x;
+		rl->limits[1][0]=info->yBottom;
+		rl->limits[1][1]=info->yTop;
+		rl->limits[2][0]=info->z;
+		rl->limits[2][1]=info->z;
+
+		rl->xfacesCount=0;
+		rl->zfacesCount=0;
+
+		//get how many face pointers we are going to have to allocate
+		for (int cface = 0; cface < d->fCount; cface++)
+		{
+			TR::Face &f = d->faces[cface];
+			if (f.water || f.normal.y != 0 || f.triangle) continue;
+
+			if (f.normal.x == 0) // xface
+			{
+				rl->xfacesCount++;
+			}
+			else if (f.normal.z == 0) // zface
+			{
+				rl->zfacesCount++;
+			}
+		}
+		
+		rl->xfaces = rl->xfacesCount > 0 ? (struct FaceLimits *)malloc(sizeof(struct FaceLimits)*rl->xfacesCount) : NULL;
+		rl->zfaces = rl->zfacesCount > 0 ? (struct FaceLimits *)malloc(sizeof(struct FaceLimits)*rl->zfacesCount) : NULL;
+
+		int xindex=0;
+		int zindex=0;
+
+		for (int cface = 0; cface < d->fCount; cface++)
+		{
+			if(roomId==12 && cface==404)
+			{
+				printface(12, 404);
+			}
+			FaceLimits * fl=NULL;
+
+			TR::Face &f = d->faces[cface];
+			
+			//we don't care about water, non vertical faces or triangles
+			if (f.water || f.normal.y != 0 || f.triangle) continue;
+
+			if (f.normal.x == 0) // xface
+			{
+				fl=&(rl->xfaces[xindex++]);
+				fl->positive = f.normal.z > 0;
+			}
+			else if (f.normal.z == 0) // zface
+			{
+				fl=&(rl->zfaces[zindex++]);
+				fl->positive = f.normal.x > 0;
+			}
+			else
+			{
+				continue;
+			}
+
+			fl->roomId = roomId;
+			fl->faceId = cface;
+
+			// pre-calculate face limits
+			fl->limits[0][0]=d->vertices[f.vertices[0]].pos.x;
+			fl->limits[0][1]=d->vertices[f.vertices[0]].pos.x;
+			fl->limits[1][0]=d->vertices[f.vertices[0]].pos.y;
+			fl->limits[1][1]=d->vertices[f.vertices[0]].pos.y;
+			fl->limits[2][0]=d->vertices[f.vertices[0]].pos.z;
+			fl->limits[2][1]=d->vertices[f.vertices[0]].pos.z;
+
+			for(int i=1; i< 4; i++)
+			{
+				if (fl->limits[0][0] > d->vertices[f.vertices[i]].pos.x) fl->limits[0][0] = d->vertices[f.vertices[i]].pos.x;
+				if (fl->limits[0][1] < d->vertices[f.vertices[i]].pos.x) fl->limits[0][1] = d->vertices[f.vertices[i]].pos.x;
+				if (fl->limits[1][0] > d->vertices[f.vertices[i]].pos.y) fl->limits[1][0] = d->vertices[f.vertices[i]].pos.y;
+				if (fl->limits[1][1] < d->vertices[f.vertices[i]].pos.y) fl->limits[1][1] = d->vertices[f.vertices[i]].pos.y;
+				if (fl->limits[2][0] > d->vertices[f.vertices[i]].pos.z) fl->limits[2][0] = d->vertices[f.vertices[i]].pos.z;
+				if (fl->limits[2][1] < d->vertices[f.vertices[i]].pos.z) fl->limits[2][1] = d->vertices[f.vertices[i]].pos.z;
+			}
+
+			// add room displacement to the faces
+			fl->limits[0][0]+=info->x;
+			fl->limits[0][1]+=info->x;
+			fl->limits[2][0]+=info->z;
+			fl->limits[2][1]+=info->z;
+
+			// Recheck room boundaries
+			if(rl->limits[0][0] > fl->limits[0][0]) rl->limits[0][0] = fl->limits[0][0];
+			if(rl->limits[0][1] < fl->limits[0][1]) rl->limits[0][1] = fl->limits[0][1];
+			if(rl->limits[1][0] > fl->limits[1][0]) rl->limits[1][0] = fl->limits[1][0];
+			if(rl->limits[1][1] < fl->limits[1][1]) rl->limits[1][1] = fl->limits[1][1];
+			if(rl->limits[2][0] > fl->limits[2][0]) rl->limits[2][0] = fl->limits[2][0];
+			if(rl->limits[2][1] < fl->limits[2][1]) rl->limits[2][1] = fl->limits[2][1];
+		}
+
+		//Add some padding to the room boundaries 
+		rl->limits[0][0]-=50;
+		rl->limits[0][1]+=50;
+		rl->limits[1][0]-=50;
+		rl->limits[1][1]+=50;
+		rl->limits[2][0]-=50;
+		rl->limits[2][1]+=50;
 	}
 
 	TR::Mesh *generateMeshBoundingBox(TR::StaticMesh *sm)
@@ -603,169 +745,103 @@ struct LevelSM64
 		printf("n(%d, %d, %d)\n\n", f.normal.x, f.normal.y, f.normal.z);
 	}
 
-	bool evalXface(int roomIdx, int faceIdx)
+	void printfacelimit(struct FaceLimits *fl)
 	{
-		TR::Room &room = level->rooms[roomIdx];
-		TR::Room::Data &d = room.data;
-		TR::Face &f = d.faces[faceIdx];
-
-		// We only want vertical surfaces
-		if(f.normal.y != 0 || f.normal.z!=0)
-		{
-			return false;
-		}
-
-		if(f.water || f.triangle)
-		{
-			return false;	
-		}
-
-		int32 x = d.vertices[f.vertices[0]].pos.x+room.info.x;
-
-		int32 miny = d.vertices[f.vertices[0]].pos.y;
-		int32 maxy = d.vertices[f.vertices[0]].pos.y;
-		int32 minz = d.vertices[f.vertices[0]].pos.z;
-		int32 maxz = d.vertices[f.vertices[0]].pos.z;
-
-		for(int i=1; i<4; i++)
-		{
-			if(d.vertices[f.vertices[i]].pos.y<miny) miny=d.vertices[f.vertices[i]].pos.y;
-			if(d.vertices[f.vertices[i]].pos.y>maxy) maxy=d.vertices[f.vertices[i]].pos.y;
-			if(d.vertices[f.vertices[i]].pos.z<minz) minz=d.vertices[f.vertices[i]].pos.z;
-			if(d.vertices[f.vertices[i]].pos.z>maxz) maxz=d.vertices[f.vertices[i]].pos.z;
-		}
-
-		xfaces[xfacesCount++] = {
-			roomIdx,
-			faceIdx,
-			f.normal.x > 0 ? true : false,
-			{x, x},
-			{miny, maxy},
-			{minz+room.info.z, maxz+room.info.z},
-		};
-
-		return true;
-
-	}
-
-	bool evalZface(int roomIdx, int faceIdx)
-	{
-		TR::Room &room = level->rooms[roomIdx];
-		TR::Room::Data &d = room.data;
-		TR::Face &f = d.faces[faceIdx];
-
-		// We only want vertical surfaces
-		if(f.normal.y != 0 || f.normal.x!=0)
-		{
-			return false;
-		}
-
-		if(f.water || f.triangle)
-		{
-			return false;	
-		}
-
-		int32 z = d.vertices[f.vertices[0]].pos.z+room.info.z;
-
-		int32 miny = d.vertices[f.vertices[0]].pos.y;
-		int32 maxy = d.vertices[f.vertices[0]].pos.y;
-		int32 minx = d.vertices[f.vertices[0]].pos.x;
-		int32 maxx = d.vertices[f.vertices[0]].pos.x;
-
-		for(int i=1; i<4; i++)
-		{
-			if(d.vertices[f.vertices[i]].pos.y<miny) miny=d.vertices[f.vertices[i]].pos.y;
-			if(d.vertices[f.vertices[i]].pos.y>maxy) maxy=d.vertices[f.vertices[i]].pos.y;
-			if(d.vertices[f.vertices[i]].pos.x<minx) minx=d.vertices[f.vertices[i]].pos.x;
-			if(d.vertices[f.vertices[i]].pos.x>maxx) maxx=d.vertices[f.vertices[i]].pos.x;
-		}
-
-		zfaces[zfacesCount++] = {
-			roomIdx,
-			faceIdx,
-			f.normal.z > 0 ? true : false,
-			{minx+room.info.x, maxx+room.info.x},
-			{miny, maxy},
-			{z, z}
-		};
-
-		return true;
-
+		printf("\nface r:%d i:%d n:%d\n", fl->roomId, fl->faceId, fl->positive);
+		printf("x(%d, %d)\n", fl->limits[0][0], fl->limits[0][1]);
+		printf("y(%d, %d)\n", fl->limits[1][0], fl->limits[1][1]);
+		printf("z(%d, %d)\n\n", fl->limits[2][0], fl->limits[2][1]);
 	}
 	
+	bool checkIfRoomsIntersect(int roomId1, int roomId2)
+	{
+		int count=0;
+
+		struct RoomLimits *rl1 = roomLimits[roomId1];
+		struct RoomLimits *rl2 = roomLimits[roomId2];
+
+		if(!(rl1->limits[0][1] < rl2->limits[0][0] || rl1->limits[0][0] > rl2->limits[0][1]))
+			count++;
+
+		if(!(rl1->limits[1][1] < rl2->limits[1][0] || rl1->limits[1][0] > rl2->limits[1][1]))
+			count++;
+
+		if(!(rl1->limits[2][1] < rl2->limits[2][0] || rl1->limits[2][0] > rl2->limits[2][1]))
+			count++;
+
+		if(count < 2)
+		{
+			#ifdef DEBUG_RENDER	
+			printf("Clip evaluaiton: room %d and room %d don't intersect.\n", roomId1, roomId2);
+			#endif
+			return false;
+		}
+		return true;
+	}
+
+	void evaluateSideClippingSurfaces(struct FaceLimits **faces, int facesCount, int mainAxis)
+	{
+		int otherAxis= mainAxis == 0 ? 2 : 0;
+
+		for(int i=0; i<facesCount-1 && facesCount>1; i++)
+		{
+			for(int j=i+1; j<facesCount; j++)
+			{
+
+				if( faces[i]->positive != faces[j]->positive && faces[i]->limits[mainAxis][0] == faces[j]->limits[mainAxis][0] 
+					&& !( ((faces[i]->limits[otherAxis][0] == faces[j]->limits[otherAxis][0] && faces[i]->limits[otherAxis][1] == faces[j]->limits[otherAxis][1]) ? 
+						faces[i]->limits[1][0] > faces[j]->limits[1][1] || faces[i]->limits[1][1] < faces[j]->limits[1][0] : 
+						faces[i]->limits[1][0] >= faces[j]->limits[1][1] || faces[i]->limits[1][1] <= faces[j]->limits[1][0] ) 
+					|| faces[i]->limits[otherAxis][0] >= faces[j]->limits[otherAxis][1] || faces[i]->limits[otherAxis][1] <= faces[j]->limits[otherAxis][0] ) )
+				{
+					bool found=false;
+					for(int w=0; w<clipsCount; w++)
+					{
+						struct ClipsDetected *clip = &(clips[w]);
+						//We need to check if this is really a new clip that hasn't been found before
+						if(clip->face1 == faces[i] || clip->face1 == faces[j])
+						{
+							found=true;
+							break;
+						}
+					}
+					if(!found)
+					{
+						clips[clipsCount++]={faces[i], faces[j]};
+					}
+				}
+			}
+		}
+	}
+
 	void evaluateClippingSurfaces()
 	{
 
-		xfacesCount=0;
-		zfacesCount=0;
-		for(int roomId=0; roomId<loadedRoomsCount; roomId++)
+		totalXfacesCount=0;
+		totalZfacesCount=0;
+		for(int i=0; i<loadedRoomsCount; i++)
 		{
-			for(int faceId=0; faceId<level->rooms[loadedRooms[roomId]].data.fCount; faceId++)
-			{
-				if(!evalXface(loadedRooms[roomId], faceId))
-				{
-					evalZface(loadedRooms[roomId], faceId);
-				}
-			}
-		}
+			// i=0 is the current room. All others will be tested against the current room.
+			if(i>0 && !checkIfRoomsIntersect(loadedRooms[0], loadedRooms[i]))
+				continue;
 
-		#ifdef DEBUG_RENDER	
-		printf("%d xfaces to evaluate\n%d zfaces to evaluate\n", xfacesCount, zfacesCount);
-		#endif
+			struct RoomLimits *rl = roomLimits[loadedRooms[i]];
+			for(int j=0; j<rl->xfacesCount; j++)
+			{
+				totalXfaces[totalXfacesCount++]=&(rl->xfaces[j]);
+			}
+			for(int j=0; j<rl->zfacesCount; j++)
+			{
+				totalZfaces[totalZfacesCount++]=&(rl->zfaces[j]);
+			}			
+		}
 
 		clipsCount = 0;
-		for(int i=0; i<xfacesCount-1; i++)
-		{
-			for(int j=i+1; j<xfacesCount; j++)
-			{
-				if( TEST_FACE_OVERLAP(xfaces[i], xfaces[j], x, z) )
-				{
-					bool found=false;
-					for(int w=0; w<clipsCount; w++)
-					{
-						struct ClipsDetected *clip = &(clips[w]);
-						//We need to check if this is really a new clip that hasn't been found before
-						if(clip->face1 == &xfaces[i] || clip->face1 == &xfaces[j])
-						{
-							found=true;
-							break;
-						}
-					}
-					if(!found)
-					{
-						clips[clipsCount++]={&xfaces[i], &xfaces[j]};
-					}
-				}
-			}
-		}
-		for(int i=0; i<zfacesCount-1; i++)
-		{
-			for(int j=i+1; j<zfacesCount; j++)
-			{
+		evaluateSideClippingSurfaces(totalXfaces, totalXfacesCount, 2);
+		evaluateSideClippingSurfaces(totalZfaces, totalZfacesCount, 0);
 
-				if( TEST_FACE_OVERLAP(zfaces[i], zfaces[j], z, x) )
-				{
-					bool found=false;
-					for(int w=0; w<clipsCount; w++)
-					{
-						struct ClipsDetected *clip = &(clips[w]);
-						//We need to check if this is really a new clip that hasn't been found before
-						if(clip->face1 == &zfaces[i] || clip->face1 == &zfaces[j])
-						{
-							found=true;
-							break;
-						}
-					}
-					if(!found)
-					{
-						clips[clipsCount++]={&zfaces[i], &zfaces[j]};
-					}
-				}
-			}
-		}
 		#ifdef DEBUG_RENDER	
 		lastClipsFound = clipsCount;
-		printf("clips found: %d\n", clipsCount);
 		#endif
 	}
 
@@ -775,21 +851,26 @@ struct LevelSM64
 
 		for(int i=0; i<clipsCount; i++)
 		{
-			FacesToEvaluate *e = clips[i].face1;
+			struct FaceLimits *e = clips[i].face1;
 
-			if(e->x[0] == e->x[1])
+			int minmax[3][2];
+			for(int j=0; j<3; j++)
+				for(int w=0; w<2; w++)
+					minmax[j][w]=e->limits[j][w];
+
+			if(minmax[0][0] == minmax[0][1])
 			{
-				e->x[0]-=CLIPPER_DISPLACEMENT;
-				e->x[1]+=CLIPPER_DISPLACEMENT;
+				minmax[0][0]-=CLIPPER_DISPLACEMENT;
+				minmax[0][1]+=CLIPPER_DISPLACEMENT;
 			}
 
-			if(e->z[0] == e->z[1])
+			if(minmax[2][0] == minmax[2][1])
 			{
-				e->z[0]-=CLIPPER_DISPLACEMENT;
-				e->z[1]+=CLIPPER_DISPLACEMENT;
+				minmax[2][0]-=CLIPPER_DISPLACEMENT;
+				minmax[2][1]+=CLIPPER_DISPLACEMENT;
 			}
 
-			ADD_CUBE_GEOMETRY(clipBlockers, clipBlockersCount, 0, 0, e->x[0], e->x[1], e->y[0], e->y[1], e->z[0], e->z[1]);
+			ADD_CUBE_GEOMETRY(clipBlockers, clipBlockersCount, 0, 0, minmax[0][0], minmax[0][1], minmax[1][0], minmax[1][1], minmax[2][0], minmax[2][1]);
 		}
 	}
 
@@ -809,7 +890,7 @@ struct LevelSM64
 
 			#ifdef DEBUG_RENDER
 			clock_gettime( CLOCK_REALTIME, &stop);
-			clipsTimeTaken = (stop.tv_nsec - start.tv_nsec)/1E6L;
+			clipsTimeTaken = (( stop.tv_sec - start.tv_sec ) + ( stop.tv_nsec - start.tv_nsec )/1E9L)*1E3L;
 			#endif
 
 			sm64_level_update_player_loaded_Rooms_with_clippers(marioId, loadedRooms, loadedRoomsCount, clipBlockers, clipBlockersCount);
@@ -885,6 +966,17 @@ struct LevelSM64
 	{
 		getCurrentAndAdjacentRooms(roomIndex, roomIndex, 2);
 		return sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, loadedRooms, loadedRoomsCount);
+	}
+
+	void flipMap(int rooms[][2], int count)
+	{
+		for(int i=0; i<count; i++)
+		{
+			struct RoomLimits *tmp = roomLimits[rooms[i][0]];
+			roomLimits[rooms[i][0]] = roomLimits[rooms[i][1]];
+			roomLimits[rooms[i][1]]=tmp;
+		}
+		sm64_level_rooms_switch(rooms, count);
 	}
 };
 

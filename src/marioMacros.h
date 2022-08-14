@@ -191,12 +191,12 @@ extern "C" {
 
 
 #define TEST_FACE_OVERLAP(face1, face2, mainAxis, otherAxis) \
-	face1.positive != face2.positive && face1.mainAxis[0] == face2.mainAxis[0] && \
+	face1->positive != face2->positive && face1->mainAxis[0] == face2->mainAxis[0] && \
 	!(\
-		((face1.otherAxis[0] == face2.otherAxis[0] && face1.otherAxis[1] == face2.otherAxis[1]) ? \
-			face1.y[0] > face2.y[1] || face1.y[1] < face2.y[0] : \
-			face1.y[0] >= face2.y[1] || face1.y[1] <= face2.y[0] ) \
-		|| face1.otherAxis[0] >= face2.otherAxis[1] || face1.otherAxis[1] <= face2.otherAxis[0] \
+		((face1->otherAxis[0] == face2->otherAxis[0] && face1->otherAxis[1] == face2->otherAxis[1]) ? \
+			face1->limits[0][0] > face2->limits[0][1] || face1->limits[0][1] < face2->limits[0][0] : \
+			face1->limits[0][0] >= face2->limits[0][1] || face1->limits[0][1] <= face2->limits[0][0] ) \
+		|| face1->otherAxis[0] >= face2->otherAxis[1] || face1->otherAxis[1] <= face2->otherAxis[0] \
 	)\
 
 #endif // H_MARIOMACROS
