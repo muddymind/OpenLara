@@ -1229,19 +1229,14 @@ struct Mario : Lara
 
 			for (int i=0; i< levelSM64->dynamicObjectsCount ; i++)
 			{
-				struct MarioControllerObj *obj = &(levelSM64->dynamicObjects[i]);
-				if (obj->entity && obj->entity->isDoor() && !obj->spawned && !((Controller*)obj->entity->controller)->isActive()) // door closed, bring back
-				{
-					// LAZY SOLUTION BECAUSE DIFFICULT
-					obj->transform.position[1] += 65536;
-					sm64_surface_object_move(obj->ID, &obj->transform);
-					obj->spawned = true;
-				}
+				struct SM64::MarioControllerObj *obj = &(levelSM64->dynamicObjects[i]);
+
 				if (!obj->entity || !obj->spawned || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
 
 				if (obj->entity->controller)
 				{
 					Controller *c = (Controller*)obj->entity->controller;
+					TR::AnimFrame *frame = c->animation.frameA;
 					float x = (c->pos.x + obj->offset.x);
 					float y = (c->pos.y - obj->offset.y);
 					float z = (c->pos.z + obj->offset.z);
@@ -1264,12 +1259,17 @@ struct Mario : Lara
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 
-					if (obj->entity->isDoor() && c->isActive()) // door open
+					if (obj->entity->isDoor())
 					{
-						// LAZY SOLUTION BECAUSE DIFFICULT
-						obj->transform.position[1] -= 65536;
+						// Doors only rotate so we only need to get the current animation angle and add it to the stationary angle
+						vec3 newAngle = (frame->getAngle(level->version, 0) + c->angle)/ M_PI * 180.f;
+
+						for(int i=0; i<3; i++)
+						{
+							obj->transform.eulerRotation[i] = newAngle[i];
+						}
+						
 						sm64_surface_object_move(obj->ID, &obj->transform);
-						obj->spawned = false;
 					}
 					else if (obj->entity->type == TR::Entity::TRAP_DOOR_1 || obj->entity->type == TR::Entity::TRAP_DOOR_2)
 					{

@@ -7029,8 +7029,4 @@ namespace TR {
     }; // struct Level
 }
 
-struct IController {
-    virtual void getFloorInfo(int roomIndex, const vec3 &pos, TR::Level::FloorInfo &info) const {}
-};
-
 #endif

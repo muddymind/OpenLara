@@ -17,6 +17,8 @@ extern "C" {
 #include "mesh.h"
 #include "marioMacros.h"
 #include "enemy.h"
+#include "controller.h"
+
 
 namespace Debug {
 
@@ -670,6 +672,25 @@ namespace Debug {
                     
                 }
             }
+            #ifdef DEBUG_DOORS
+            for(int i=0; i< level->entitiesCount; i++)
+            {
+                    TR::Entity *e = &(level->entities[i]);
+                    if(e->isDoor())
+                    {
+                        char buf[255];
+
+                        Controller *c = (Controller *)e->controller;                        
+                        vec3 position = vec3(e->x, e->y, e->z);
+                        vec3 dangle = (c->angle)/ M_PI * 180.f;
+
+                        sprintf(buf, "T:%s AngleDeg(%.1f) id(%d)", getEntityName(*level, level->entities[i]), dangle[1], i );
+                        //sprintf(buf, "Door: frame(%d) AngleDeg(%.1f) Angle(%.1f) sin(%.1f) cos(%.1f) position (%d, %d, %d)", c->animation.frameIndex, dangle[1], c->angle[1], sin(c->angle[1]), cos(c->angle[1]), e->x, e->y, e->z);
+
+                        Debug::Draw::text(position, vec4(0.9, 0.9, 0.9, 1), buf);
+                    }
+            }
+            #endif
 
             Core::setDepthTest(true);            
         }
@@ -910,7 +931,7 @@ namespace Debug {
             }
         }
 
-        void info(IGame *game, Controller *controller, Animation &anim, LevelSM64 *levelSM64) {
+        void info(IGame *game, Controller *controller, Animation &anim, SM64::ILevelSM64 *levelSM64) {
             TR::Level &level = *game->getLevel();
 
             if (level.isCutsceneLevel()) return;
@@ -950,7 +971,7 @@ namespace Debug {
             if(levelSM64)
             {
                 int index = 0;
-                index = sprintf(buf, "SM64: clipBoxes = %d, clipTime: %.2fms, roomsLoaded:", levelSM64->clipsCount, levelSM64->clipsTimeTaken);
+                index = sprintf(buf, "SM64: clipBoxes = %d, clipTime: %.2fms, roomsLoaded:", levelSM64->lastClipsFound, levelSM64->clipsTimeTaken);
                 for (int i=0; i<levelSM64->loadedRoomsCount; i++)
                 {
                     index += sprintf(&buf[index], " %d", levelSM64->loadedRooms[i]);
@@ -986,6 +1007,18 @@ namespace Debug {
                     }
 
                     Debug::Draw::text(vec2(16, y += 16), vec4(0.1f, 0.6f, 0.1f, 1.0f), buf);
+
+                    #ifdef DEBUG_DOORS
+                    TR::Entity *e = &(level.entities[cmd.args]);
+                    Controller *c = (Controller *)e->controller;
+                    if(e->isDoor())
+                    {
+                        //vec3 dangle = (c->animation.frameA->getAngle(level.version, 0) + c->angle)/ M_PI * 180.f;
+                        vec3 dangle = (c->angle)/ M_PI * 180.f;
+                        sprintf(buf, "Door: frame(%d) AngleDeg(%.1f) Angle(%.1f) sin(%.1f) cos(%.1f) position (%d, %d, %d)", c->animation.frameIndex, dangle[1], c->angle[1], sin(c->angle[1]), cos(c->angle[1]), e->x, e->y, e->z);
+                        Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
+                    }
+                    #endif
                 }
             }
         }

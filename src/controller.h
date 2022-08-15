@@ -5,7 +5,6 @@
 #include "frustum.h"
 #include "mesh.h"
 #include "animation.h"
-#include "levelsm64.h"
 
 #define GRAVITY     6.0f
 #define SPRITE_FPS  10.0f
@@ -15,6 +14,46 @@
 #define UNLIMITED_AMMO  10000
 
 struct Controller;
+
+namespace SM64
+{
+    struct MarioControllerObj
+    {
+        MarioControllerObj() : ID(0), entity(NULL), spawned(false) {}
+
+        uint32_t ID;
+        struct SM64ObjectTransform transform;
+        TR::Entity* entity;
+        vec3 offset;
+        bool spawned;
+    };
+
+    struct ILevelSM64 
+    {
+        ILevelSM64(){}
+        virtual ~ILevelSM64(){}
+
+        enum MESH_LOADING_RESULT{
+            MESH_LOADING_DISCARD,
+            MESH_LOADING_NORMAL,
+            MESH_LOADING_BOUNDING_BOX
+	    };
+
+        int lastClipsFound = 0;
+	    double clipsTimeTaken = 0.0;
+
+        int loadedRooms[256];
+	    int loadedRoomsCount=0;
+
+        struct MarioControllerObj dynamicObjects[4096];
+	    int dynamicObjectsCount=0;
+
+        virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0){}
+        virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false){}
+        virtual int createMarioInstance(int roomIndex, vec3(pos)){return 0;}
+        virtual void flipMap(int rooms[][2], int count){}
+    };
+}
 
 struct ICamera {
     enum Mode {
@@ -64,7 +103,7 @@ struct IGame {
     virtual void         applySettings(const Core::Settings &settings)  {}
 
     virtual TR::Level*   getLevel()     { return NULL; }
-    virtual LevelSM64*   getLevelSM64() { return NULL; }
+    virtual SM64::ILevelSM64*   getLevelSM64() { return NULL; }
     virtual MeshBuilder* getMesh()      { return NULL; }
     virtual ICamera*     getCamera(int index = -1)  { return NULL; }
     virtual Controller*  getLara(int index = 0)     { return NULL; }
@@ -107,15 +146,15 @@ struct IGame {
     virtual void stopTrack()                                     {}
 };
 
-struct Controller : IController {
+struct Controller {
 
     static Controller *first;
     Controller  *next;
 
-    IGame       *game;
-    TR::Level   *level;
-    LevelSM64   *levelSM64;
-    int         entity;
+    IGame               *game;
+    TR::Level           *level;
+    SM64::ILevelSM64     *levelSM64;
+    int                 entity;
     
     Animation   animation;
     int         &state;

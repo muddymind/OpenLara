@@ -13,33 +13,17 @@ extern "C" {
 
 #include <time.h>
 #include "core.h"
-#include "format.h"
 #include "controller.h"
 #include "marioMacros.h"
+#include "format.h"
+#include "objects.h"
 
-struct MarioControllerObj
-{
-	MarioControllerObj() : ID(0), entity(NULL), spawned(false) {}
-
-	uint32_t ID;
-	struct SM64ObjectTransform transform;
-	TR::Entity* entity;
-	vec3 offset;
-	bool spawned;
-};
-
-struct LevelSM64
+struct LevelSM64 : SM64::ILevelSM64
 {
 	/**
 	 * @brief the minimum x,y,z distance between faces of the clipper blocks 
 	 */
 	#define CLIPPER_DISPLACEMENT 40
-
-	enum MESH_LOADING_RESULT{
-		MESH_LOADING_DISCARD,
-		MESH_LOADING_NORMAL,
-		MESH_LOADING_BOUNDING_BOX
-	};
 
 	struct FaceLimits
 	{
@@ -64,9 +48,7 @@ struct LevelSM64
 	};
 
     TR::Level *level=NULL;
-	IController *controller=NULL;
-    struct MarioControllerObj dynamicObjects[4096];
-	int dynamicObjectsCount=0;
+	Controller *controller=NULL;
 
 	struct FaceLimits *totalXfaces[2048];
 	int totalXfacesCount=0;
@@ -80,17 +62,11 @@ struct LevelSM64
 	SM64Surface clipBlockers[MAX_CLIPPER_BLOCKS_FACES];
 	int clipBlockersCount = 0;
 
-	int loadedRooms[256];
-	int loadedRoomsCount=0;
-
-	int lastClipsFound = 0;
-	double clipsTimeTaken = 0.0;
-
-    LevelSM64()
+    LevelSM64() : SM64::ILevelSM64()
     {
 		roomLimits=NULL;
     }
-    ~LevelSM64()
+    virtual ~LevelSM64()
     {
 		for(int i=0; i<level->roomsCount; i++)
 		{
@@ -108,10 +84,10 @@ struct LevelSM64
         sm64_level_unload();
     }
 
-	void loadSM64Level(TR::Level *newLevel, IController *player, int initRoom=0)
+	virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0)
     {
 		level=newLevel;
-		controller = player;
+		controller = (Controller *)player;
         #ifdef DEBUG_RENDER	
         printf("Loading level %d\n", level->id);
         #endif
@@ -586,6 +562,162 @@ struct LevelSM64
 		return meshes;
 	}
 
+	// copied from debug.h to help fixing issues.
+	const char *getEntityName(const TR::Level &level, const TR::Entity &entity) 
+	{
+		const char *TR_TYPE_NAMES[] = { TR_TYPES(DECL_STR) };
+		
+		if (entity.type < TR::Entity::TR1_TYPE_MAX)
+			return TR_TYPE_NAMES[entity.type - TR1_TYPES_START];
+		if (entity.type < TR::Entity::TR2_TYPE_MAX)
+			return TR_TYPE_NAMES[entity.type - TR2_TYPES_START + (TR::Entity::TR1_TYPE_MAX - TR1_TYPES_START) + 1];
+		if (entity.type < TR::Entity::TR3_TYPE_MAX)
+			return TR_TYPE_NAMES[entity.type - TR3_TYPES_START + (TR::Entity::TR1_TYPE_MAX - TR1_TYPES_START) + (TR::Entity::TR2_TYPE_MAX - TR2_TYPES_START) + 2];
+		if (entity.type < TR::Entity::TR4_TYPE_MAX)
+			return TR_TYPE_NAMES[entity.type - TR4_TYPES_START + (TR::Entity::TR1_TYPE_MAX - TR1_TYPES_START) + (TR::Entity::TR2_TYPE_MAX - TR2_TYPES_START) + (TR::Entity::TR3_TYPE_MAX - TR3_TYPES_START) + 3];
+
+		return "UNKNOWN";
+	}
+
+	void printv(vec3 v, const char* name)
+	{
+		printf("%s: (%.1f, %.1f, %.1f)\n", name, v.x, v.y, v.z);
+	}
+
+	void printDoorDebug(int entityIndex, Controller * controller, TR::AnimFrame *frame)
+	{
+		printf("\nEntity: %d\n", entityIndex);
+		const char nopos[]="Initial pos";
+		printv(controller->pos, nopos);
+		vec3 dangle = controller->getDir();
+		dangle.y=0;
+
+		const char ndangle[]="directional Angle";
+		printv(dangle, ndangle);
+
+		vec3 p = controller->pos - dangle * 512.0f;
+		const char nnpos[]="new position";
+		printv(p, nnpos);
+
+		if(entityIndex == 80)
+		{
+			printf("stop!");
+		}
+
+		p.y+=frame->pos.y;
+
+		vec3 rangle;
+		if((controller->animation.frameA->pos.x >= 0) ^ (controller->animation.frameA->pos.z < 0))
+		{
+			rangle = vec3(dangle.z, dangle.y, -dangle.x);
+		}
+		else
+		{
+			rangle = vec3(-dangle.z, dangle.y, dangle.x);
+		}
+		
+		const char nrangle[]="rotation angle";
+		printv(rangle, nrangle);
+
+		p = p - rangle*512.0f;
+		const char nfinal[]="final position";
+		printv(p, nfinal);
+	}
+
+	void create_door(int entityIndex, TR::Model *model)
+	{
+		TR::Entity *entity = &(level->entities[entityIndex]);
+
+		Controller *controller = (Controller *)entity->controller;
+		TR::AnimFrame *frame = controller->animation.frameA;
+		struct SM64SurfaceObject obj;
+		obj.surfaceCount = 0;
+
+		#ifdef DEBUG_DOORS
+		printDoorDebug(entityIndex, controller, frame);
+		#endif
+
+		// this is the stationary angle of the door when closed.
+		float yangle = controller->angle[1]/ M_PI * 180.f;
+
+		// we get the current rotation of the door from the animation and add it to the stationary angle.
+		vec3 newAngle = (frame->getAngle(level->version, 0) + controller->angle)/ M_PI * 180.f;
+		for(int i=0; i<3; i++)
+		{
+			obj.transform.eulerRotation[i] = newAngle[i];
+		}
+
+		// The position provided by the entity is in the middle of the cell where it spawns.
+		// We need to displace it to the correct position.
+
+		// get direction between the surface it is to the next surface
+		vec3 dangle = controller->getDir();
+
+		// add half cell in the direction of the next surface to place it between both cells
+		vec3 p = controller->pos - dangle * 512.0f;
+
+		// We need to correct the y position. The easiest way to accomplish that is by getting the animation y displacement.
+		p.y+=frame->pos.y;
+
+		// we need to offset sideways to the limit of the cell but we need to now to which direction to rotate our displacement vector.
+		// Normally we always rotate to the left except in case of a double door. 
+		// If we rotate both doors to the left they will overlap in the same position. 
+		// In this case we can use the animation frame position. 
+		// If x and z are both negative or positive then it's the door we need to rotate the vector to the right.
+		vec3 rangle;
+		if((controller->animation.frameA->pos.x >= 0) ^ (controller->animation.frameA->pos.z < 0))
+		{
+			//rotate 90º to the right if it's the second door from double doors
+			rangle = vec3(dangle.z, dangle.y, -dangle.x);
+		}
+		else
+		{
+			//rotate 90º to the left if it's a regular door
+			rangle = vec3(-dangle.z, dangle.y, dangle.x);
+		}
+
+		// walk half cell in the direction of the rotation vector and we should have our final position.
+		p = p - rangle*512.0f;
+		
+		// Now all there's left to do is convert to sm64 coordinates
+		obj.transform.position[0] = (p.x)/ MARIO_SCALE;
+		obj.transform.position[1] = -(p.y) / MARIO_SCALE;
+		obj.transform.position[2] = -(p.z) / MARIO_SCALE;
+
+		int index = level->meshOffsets[model->mStart];
+		if (index || model->mStart <= 0)
+		{
+			TR::Mesh &d = level->meshes[index];
+			for (int j = 0; j < d.fCount; j++)
+				obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+		}
+		
+		obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+		size_t surface_ind = 0;
+
+		index = level->meshOffsets[model->mStart];
+		if (index || model->mStart <= 0)
+		{
+			TR::Mesh *d = &(level->meshes[index]);
+			for (int j = 0; j < d->fCount; j++)
+			{
+				TR::Face &f = d->faces[j]; 
+
+				ADD_MESH_FACE_RELATIVE(obj.surfaces, surface_ind, d, f);
+			}
+		}
+		
+
+		SM64::MarioControllerObj cObj;
+		cObj.spawned = true;
+		cObj.ID = sm64_surface_object_create(&obj);
+		cObj.transform = obj.transform;
+		cObj.entity = entity;
+
+		dynamicObjects[dynamicObjectsCount++] = cObj;
+		free(obj.surfaces);
+	}
+
     void createDynamicObjects()
 	{
 		// create collisions from entities (bridges, doors)
@@ -621,8 +753,8 @@ struct LevelSM64
 			}
 			else if (e->isDoor())
 			{
-				offset.x = (512*cos(float(e->rotation)) - 512*sin(float(e->rotation))) * (1);
-				offset.z = (-512*sin(float(e->rotation)) - 512*cos(float(e->rotation))) * ((e->type == TR::Entity::DOOR_1 || e->type == TR::Entity::DOOR_2 || (e->type == TR::Entity::DOOR_3 && abs(cos(float(e->rotation))) == 1) || e->type == TR::Entity::DOOR_4 || e->type == TR::Entity::DOOR_5 ||e->type == TR::Entity::DOOR_6 || e->type == TR::Entity::DOOR_7 || e->type == TR::Entity::DOOR_8) ? -1 : 1);
+				create_door(i, model);
+				continue;
 			}
 			else if (e->type == TR::Entity::TRAP_DOOR_1)
 			{
@@ -714,7 +846,7 @@ struct LevelSM64
 			obj.transform.position[2] += offset.z/MARIO_SCALE;
 
 			// and finally add the object (this returns an uint32_t which is the object's ID)
-			struct MarioControllerObj cObj;
+			SM64::MarioControllerObj cObj;
 			cObj.spawned = true;
 			cObj.ID = sm64_surface_object_create(&obj);
 			cObj.transform = obj.transform;
@@ -874,7 +1006,7 @@ struct LevelSM64
 		}
 	}
 
-	void getCurrentAndAdjacentRoomsWithClips(int marioId, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false) 
+	virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false) 
 	{
 		getCurrentAndAdjacentRooms(currentRoomIndex, to, maxDepth);
 
@@ -962,13 +1094,13 @@ struct LevelSM64
 		}
     }
 
-	int createMarioInstance(int roomIndex, vec3(pos))
+	virtual int createMarioInstance(int roomIndex, vec3(pos))
 	{
 		getCurrentAndAdjacentRooms(roomIndex, roomIndex, 2);
 		return sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, loadedRooms, loadedRoomsCount);
 	}
 
-	void flipMap(int rooms[][2], int count)
+	virtual void flipMap(int rooms[][2], int count)
 	{
 		for(int i=0; i<count; i++)
 		{
