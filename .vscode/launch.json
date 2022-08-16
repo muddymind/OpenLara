@@ -39,8 +39,7 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/bin",
             "environment": [],
-            "console": "externalTerminal",
-            "preLaunchTask": "Compile OpenLara g++",
+            "console": "externalTerminal"
         }
     ]
 }

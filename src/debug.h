@@ -672,25 +672,43 @@ namespace Debug {
                     
                 }
             }
+            
             #ifdef DEBUG_DOORS
             for(int i=0; i< level->entitiesCount; i++)
             {
-                    TR::Entity *e = &(level->entities[i]);
-                    if(e->isDoor())
-                    {
-                        char buf[255];
+                TR::Entity *e = &(level->entities[i]);
+                                 
+                if(e->isDoor())
+                {
+                    char buf[255];
 
-                        Controller *c = (Controller *)e->controller;                        
-                        vec3 position = vec3(e->x, e->y, e->z);
-                        vec3 dangle = (c->angle)/ M_PI * 180.f;
+                    Controller *c = (Controller *)e->controller;                        
+                    vec3 position = c->getDoorPlacement();
+                    vec3 dangle = (c->angle)/ M_PI * 180.f;
+                    vec3 cangle = c->getDoorEulerRotation(false);
 
-                        sprintf(buf, "T:%s AngleDeg(%.1f) id(%d)", getEntityName(*level, level->entities[i]), dangle[1], i );
-                        //sprintf(buf, "Door: frame(%d) AngleDeg(%.1f) Angle(%.1f) sin(%.1f) cos(%.1f) position (%d, %d, %d)", c->animation.frameIndex, dangle[1], c->angle[1], sin(c->angle[1]), cos(c->angle[1]), e->x, e->y, e->z);
+                    sprintf(buf, "T:%s id(%d) OrigDeg(%.0f,%.0f,%.0f) rot(%.0f) h(%.0f)", getEntityName(*level, level->entities[i]), i, dangle[0], dangle[1], dangle[2], cangle[1], position[1]);
 
-                        Debug::Draw::text(position, vec4(0.9, 0.9, 0.9, 1), buf);
-                    }
+                    Debug::Draw::text(vec3(e->x, e->y, e->z)+vec3(0,-512,0), vec4(0.9, 0.9, 0.9, 1), buf);
+                }
+                if(e->isTrapdoor())
+                {
+                    char buf[255];
+                    Controller *c = (Controller *)e->controller;
+                    vec3 dangle = (c->angle)/ M_PI * 180.f;
+                    vec3 cangle = c->getDoorEulerRotation(true);
+                    sprintf(buf, "TD: %s id(%d) OrigDeg(%.0f, %.0f, %.0f) rot(%.0f, %.0f, %.0f)", 
+                        getEntityName(*level, level->entities[i]), i, 
+                        dangle[0], dangle[1], dangle[2], 
+                        cangle[0], cangle[1], cangle[2]);
+                    Debug::Draw::text(vec3(e->x, e->y, e->z)+vec3(0,-512,0), vec4(0.9, 0.9, 0.9, 1), buf);
+                }
+               
             }
             #endif
+            
+
+                   
 
             Core::setDepthTest(true);            
         }
@@ -1008,9 +1026,10 @@ namespace Debug {
 
                     Debug::Draw::text(vec2(16, y += 16), vec4(0.1f, 0.6f, 0.1f, 1.0f), buf);
 
-                    #ifdef DEBUG_DOORS
                     TR::Entity *e = &(level.entities[cmd.args]);
                     Controller *c = (Controller *)e->controller;
+
+                    #ifdef DEBUG_DOORS
                     if(e->isDoor())
                     {
                         //vec3 dangle = (c->animation.frameA->getAngle(level.version, 0) + c->angle)/ M_PI * 180.f;

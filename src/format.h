@@ -2448,6 +2448,10 @@ namespace TR {
             return type >= DOOR_1 && type <= DOOR_8;
         }
 
+        bool isTrapdoor() const {
+            return type == TRAP_DOOR_1 || type == TRAP_DOOR_2;
+        }
+
         static bool isPuzzleItem(Type type) {
             return (type >= PUZZLE_1 && type <= PUZZLE_4) || (type >= INV_PUZZLE_1 && type <= INV_PUZZLE_4);
         }
