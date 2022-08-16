@@ -35,8 +35,8 @@ extern int loadSlot;
 
 struct Level : IGame {
 
-    TR::Level   level;
-    LevelSM64   *levelSM64;
+    TR::Level          level;
+    SM64::ILevelSM64   *levelSM64;
 
     Texture     *atlasRooms;
     Texture     *atlasObjects;
@@ -452,7 +452,7 @@ struct Level : IGame {
         return &level;
     }
 
-    virtual LevelSM64* getLevelSM64() 
+    virtual SM64::ILevelSM64* getLevelSM64() 
     { 
         return levelSM64; 
     }
