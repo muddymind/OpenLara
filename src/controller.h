@@ -1565,6 +1565,65 @@ struct Controller {
         if (sound)
             game->playSound(TR::SND_RICOCHET, pos, Sound::PAN);
     }
+
+    vec3 getDoorPlacement(){
+        TR::Entity *e = &(level->entities[entity]);
+
+        // this is only meant for doors and trapdoors
+        if(!(e->isDoor() || e->isTrapdoor()))
+            return vec3(0,0,0);
+
+        TR::AnimFrame *frame = animation.frameA;
+
+        // The position provided by the entity is in the middle of the cell where it spawns.
+		// We need to displace it to the correct position.
+
+		// get direction between the surface it is to the next surface
+		vec3 dangle = getDir();
+
+        // add half cell in the direction of the next surface to place it between both cells
+		vec3 p = pos - dangle * 512.0f;
+
+        // We need to correct the y position. The easiest way to accomplish that is by getting the animation y displacement.
+		p.y+=frame->pos.y;
+
+        // we need to offset sideways to the limit of the cell but we need to now to which direction to rotate our displacement vector.
+		// Normally we always rotate to the left except in case of a double door. 
+		// If we rotate both doors to the left they will overlap in the same position. 
+		// In this case we can use the animation frame position. 
+		// If x and z are both negative or positive then it's the door we need to rotate the vector to the right.
+		vec3 rangle;
+		if((frame->pos.x >= 0) ^ (frame->pos.z < 0))
+		{
+			//rotate 90º to the right if it's the second door from double doors
+			rangle = vec3(dangle.z, dangle.y, -dangle.x);
+		}
+		else
+		{
+			//rotate 90º to the left if it's a regular door
+			rangle = vec3(-dangle.z, dangle.y, dangle.x);
+		}
+
+        // walk half cell in the direction of the rotation vector and we should have our final position.
+		return p - rangle*512.0f;
+    }
+
+    vec3 getDoorEulerRotation(bool trapdoors)
+    {
+        TR::Entity *e = &(level->entities[entity]);
+
+        // this is only meant for doors and trapdoors
+        if(!(e->isDoor() || e->isTrapdoor()))
+            return vec3(0,0,0);
+
+        TR::AnimFrame *frame = animation.frameA;
+
+        //Since the coordinates are different between SM and TR we need to invert x and z axis for trapdoors
+        vec3 angleSwitch = trapdoors ? (-1,1,-1) : (1,1,1);
+
+		// we get the current rotation of the door from the animation and add it to the stationary angle.
+		return ((frame->getAngle(level->version, 0) + angle)*angleSwitch)/ M_PI * 180.f;
+    }
 };
 
 struct DummyController : Controller {

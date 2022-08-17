@@ -1259,21 +1259,20 @@ struct Mario : Lara
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 
-					if (obj->entity->isDoor())
+					if (obj->entity->isDoor() + obj->entity->isTrapdoor())
 					{
-						// Doors only rotate so we only need to get the current animation angle and add it to the stationary angle
-						vec3 newAngle = (frame->getAngle(level->version, 0) + c->angle)/ M_PI * 180.f;
+						vec3 newAngle = c->getDoorEulerRotation(obj->entity->isTrapdoor());
 
 						for(int i=0; i<3; i++)
 						{
 							obj->transform.eulerRotation[i] = newAngle[i];
 						}
-						
-						sm64_surface_object_move(obj->ID, &obj->transform);
-					}
-					else if (obj->entity->type == TR::Entity::TRAP_DOOR_1 || obj->entity->type == TR::Entity::TRAP_DOOR_2)
-					{
-						obj->transform.eulerRotation[0] = (!c->isCollider()) ? 90 : 0;
+
+						vec3 p = c->getDoorPlacement();
+						obj->transform.position[0] = (p.x)/ MARIO_SCALE;
+						obj->transform.position[1] = -(p.y) / MARIO_SCALE;
+						obj->transform.position[2] = -(p.z) / MARIO_SCALE;
+
 						sm64_surface_object_move(obj->ID, &obj->transform);
 					}
 					else if (obj->entity->type == TR::Entity::TRAP_FLOOR)
