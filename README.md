@@ -25,7 +25,7 @@ Levels tested and finished as Mario:
 Final quality of life improvements:
 - [ ] Add collisions to all entities (doors, trapdoors, trap floors)
 - [x] Mario fall damage
-- [x] Correct mesh loading between rooms
+- [x] Correct mesh loading between rooms (muddymind)
 - [ ] Make Mario's lighting blend in correctly with the rooms he is in (a glsl shader thing...)
 - [x] Fix Mario's collisions with movable boxes on Atlantis and The Great Pyramid
 - [x] Give Mario animations for certain events like pulling switches
@@ -36,6 +36,7 @@ Final quality of life improvements:
 
 And some more I will remember later on...
 
+Big thanks to muddymind for the huge help during the development!
 
 ## OpenLara project
 [WebGL build with demo level](http://xproger.info/projects/OpenLara/)
