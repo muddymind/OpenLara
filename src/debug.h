@@ -673,11 +673,11 @@ namespace Debug {
                 }
             }
             
-            #ifdef DEBUG_DOORS
+            #ifdef DEBUG_DOORS       
             for(int i=0; i< level->entitiesCount; i++)
             {
                 TR::Entity *e = &(level->entities[i]);
-                                 
+                          
                 if(e->isDoor())
                 {
                     char buf[255];
@@ -696,16 +696,46 @@ namespace Debug {
                     char buf[255];
                     Controller *c = (Controller *)e->controller;
                     vec3 dangle = (c->angle)/ M_PI * 180.f;
-                    vec3 cangle = c->getDoorEulerRotation(true);
+                    vec3 cangle = c->getEulerRotation();
                     sprintf(buf, "TD: %s id(%d) OrigDeg(%.0f, %.0f, %.0f) rot(%.0f, %.0f, %.0f)", 
                         getEntityName(*level, level->entities[i]), i, 
                         dangle[0], dangle[1], dangle[2], 
                         cangle[0], cangle[1], cangle[2]);
                     Debug::Draw::text(vec3(e->x, e->y, e->z)+vec3(0,-512,0), vec4(0.9, 0.9, 0.9, 1), buf);
                 }
-               
+                if(e->type == TR::Entity::DRAWBRIDGE && i==22)
+                {
+                    char buf[255];
+                    Controller *c = (Controller *)e->controller;
+                    vec3 dangle = (c->angle)/ M_PI * 180.f;
+                    vec3 cangle = c->getEulerRotation();
+                    sprintf(buf, "TD: %s id(%d) frame(%d) OrigDeg(%.0f, %.0f, %.0f) rot(%.0f, %.0f, %.0f)", 
+                        getEntityName(*level, level->entities[i]), i, 
+                        c->animation.frameIndex,
+                        dangle[0], dangle[1], dangle[2], 
+                        cangle[0], cangle[1], cangle[2]);
+                    Debug::Draw::text(vec3(e->x, e->y, e->z)+vec3(0,-512,0), vec4(0.9, 0.9, 0.9, 1), buf);
+                }
             }
-            #endif
+             #endif
+
+            // for(int i=0; i< level->entitiesCount; i++)
+            // {
+            //     TR::Entity *e = &(level->entities[i]);
+                          
+            //     if(e->isBlock())
+            //     {
+            //         char buf[255];
+
+            //         Controller *c = (Controller *)e->controller;                        
+            //         vec3 position = c->pos;
+            //         vec3 jposition = c->joints[0].pos;
+
+            //         sprintf(buf, "T:%s id(%d) pos(%.0f,%.0f,%.0f) joint(%.0f,%.0f,%.0f)", getEntityName(*level, level->entities[i]), i, position[0], position[1],  position[2], jposition[0], jposition[1], jposition[2]);
+
+            //         Debug::Draw::text(jposition, vec4(0.9, 0.9, 0.9, 1), buf);
+            //     }
+            // }
             
 
                    
@@ -915,7 +945,7 @@ namespace Debug {
                     uint32 data;
                     uint32 dataSize;
                 } header = {
-                        FOURCC("RIFF"), sizeof(Header) - 8 + dataSize,
+                        FOURCC("RIFF"), ((uint32)sizeof(Header) - 8 + dataSize),
                         FOURCC("WAVE"), FOURCC("fmt "), 16,
                         { 1, 1, 44100, 44100 * 16 / 8, 0, 16 },
                         FOURCC("data"), dataSize

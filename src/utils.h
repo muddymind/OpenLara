@@ -488,6 +488,12 @@ struct vec3 {
 
     float angleX() const { return atan2f(sqrtf(x * x + z * z), y); }
     float angleY() const { return atan2f(z, x); }
+
+    void copyToArray(float *arr) {
+        arr[0]=x;
+        arr[1]=y;
+        arr[2]=z;
+    }
 };
 
 struct vec4 {

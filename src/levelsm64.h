@@ -579,49 +579,48 @@ struct LevelSM64 : SM64::ILevelSM64
 		return "UNKNOWN";
 	}
 
-	void printv(vec3 v, const char* name)
+	virtual void updateTransformation(TR::Entity *entity, struct SM64ObjectTransform *transform)
 	{
-		printf("%s: (%.1f, %.1f, %.1f)\n", name, v.x, v.y, v.z);
-	}
+		Controller *controller = (Controller*)entity->controller;
+		if(controller == NULL)
+			return;
 
-	void printDoorDebug(int entityIndex, Controller * controller, TR::AnimFrame *frame)
-	{
-		printf("\nEntity %s: %d\n", getEntityName(*level, level->entities[entityIndex]), entityIndex);
-		const char nopos[]="Initial pos";
-		printv(controller->pos, nopos);
-		vec3 dangle = controller->getDir();
-		dangle.y=0;
+		controller->updateJoints();
 
-		const char ndangle[]="directional Angle";
-		printv(dangle, ndangle);
+		transform->position[0] = controller->joints[0].pos[0];
+		transform->position[1] = -controller->joints[0].pos[1];
+		transform->position[2] = -controller->joints[0].pos[2];
 
-		vec3 p = controller->pos - dangle * 512.0f;
-		const char nnpos[]="new position";
-		printv(p, nnpos);
+		vec3(0.0f,0.0f,0.0f).copyToArray(transform->eulerRotation);
 
-		if(entityIndex == 80)
+		if(entity->type == TR::Entity::TRAP_FLOOR)
 		{
-			printf("stop!");
+			//This is composed by multiple meshes (joints).
+			//We grab the x,z position of the entire entity and the z from one of the joints.
+			transform->position[0] = controller->pos[0];
+			transform->position[1] = -controller->joints[0].pos[1];
+			transform->position[2] = -controller->pos[2];
 		}
-
-		p.y+=frame->pos.y;
-
-		vec3 rangle;
-		if((controller->animation.frameA->pos.x >= 0) ^ (controller->animation.frameA->pos.z < 0))
+		else if(entity->isBlock())
 		{
-			rangle = vec3(dangle.z, dangle.y, -dangle.x);
+			// y position from the joint has different slight offsets that differ depending on the level.
+			// using the controller y position and offsetting from the middle point to the ground fixes it.
+			// Why does the joint position is wrong? Who knows?
+			transform->position[1] = -controller->pos[1]+512;
+
+			// for the x and z displacements we just increase Marios' interaction limits.
 		}
 		else
 		{
-			rangle = vec3(-dangle.z, dangle.y, dangle.x);
-		}
-		
-		const char nrangle[]="rotation angle";
-		printv(rangle, nrangle);
+			vec3 newAngle = ((controller->animation.frameA->getAngle(level->version, 0)*vec3(-1,1,-1))+controller->angle)/ M_PI * 180.f;
 
-		p = p - rangle*512.0f;
-		const char nfinal[]="final position";
-		printv(p, nfinal);
+			newAngle.copyToArray(transform->eulerRotation);
+		}
+
+		for(int i=0; i<3; i++)
+		{
+			transform->position[i] = transform->position[i]/MARIO_SCALE;
+		}
 	}
 
 	void create_door(int entityIndex, TR::Model *model)
@@ -632,47 +631,49 @@ struct LevelSM64 : SM64::ILevelSM64
 		TR::AnimFrame *frame = controller->animation.frameA;
 		struct SM64SurfaceObject obj;
 		obj.surfaceCount = 0;
-
-		#ifdef DEBUG_DOORS
-		printDoorDebug(entityIndex, controller, frame);
-		#endif
-
-		vec3 newAngle = controller->getDoorEulerRotation(entity->isTrapdoor());
-		for(int i=0; i<3; i++)
-		{
-			obj.transform.eulerRotation[i] = newAngle[i];
-		}
-
-		vec3 p = controller->getDoorPlacement();
 		
-		// Now all there's left to do is convert to sm64 coordinates
-		obj.transform.position[0] = (p.x)/ MARIO_SCALE;
-		obj.transform.position[1] = -(p.y) / MARIO_SCALE;
-		obj.transform.position[2] = -(p.z) / MARIO_SCALE;
-
-		int index = level->meshOffsets[model->mStart];
-		if (index || model->mStart <= 0)
-		{
-			TR::Mesh &d = level->meshes[index];
-			for (int j = 0; j < d.fCount; j++)
-				obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
-		}
-		
+		obj.surfaceCount=12;
 		obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 		size_t surface_ind = 0;
 
-		index = level->meshOffsets[model->mStart];
-		if (index || model->mStart <= 0)
+		switch(entity->type)
 		{
-			TR::Mesh *d = &(level->meshes[index]);
-			for (int j = 0; j < d->fCount; j++)
-			{
-				TR::Face &f = d->faces[j]; 
+			case TR::Entity::TRAP_FLOOR:
+				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -10, 10, -128, 128);
+				break;
+			default:
 
-				ADD_MESH_FACE_RELATIVE(obj.surfaces, surface_ind, d, f);
-			}
+				int limits[3][2];
+				for(int i=0; i<3; i++)
+				{
+					limits[i][0]=INT16_MAX;
+					limits[i][1]=INT16_MIN;
+				}
+
+				int index = level->meshOffsets[model->mStart];
+				TR::Mesh *d = &(level->meshes[index]);
+				for (int i = 0; i < d->fCount; i++)
+				{
+					TR::Face &f = d->faces[i]; 
+					for(int j = 0; j<(f.triangle ? 3 : 4); j++)
+					{
+						for(int w = 0; w < 3; w++)
+						{
+							if(d->vertices[f.vertices[j]].coord[w] < limits[w][0]) limits[w][0] = d->vertices[f.vertices[j]].coord[w];
+							if(d->vertices[f.vertices[j]].coord[w] > limits[w][1]) limits[w][1] = d->vertices[f.vertices[j]].coord[w];
+						}
+					}
+				}
+				if(entity->isTrapdoor())
+				{
+					// raise the top limit of the trapdoor a bit to avoid Mario crossing the portal to the next room which would cause havoc with the camera.
+					limits[1][0]-=10;
+				}
+				ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
+				break;
 		}
-		
+
+		updateTransformation(entity, &obj.transform);
 
 		SM64::MarioControllerObj cObj;
 		cObj.spawned = true;
@@ -700,6 +701,12 @@ struct LevelSM64 : SM64::ILevelSM64
 			if (!model)
 				continue;
 
+			if (e->isDoor() || e->isTrapdoor() || e->type == TR::Entity::DRAWBRIDGE || e->type == TR::Entity::TRAP_FLOOR || e->isBlock())
+			{
+				create_door(i, model);
+				continue;
+			}
+
 			struct SM64SurfaceObject obj;
 			obj.surfaceCount = 0;
 			obj.transform.position[0] = e->x / MARIO_SCALE;
@@ -712,87 +719,35 @@ struct LevelSM64 : SM64::ILevelSM64
 			bool doOffsetY = true;
 			int16 topPointSign = 1;
 			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
-			else if (e->type == TR::Entity::TRAP_FLOOR)
+			for (int c = 0; c < model->mCount; c++)
 			{
-				offset.y = 512;
-				doOffsetY = false;
-			}
-			else if (e->isDoor() || e->isTrapdoor())
-			{
-				create_door(i, model);
-				continue;
-			}
-			else if (e->type == TR::Entity::DRAWBRIDGE)
-			{
-				offset.y = -20;
-				doOffsetY = false;
-				// before you go "yanderedev code":
-				// can't use switch() here because eulerRotation isn't an integer
-				if (obj.transform.eulerRotation[1] == 90)
+				int index = level->meshOffsets[model->mStart + c];
+				if (index || model->mStart + c <= 0)
 				{
-					offset.x = -384-128;
-					offset.z = -384-128;
-				}
-				else if (obj.transform.eulerRotation[1] == 270)
-				{
-					offset.x = 512;
-					offset.z = 512;
-				}
-				else if (obj.transform.eulerRotation[1] == 180)
-				{
-					offset.x = -384;
-					offset.z = 512;
-				}
-				else
-				{
-					offset.x = 384+128;
-					offset.z = -384-128;
+					TR::Mesh &d = level->meshes[index];
+					for (int j = 0; j < d.fCount; j++)
+						obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
 				}
 			}
+			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 
-			if (e->isBlock())
+			for (int c = 0; c < model->mCount; c++)
 			{
-				obj.surfaceCount = 12;
-				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
-				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, 0, 256, -128, 128);
-			}
-			else if (e->type == TR::Entity::TRAP_FLOOR)
-			{
-				obj.surfaceCount = 12;
-				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
-				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -10, 0, -128, 128);
-			}
-			else
-			{
-				for (int c = 0; c < model->mCount; c++)
+				int index = level->meshOffsets[model->mStart + c];
+				if (index || model->mStart + c <= 0)
 				{
-					int index = level->meshOffsets[model->mStart + c];
-					if (index || model->mStart + c <= 0)
+					TR::Mesh *d = &(level->meshes[index]);
+					for (int j = 0; j < d->fCount; j++)
 					{
-						TR::Mesh &d = level->meshes[index];
-						for (int j = 0; j < d.fCount; j++)
-							obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
-					}
-				}
-				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+						TR::Face &f = d->faces[j];
 
-				for (int c = 0; c < model->mCount; c++)
-				{
-					int index = level->meshOffsets[model->mStart + c];
-					if (index || model->mStart + c <= 0)
-					{
-						TR::Mesh *d = &(level->meshes[index]);
-						for (int j = 0; j < d->fCount; j++)
-						{
-							TR::Face &f = d->faces[j];
+						if (!offset.y) offset.y = topPointSign * max(offset.y, (float)d->vertices[f.vertices[0]].coord.y, max((float)d->vertices[f.vertices[1]].coord.y, (float)d->vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d->vertices[f.vertices[3]].coord.y));
 
-							if (!offset.y) offset.y = topPointSign * max(offset.y, (float)d->vertices[f.vertices[0]].coord.y, max((float)d->vertices[f.vertices[1]].coord.y, (float)d->vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d->vertices[f.vertices[3]].coord.y));
-
-							ADD_MESH_FACE_RELATIVE(obj.surfaces, surface_ind, d, f);
-						}
+						ADD_MESH_FACE_RELATIVE(obj.surfaces, surface_ind, d, f);
 					}
 				}
 			}
+			
 			obj.transform.position[0] += offset.x/MARIO_SCALE;
 			obj.transform.position[1] += offset.y/MARIO_SCALE;
 			obj.transform.position[2] += offset.z/MARIO_SCALE;

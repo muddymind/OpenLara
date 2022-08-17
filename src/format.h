@@ -1615,7 +1615,7 @@ namespace TR {
         };
 
         Limit BLOCK_MARIO = { 
-            0, -612, 30,    ::Box(vec3(-300, 0, -712), vec3(300, 0, -512)), true, false
+            0, -612, 30,    ::Box(vec3(-300, 0, -780), vec3(300, 0, -512)), true, false
         };
 
         Limit MIDAS = { 
