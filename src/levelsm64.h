@@ -587,30 +587,39 @@ struct LevelSM64 : SM64::ILevelSM64
 
 		controller->updateJoints();
 
-		switch (entity->type)
+		transform->position[0] = controller->joints[0].pos[0];
+		transform->position[1] = -controller->joints[0].pos[1];
+		transform->position[2] = -controller->joints[0].pos[2];
+
+		vec3(0.0f,0.0f,0.0f).copyToArray(transform->eulerRotation);
+
+		if(entity->type == TR::Entity::TRAP_FLOOR)
 		{
-		case TR::Entity::TRAP_FLOOR:
-			transform->position[0] = (controller->pos[0])/ MARIO_SCALE;
-			transform->position[1] = -(controller->joints[0].pos[1]) / MARIO_SCALE;
-			transform->position[2] = -(controller->pos[2]) / MARIO_SCALE;
+			//This is composed by multiple meshes (joints).
+			//We grab the x,z position of the entire entity and the z from one of the joints.
+			transform->position[0] = controller->pos[0];
+			transform->position[1] = -controller->joints[0].pos[1];
+			transform->position[2] = -controller->pos[2];
+		}
+		else if(entity->isBlock())
+		{
+			// y position from the joint has different slight offsets that differ depending on the level.
+			// using the entity->y position and offsetting from the middle point to the ground fixes it.
+			// Why does the joint position is wrong? Who knows?
+			transform->position[1] = -entity->y+512;
 
-			for(int i=0; i<3; i++)
-			{
-				transform->eulerRotation[i] = 0;
-			}
-			break;
-		
-		default:
-			transform->position[0] = (controller->joints[0].pos[0])/ MARIO_SCALE;
-			transform->position[1] = -(controller->joints[0].pos[1]) / MARIO_SCALE;
-			transform->position[2] = -(controller->joints[0].pos[2]) / MARIO_SCALE;
+			// for the x and z displacements we just increase Marios' interaction limits.
+		}
+		else
+		{
 			vec3 newAngle = ((controller->animation.frameA->getAngle(level->version, 0)*vec3(-1,1,-1))+controller->angle)/ M_PI * 180.f;
-			for(int i=0; i<3; i++)
-			{
-				transform->eulerRotation[i] = newAngle[i];
-			}
 
-			break;
+			newAngle.copyToArray(transform->eulerRotation);
+		}
+
+		for(int i=0; i<3; i++)
+		{
+			transform->position[i] = transform->position[i]/MARIO_SCALE;
 		}
 	}
 

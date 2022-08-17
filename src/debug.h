@@ -718,6 +718,24 @@ namespace Debug {
                 }
             }
              #endif
+
+            // for(int i=0; i< level->entitiesCount; i++)
+            // {
+            //     TR::Entity *e = &(level->entities[i]);
+                          
+            //     if(e->isBlock())
+            //     {
+            //         char buf[255];
+
+            //         Controller *c = (Controller *)e->controller;                        
+            //         vec3 position = c->pos;
+            //         vec3 jposition = c->joints[0].pos;
+
+            //         sprintf(buf, "T:%s id(%d) pos(%.0f,%.0f,%.0f) joint(%.0f,%.0f,%.0f)", getEntityName(*level, level->entities[i]), i, position[0], position[1],  position[2], jposition[0], jposition[1], jposition[2]);
+
+            //         Debug::Draw::text(jposition, vec4(0.9, 0.9, 0.9, 1), buf);
+            //     }
+            // }
             
 
                    
