@@ -1583,7 +1583,7 @@ namespace TR {
         };
 
         Limit SWITCH_MARIO = {
-            0, 376, 30,     ::Box(vec3(-200, 0, 270), vec3(200, 0, 512)), true, false
+            0, 376, 30,     ::Box(vec3(-200, 0, 270), vec3(200, 4, 512)), true, false
         };
 
         Limit PICKUP = {
@@ -1615,7 +1615,7 @@ namespace TR {
         };
 
         Limit BLOCK_MARIO = { 
-            0, -612, 30,    ::Box(vec3(-300, 0, -712), vec3(300, 0, -512)), true, false
+            0, -612, 30,    ::Box(vec3(-300, 0, -780), vec3(300, 0, -512)), true, false
         };
 
         Limit MIDAS = { 

@@ -45,6 +45,8 @@ extern "C" {
 #define Y_GEOMETRY_TRANSFORMATION(y) -y/IMARIO_SCALE
 #define Z_GEOMETRY_TRANSFORMATION(z, displacement) -(z+displacement)/IMARIO_SCALE
 
+#define ADD_CUBE_GEOMETRY_ALTERNATE(container, container_index, xDisplacement, zDisplacement, limits) \
+	ADD_CUBE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, limits[0][0], limits[0][1], limits[1][0], limits[1][1], limits[2][0], limits[2][1])
 
 #define ADD_CUBE_GEOMETRY(container, container_index, xDisplacement, zDisplacement, minx, maxx, miny, maxy, minz, maxz) \
 	ADD_CUBE_GEOMETRY_NON_TRANSFORMED( \
@@ -63,6 +65,8 @@ extern "C" {
 		X_GEOMETRY_TRANSFORMATION(v2x, xDisplacement), Y_GEOMETRY_TRANSFORMATION(v2y), Z_GEOMETRY_TRANSFORMATION(v2z, zDisplacement) \
 	)
 
+#define ADD_CUBE_GEOMETRY_NON_TRANSFORMED_ALTERNATE(container, container_index, limits) \
+	ADD_CUBE_GEOMETRY_NON_TRANSFORMED(container, container_index, limits[0][0], limits[0][1], limits[1][0], limits[1][1], limits[2][0], limits[2][1])
 
 #define ADD_CUBE_GEOMETRY_NON_TRANSFORMED(container, container_index, minx, maxx, miny, maxy, minz, maxz) \
 	ADD_TRIANGLE_FACE_GEOMETRY_NON_TRANSFORMED(container, container_index, maxx, maxy, minz, minx, maxy, minz, minx, miny, minz) /*face1*/ \

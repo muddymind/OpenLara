@@ -1236,57 +1236,14 @@ struct Mario : Lara
 				if (obj->entity->controller)
 				{
 					Controller *c = (Controller*)obj->entity->controller;
-					TR::AnimFrame *frame = c->animation.frameA;
-					float x = (c->pos.x + obj->offset.x);
-					float y = (c->pos.y - obj->offset.y);
-					float z = (c->pos.z + obj->offset.z);
 
-					if (obj->entity->type == TR::Entity::MOVING_BLOCK) // always move
+					levelSM64->updateTransformation(obj->entity, &obj->transform);
+					sm64_surface_object_move(obj->ID, &obj->transform);
+
+					if (obj->entity->type == TR::Entity::TRAP_FLOOR && !c->isCollider())
 					{
-						obj->transform.position[0] = x/MARIO_SCALE;
-						obj->transform.position[1] = -y/MARIO_SCALE;
-						obj->transform.position[2] = -z/MARIO_SCALE;
-						sm64_surface_object_move(obj->ID, &obj->transform);
-					}
-
-					if ((x != obj->transform.position[0]*MARIO_SCALE || y != obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE) && obj->entity->type != TR::Entity::TRAP_DOOR_1 && obj->entity->type != TR::Entity::TRAP_DOOR_2 && !obj->entity->isDoor() && obj->entity->type != TR::Entity::MOVING_BLOCK &&
-					    (x != obj->transform.position[0]*MARIO_SCALE || y != -obj->transform.position[1]*MARIO_SCALE || z != -obj->transform.position[2]*MARIO_SCALE))
-					{
-						printf("moving %d (%d): %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, obj->entity->type, x, y, z, obj->transform.position[0]*MARIO_SCALE, obj->transform.position[1]*MARIO_SCALE, -obj->transform.position[2]*MARIO_SCALE);
-						obj->transform.position[0] = x/MARIO_SCALE;
-						obj->transform.position[1] = -y/MARIO_SCALE;
-						obj->transform.position[2] = -z/MARIO_SCALE;
-						sm64_surface_object_move(obj->ID, &obj->transform);
-					}
-
-					if (obj->entity->isDoor() + obj->entity->isTrapdoor())
-					{
-						vec3 newAngle = c->getDoorEulerRotation(obj->entity->isTrapdoor());
-
-						for(int i=0; i<3; i++)
-						{
-							obj->transform.eulerRotation[i] = newAngle[i];
-						}
-
-						vec3 p = c->getDoorPlacement();
-						obj->transform.position[0] = (p.x)/ MARIO_SCALE;
-						obj->transform.position[1] = -(p.y) / MARIO_SCALE;
-						obj->transform.position[2] = -(p.z) / MARIO_SCALE;
-
-						sm64_surface_object_move(obj->ID, &obj->transform);
-					}
-					else if (obj->entity->type == TR::Entity::TRAP_FLOOR)
-					{
-						if (!c->isCollider())
-						{
-							sm64_surface_object_delete(obj->ID);
-							obj->spawned = false;
-						}
-					}
-					else if (obj->entity->type == TR::Entity::DRAWBRIDGE)
-					{
-						obj->transform.eulerRotation[0] = (!c->isCollider()) ? -90 : 0;
-						sm64_surface_object_move(obj->ID, &obj->transform);
+						obj->spawned = false;
+						sm64_surface_object_delete(obj->ID);
 					}
 				}
 			}
