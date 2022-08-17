@@ -664,6 +664,11 @@ struct LevelSM64 : SM64::ILevelSM64
 						}
 					}
 				}
+				if(entity->isTrapdoor())
+				{
+					// raise the top limit of the trapdoor a bit to avoid Mario crossing the portal to the next room which would cause havoc with the camera.
+					limits[1][0]-=10;
+				}
 				ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
 				break;
 		}
