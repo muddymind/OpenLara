@@ -604,9 +604,9 @@ struct LevelSM64 : SM64::ILevelSM64
 		else if(entity->isBlock())
 		{
 			// y position from the joint has different slight offsets that differ depending on the level.
-			// using the entity->y position and offsetting from the middle point to the ground fixes it.
+			// using the controller y position and offsetting from the middle point to the ground fixes it.
 			// Why does the joint position is wrong? Who knows?
-			transform->position[1] = -entity->y+512;
+			transform->position[1] = -controller->pos[1]+512;
 
 			// for the x and z displacements we just increase Marios' interaction limits.
 		}
