@@ -343,13 +343,13 @@ struct LevelSM64 : SM64::ILevelSM64
 					return MESH_LOADING_NORMAL;
 			}
 			break;
-		case TR::LevelID::LVL_TR1_1: //Caves
+		case TR::LevelID::LVL_TR1_1: // Caves
 			switch (meshIndex)
 			{
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_2: //City of Vilcabamba
+		case TR::LevelID::LVL_TR1_2: // City of Vilcabamba
 			switch (meshIndex)
 			{
 				case 3: // barn animal food holder - Mario can get stuck on it.
@@ -361,14 +361,14 @@ struct LevelSM64 : SM64::ILevelSM64
 					return MESH_LOADING_NORMAL;
 			}
 			break;
-		case TR::LevelID::LVL_TR1_3A: //The Lost Valley
+		case TR::LevelID::LVL_TR1_3A: // The Lost Valley
 			switch (meshIndex)
 			{
 				case 6: // old tree bark - mario gets stuck
 				return MESH_LOADING_DISCARD;
 			}
 			break;
-		case TR::LevelID::LVL_TR1_3B: //Tomb of Qualopec
+		case TR::LevelID::LVL_TR1_3B: // Tomb of Qualopec
 			switch (meshIndex)
 			{
 
@@ -380,16 +380,17 @@ struct LevelSM64 : SM64::ILevelSM64
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_4: //St Francis' Folly
+		case TR::LevelID::LVL_TR1_4: // St Francis' Folly
 			switch (meshIndex)
 			{
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_5:
+		case TR::LevelID::LVL_TR1_5: // Colosseum
 			switch (meshIndex)
 			{
-				
+				case 6: // chairs. Mario gets stuck.
+					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
 		case TR::LevelID::LVL_TR1_6:// Palace Midas
@@ -399,10 +400,12 @@ struct LevelSM64 : SM64::ILevelSM64
 					return MESH_LOADING_BOUNDING_BOX;
 				case 14: // bushes - mario gets stuck
 				case 19: // small tree - mario gets stuck
+				case 22: // mida's fingers - mario gets stuck
+				case 23: // mida's thumb finger - mario gets stuck
 					return MESH_LOADING_DISCARD;
 			}
 			break;
-		case TR::LevelID::LVL_TR1_7A:
+		case TR::LevelID::LVL_TR1_7A: // Cistern
 			switch (meshIndex)
 			{
 				
@@ -426,7 +429,7 @@ struct LevelSM64 : SM64::ILevelSM64
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_8B: //Obelisk of Khamoon
+		case TR::LevelID::LVL_TR1_8B: // Obelisk of Khamoon
 			switch (meshIndex)
 			{
 				
@@ -450,7 +453,7 @@ struct LevelSM64 : SM64::ILevelSM64
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_10B: //Atlantis
+		case TR::LevelID::LVL_TR1_10B: // Atlantis
 			switch (meshIndex)
 			{
 				case 0:	// weird flesh 1 surface walls - Mario can clip
