@@ -185,12 +185,11 @@ struct LevelSM64 : SM64::ILevelSM64
 		TR::Room::Info *info = &room.info;
 		
 		// Initialize room boundaries values
-		rl->limits[0][0]=info->x;
-		rl->limits[0][1]=info->x;
-		rl->limits[1][0]=info->yBottom;
-		rl->limits[1][1]=info->yTop;
-		rl->limits[2][0]=info->z;
-		rl->limits[2][1]=info->z;
+		for(int i=0; i<3; i++)
+		{
+			rl->limits[i][0]=INT32_MAX;
+			rl->limits[i][1]=INT32_MIN;
+		}
 
 		rl->xfacesCount=0;
 		rl->zfacesCount=0;
@@ -227,58 +226,64 @@ struct LevelSM64 : SM64::ILevelSM64
 
 			TR::Face &f = d->faces[cface];
 			
-			//we don't care about water, non vertical faces or triangles
-			if (f.water || f.normal.y != 0 || f.triangle) continue;
+			// //we don't care about water, non vertical faces or triangles
+			// if (f.water || f.normal.y != 0 || f.triangle) continue;
 
-			if (f.normal.x == 0) // xface
+			if( f.normal.y == 0 && !f.water && !f.triangle )
 			{
-				fl=&(rl->xfaces[xindex++]);
-				fl->positive = f.normal.z > 0;
-			}
-			else if (f.normal.z == 0) // zface
-			{
-				fl=&(rl->zfaces[zindex++]);
-				fl->positive = f.normal.x > 0;
-			}
-			else
-			{
-				continue;
-			}
-
-			fl->roomId = roomId;
-			fl->faceId = cface;
-
-			// pre-calculate face limits
-			fl->limits[0][0]=d->vertices[f.vertices[0]].pos.x;
-			fl->limits[0][1]=d->vertices[f.vertices[0]].pos.x;
-			fl->limits[1][0]=d->vertices[f.vertices[0]].pos.y;
-			fl->limits[1][1]=d->vertices[f.vertices[0]].pos.y;
-			fl->limits[2][0]=d->vertices[f.vertices[0]].pos.z;
-			fl->limits[2][1]=d->vertices[f.vertices[0]].pos.z;
-
-			for(int i=1; i< 4; i++)
-			{
-				if (fl->limits[0][0] > d->vertices[f.vertices[i]].pos.x) fl->limits[0][0] = d->vertices[f.vertices[i]].pos.x;
-				if (fl->limits[0][1] < d->vertices[f.vertices[i]].pos.x) fl->limits[0][1] = d->vertices[f.vertices[i]].pos.x;
-				if (fl->limits[1][0] > d->vertices[f.vertices[i]].pos.y) fl->limits[1][0] = d->vertices[f.vertices[i]].pos.y;
-				if (fl->limits[1][1] < d->vertices[f.vertices[i]].pos.y) fl->limits[1][1] = d->vertices[f.vertices[i]].pos.y;
-				if (fl->limits[2][0] > d->vertices[f.vertices[i]].pos.z) fl->limits[2][0] = d->vertices[f.vertices[i]].pos.z;
-				if (fl->limits[2][1] < d->vertices[f.vertices[i]].pos.z) fl->limits[2][1] = d->vertices[f.vertices[i]].pos.z;
+				if (f.normal.x == 0 ) // xface
+				{
+					fl=&(rl->xfaces[xindex++]);
+					fl->positive = f.normal.z > 0;
+				}
+				else if (f.normal.z == 0 ) // zface
+				{
+					fl=&(rl->zfaces[zindex++]);
+					fl->positive = f.normal.x > 0;
+				}
 			}
 
-			// add room displacement to the faces
-			fl->limits[0][0]+=info->x;
-			fl->limits[0][1]+=info->x;
-			fl->limits[2][0]+=info->z;
-			fl->limits[2][1]+=info->z;
+			// If we have a face to add
+			if(fl!=NULL)
+			{
+				fl->roomId = roomId;
+				fl->faceId = cface;
 
+				// pre-calculate face limits
+				for(int i=0; i<3; i++)
+				{
+					fl->limits[i][0]=INT16_MAX;
+					fl->limits[i][1]=INT16_MIN;
+				}
+
+				for(int i=0; i< 4; i++)
+				{
+					if (fl->limits[0][0] > d->vertices[f.vertices[i]].pos.x) fl->limits[0][0] = d->vertices[f.vertices[i]].pos.x;
+					if (fl->limits[0][1] < d->vertices[f.vertices[i]].pos.x) fl->limits[0][1] = d->vertices[f.vertices[i]].pos.x;
+					if (fl->limits[1][0] > d->vertices[f.vertices[i]].pos.y) fl->limits[1][0] = d->vertices[f.vertices[i]].pos.y;
+					if (fl->limits[1][1] < d->vertices[f.vertices[i]].pos.y) fl->limits[1][1] = d->vertices[f.vertices[i]].pos.y;
+					if (fl->limits[2][0] > d->vertices[f.vertices[i]].pos.z) fl->limits[2][0] = d->vertices[f.vertices[i]].pos.z;
+					if (fl->limits[2][1] < d->vertices[f.vertices[i]].pos.z) fl->limits[2][1] = d->vertices[f.vertices[i]].pos.z;
+				}
+				
+
+				// add room displacement to the faces
+				fl->limits[0][0]+=info->x;
+				fl->limits[0][1]+=info->x;
+				fl->limits[2][0]+=info->z;
+				fl->limits[2][1]+=info->z;
+			}
+			
 			// Recheck room boundaries
-			if(rl->limits[0][0] > fl->limits[0][0]) rl->limits[0][0] = fl->limits[0][0];
-			if(rl->limits[0][1] < fl->limits[0][1]) rl->limits[0][1] = fl->limits[0][1];
-			if(rl->limits[1][0] > fl->limits[1][0]) rl->limits[1][0] = fl->limits[1][0];
-			if(rl->limits[1][1] < fl->limits[1][1]) rl->limits[1][1] = fl->limits[1][1];
-			if(rl->limits[2][0] > fl->limits[2][0]) rl->limits[2][0] = fl->limits[2][0];
-			if(rl->limits[2][1] < fl->limits[2][1]) rl->limits[2][1] = fl->limits[2][1];
+			for(int i=0; i< (f.triangle ? 3 : 4); i++)
+			{
+				if (rl->limits[0][0] > d->vertices[f.vertices[i]].pos.x+info->x) rl->limits[0][0] = d->vertices[f.vertices[i]].pos.x+info->x;
+				if (rl->limits[0][1] < d->vertices[f.vertices[i]].pos.x+info->x) rl->limits[0][1] = d->vertices[f.vertices[i]].pos.x+info->x;
+				if (rl->limits[1][0] > d->vertices[f.vertices[i]].pos.y) rl->limits[1][0] = d->vertices[f.vertices[i]].pos.y;
+				if (rl->limits[1][1] < d->vertices[f.vertices[i]].pos.y) rl->limits[1][1] = d->vertices[f.vertices[i]].pos.y;
+				if (rl->limits[2][0] > d->vertices[f.vertices[i]].pos.z+info->z) rl->limits[2][0] = d->vertices[f.vertices[i]].pos.z+info->z;
+				if (rl->limits[2][1] < d->vertices[f.vertices[i]].pos.z+info->z) rl->limits[2][1] = d->vertices[f.vertices[i]].pos.z+info->z;
+			}
 		}
 
 		//Add some padding to the room boundaries 
