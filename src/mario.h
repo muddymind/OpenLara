@@ -435,7 +435,7 @@ struct Mario : Lara
 			if (entity.type == TR::Entity::CRYSTAL) {
 				if (Input::lastState[camera->cameraIndex] == cAction) {
 					vec3 dir = controller->pos - pos;
-					if (dir.length2() < SQR(350.0f) && getDir().dot(dir.normal()) > COS30) {
+					if (dir.length2() < SQR(400.0f) /*&& getDir().dot(dir.normal()) > COS30*/) {
 						pickupListCount = 0;
 						game->invShow(camera->cameraIndex, Inventory::PAGE_SAVEGAME, i);
 						return true;
