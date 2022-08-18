@@ -86,6 +86,7 @@ struct LevelSM64 : SM64::ILevelSM64
 
 	virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0)
     {
+		DEBUG_TIME_INIT();
 		level=newLevel;
 		controller = (Controller *)player;
         #ifdef DEBUG_RENDER	
@@ -116,6 +117,7 @@ struct LevelSM64 : SM64::ILevelSM64
         }
 
         createDynamicObjects();
+		DEBUG_TIME_END(loadLevelTimeTaken);
     }
 
     struct SM64Surface* marioLoadRoomSurfaces(int roomId, int *room_surfaces_count)
@@ -765,6 +767,32 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 	}
 
+	virtual void updateDynamicObjects()
+	{
+		DEBUG_TIME_INIT();
+		for (int i=0; i< dynamicObjectsCount ; i++)
+		{
+			struct SM64::MarioControllerObj *obj = &(dynamicObjects[i]);
+
+			if (!obj->entity || !obj->spawned || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
+
+			if (obj->entity->controller)
+			{
+				Controller *c = (Controller*)obj->entity->controller;
+
+				updateTransformation(obj->entity, &obj->transform);
+				sm64_surface_object_move(obj->ID, &obj->transform);
+
+				if (obj->entity->type == TR::Entity::TRAP_FLOOR && !c->isCollider())
+				{
+					obj->spawned = false;
+					sm64_surface_object_delete(obj->ID);
+				}
+			}
+		}
+		DEBUG_TIME_END_AVERAGED(updateDynamicTimeTaken);
+	}
+
 	void printface(int roomIdx, int faceIdx)
 	{
 		TR::Room &room = level->rooms[roomIdx];
@@ -799,16 +827,15 @@ struct LevelSM64 : SM64::ILevelSM64
 		struct RoomLimits *rl1 = roomLimits[roomId1];
 		struct RoomLimits *rl2 = roomLimits[roomId2];
 
-		if(!(rl1->limits[0][1] < rl2->limits[0][0] || rl1->limits[0][0] > rl2->limits[0][1]))
-			count++;
+		for(int i=0; i<3; i++)
+		{
+			if(!(rl1->limits[i][1] < rl2->limits[i][0] || rl1->limits[i][0] > rl2->limits[i][1]))
+			{
+				count++;
+			}
+		}
 
-		if(!(rl1->limits[1][1] < rl2->limits[1][0] || rl1->limits[1][0] > rl2->limits[1][1]))
-			count++;
-
-		if(!(rl1->limits[2][1] < rl2->limits[2][0] || rl1->limits[2][0] > rl2->limits[2][1]))
-			count++;
-
-		if(count < 2)
+		if(count < 3)
 		{
 			#ifdef DEBUG_RENDER	
 			printf("Clip evaluaiton: room %d and room %d don't intersect.\n", roomId1, roomId2);
@@ -853,18 +880,17 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 	}
 
-	void evaluateClippingSurfaces()
+	void evaluateClippingSurfaces(SM64::MarioPlayer *player)
 	{
-
 		totalXfacesCount=0;
 		totalZfacesCount=0;
-		for(int i=0; i<loadedRoomsCount; i++)
+		for(int i=0; i<player->loadedRoomsCount; i++)
 		{
 			// i=0 is the current room. All others will be tested against the current room.
-			if(i>0 && !checkIfRoomsIntersect(loadedRooms[0], loadedRooms[i]))
+			if(i>0 && !checkIfRoomsIntersect(player->loadedRooms[0], player->loadedRooms[i]))
 				continue;
 
-			struct RoomLimits *rl = roomLimits[loadedRooms[i]];
+			struct RoomLimits *rl = roomLimits[player->loadedRooms[i]];
 			for(int j=0; j<rl->xfacesCount; j++)
 			{
 				totalXfaces[totalXfacesCount++]=&(rl->xfaces[j]);
@@ -880,7 +906,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		evaluateSideClippingSurfaces(totalZfaces, totalZfacesCount, 0);
 
 		#ifdef DEBUG_RENDER	
-		lastClipsFound = clipsCount;
+		player->lastClipsFound = clipsCount;
 		#endif
 	}
 
@@ -913,42 +939,81 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 	}
 
-	virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false) 
+	void discardDistantRooms(SM64::MarioPlayer *player, vec3 position)
 	{
-		getCurrentAndAdjacentRooms(currentRoomIndex, to, maxDepth);
+		// let's consider a 2 cell lenght displacement for marios position
+		// Mainly to avoid any clipping issues into static meshes geometry when entering a room
+		const int displacement = 2048;
+
+		int prevLoadedRooms[player->loadedRoomsCount];
+		int prevLoadedRoomsCount = player->loadedRoomsCount;
+
+		for(int i=0; i<player->loadedRoomsCount; i++)
+		{
+			prevLoadedRooms[i]=player->loadedRooms[i];
+		}
+
+		player->loadedRoomsCount=0;
+		player->discardedRoomsCount=0;
+		for(int i=0; i<prevLoadedRoomsCount; i++)
+		{
+			struct RoomLimits *rlimits = roomLimits[prevLoadedRooms[i]];
+			int count=0;
+			for(int j=0; j<3; j++)
+			{
+				// Check if mario is not out of bounds in each axis even with displacement
+				if(!(position[j]+displacement < rlimits->limits[j][0] || position[j]-displacement > rlimits->limits[j][1]))
+				{
+					count++;
+				}
+			}
+			// if mario is in bounds in all axis then we consider this room
+			if(count==3)
+			{
+				player->loadedRooms[player->loadedRoomsCount++] = prevLoadedRooms[i];
+			}
+			else
+			{
+				player->discardedRooms[player->discardedRoomsCount++] = prevLoadedRooms[i];
+			}
+		}
+	}
+
+	virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, vec3 position, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false) 
+	{
+		SM64::MarioPlayer *player = getMarioPlayer(marioId);
+
+		DEBUG_TIME_INIT();
+
+		getCurrentAndAdjacentRooms(player->loadedRooms, &(player->loadedRoomsCount), currentRoomIndex, to, maxDepth);
+
+		// If Mario is too far away from the room then there's no need to have them loaded
+		discardDistantRooms(player, position);
 
 		if(evaluateClips)
 		{
-			#ifdef DEBUG_RENDER	
-			struct timespec start, stop;
-			clock_gettime( CLOCK_REALTIME, &start);
-			#endif
-
-			evaluateClippingSurfaces();
+			evaluateClippingSurfaces(player);
 			createClipBlockers();
 
-			#ifdef DEBUG_RENDER
-			clock_gettime( CLOCK_REALTIME, &stop);
-			clipsTimeTaken = (( stop.tv_sec - start.tv_sec ) + ( stop.tv_nsec - start.tv_nsec )/1E9L)*1E3L;
-			#endif
-
-			sm64_level_update_player_loaded_Rooms_with_clippers(marioId, loadedRooms, loadedRoomsCount, clipBlockers, clipBlockersCount);
+			sm64_level_update_player_loaded_Rooms_with_clippers(marioId, player->loadedRooms, player->loadedRoomsCount, clipBlockers, clipBlockersCount);
 		}
 		else
 		{
-			sm64_level_update_loaded_rooms_list(marioId, loadedRooms, loadedRoomsCount);
+			sm64_level_update_loaded_rooms_list(marioId, player->loadedRooms, player->loadedRoomsCount);
 		}
+
+		DEBUG_TIME_END_AVERAGED(player->clipsTimeTaken);
 
 		return;			
 	}
 
-	void getCurrentAndAdjacentRooms(int currentRoomIndex, int to, int maxDepth, int count=0) {
+	void getCurrentAndAdjacentRooms(int *loadedRooms, int *loadedRoomsCount, int currentRoomIndex, int to, int maxDepth, int count=0) {
 		if(count==0)
 		{
-			loadedRoomsCount=0;
+			*loadedRoomsCount=0;
 		}
 
-        if (count>maxDepth || loadedRoomsCount == 256) {
+        if (count>maxDepth || *loadedRoomsCount == 256) {
             return;
         }
 
@@ -993,18 +1058,27 @@ struct LevelSM64 : SM64::ILevelSM64
 
 		if(!room.flags.visible){
 			room.flags.visible = true;
-			loadedRooms[loadedRoomsCount++] = to;
+			loadedRooms[(*loadedRoomsCount)++] = to;
 		}
 
 		for (int i = 0; i < room.portalsCount; i++) {
-			getCurrentAndAdjacentRooms(currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
+			getCurrentAndAdjacentRooms(loadedRooms, loadedRoomsCount, currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
 		}
     }
 
-	virtual int createMarioInstance(int roomIndex, vec3(pos))
+	virtual int createMarioInstance(int roomIndex, vec3 pos)
 	{
-		getCurrentAndAdjacentRooms(roomIndex, roomIndex, 2);
-		return sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, loadedRooms, loadedRoomsCount);
+		SM64::MarioPlayer *player = getMarioPlayer(-1);
+		getCurrentAndAdjacentRooms(player->loadedRooms, &(player->loadedRoomsCount), roomIndex, roomIndex, 2);
+		int marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, player->loadedRooms, player->loadedRoomsCount);
+		player->marioId=marioId;
+		return marioId;
+	}
+
+	virtual void deleteMarioInstance(int marioId)
+	{
+		sm64_mario_delete(marioId);
+		removeMarioPlayer(marioId);
 	}
 
 	virtual void flipMap(int rooms[][2], int count)
@@ -1016,6 +1090,43 @@ struct LevelSM64 : SM64::ILevelSM64
 			roomLimits[rooms[i][1]]=tmp;
 		}
 		sm64_level_rooms_switch(rooms, count);
+	}
+
+	virtual void marioTick(int32_t marioId, const struct SM64MarioInputs *inputs, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers)
+	{
+		DEBUG_TIME_INIT();
+		sm64_mario_tick(marioId, inputs, outState, outBuffers);
+		DEBUG_TIME_END_AVERAGED(getMarioPlayer(marioId)->marioTickTimeTaken);
+	}
+
+	SM64::MarioPlayer *getMarioPlayer(int marioId)
+	{
+		for(int i=0; i<MAX_MARIO_PLAYERS; i++)
+		{
+			if(marioPlayers[i].marioId==marioId)
+			{
+				return &(marioPlayers[i]);
+			}
+		}
+		printf("Tried to get an invalid MarioId player!\n");
+		return NULL;
+	}
+
+	void removeMarioPlayer(int marioId)
+	{
+		getMarioPlayer(marioId)->marioId = -1;
+	}
+
+	SM64::MarioPlayer *createMarioPlayer()
+	{
+		SM64::MarioPlayer *player = getMarioPlayer(-1);
+		
+		player->lastClipsFound=0;
+		player->clipsTimeTaken=0.0;
+		player->marioTickTimeTaken=0.0;
+		player->loadedRoomsCount;
+
+		return player;
 	}
 };
 

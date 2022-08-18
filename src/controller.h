@@ -5,6 +5,7 @@
 #include "frustum.h"
 #include "mesh.h"
 #include "animation.h"
+#include "marioMacros.h"
 
 #define GRAVITY     6.0f
 #define SPRITE_FPS  10.0f
@@ -28,6 +29,21 @@ namespace SM64
         bool spawned;
     };
 
+    struct MarioPlayer
+    {
+        int marioId=-1;
+        int lastClipsFound = 0;
+
+        double clipsTimeTaken = 0.0;
+        double marioTickTimeTaken=0.0;
+
+        int loadedRooms[256];
+	    int loadedRoomsCount = 0;
+
+        int discardedRooms[256];
+	    int discardedRoomsCount = 0;
+    };
+
     struct ILevelSM64 
     {
         ILevelSM64(){}
@@ -39,20 +55,22 @@ namespace SM64
             MESH_LOADING_BOUNDING_BOX
 	    };
 
-        int lastClipsFound = 0;
-	    double clipsTimeTaken = 0.0;
+        struct MarioPlayer marioPlayers[MAX_MARIO_PLAYERS];
 
-        int loadedRooms[256];
-	    int loadedRoomsCount=0;
+        double updateDynamicTimeTaken=0.0;
+        double loadLevelTimeTaken=0.0;
 
         struct MarioControllerObj dynamicObjects[4096];
 	    int dynamicObjectsCount=0;
 
         virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0){}
-        virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false){}
-        virtual int createMarioInstance(int roomIndex, vec3(pos)){return 0;}
+        virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, vec3 position, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false){}
+        virtual int createMarioInstance(int roomIndex, vec3 pos){return 0;}
         virtual void flipMap(int rooms[][2], int count){}
         virtual void updateTransformation(TR::Entity *entity, struct SM64ObjectTransform *transform){}
+        virtual void updateDynamicObjects(){}
+        virtual void marioTick(int32_t marioId, const struct SM64MarioInputs *inputs, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers){}
+        virtual void deleteMarioInstance(int marioId) {}
     };
 }
 

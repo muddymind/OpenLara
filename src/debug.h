@@ -607,7 +607,7 @@ namespace Debug {
             }
         }
 
-        void sm64debug(Lara *lara, TR::Level *level) {
+        void sm64debug(Lara *lara, TR::Level *level, SM64::ILevelSM64 *levelSM64) {
 
             if(!lara->surfaceDebuggerEnabled || !lara->isMario || !level)
             {
@@ -654,11 +654,6 @@ namespace Debug {
                     TR::Room::Mesh &m  = r.meshes[j];
                     TR::StaticMesh *sm = &level->staticMeshes[m.meshIndex];
 
-                    // if (sm->flags != 2 || !level->meshOffsets[sm->mesh])
-                    // {
-                    //     continue;
-                    // }
-
                     Box box;
                     vec3 offset = vec3(float(m.x), float(m.y), float(m.z));
                     sm->getBox(false, m.rotation, box); // visible box
@@ -668,8 +663,6 @@ namespace Debug {
                         sprintf(buf, "ID: %d", (int)m.meshIndex);
                         Debug::Draw::text(offset + (box.min + box.max) * 0.5f, vec4(0.5, 0.5, 1.0, 1), buf);
                     }
-                    
-                    
                 }
             }
             
@@ -1018,13 +1011,32 @@ namespace Debug {
 
             if(levelSM64)
             {
-                int index = 0;
-                index = sprintf(buf, "SM64: clipBoxes = %d, clipTime: %.2fms, roomsLoaded:", levelSM64->lastClipsFound, levelSM64->clipsTimeTaken);
-                for (int i=0; i<levelSM64->loadedRoomsCount; i++)
-                {
-                    index += sprintf(&buf[index], " %d", levelSM64->loadedRooms[i]);
-                }
+                sprintf(buf, "SM64: RoomsLoaded = %d, LevelLoadTime: %.2fms, dynamicObjects: %d, dynamicObjectsUpdateTime: %.3fms", 
+                    level.roomsCount, levelSM64->loadLevelTimeTaken, levelSM64->dynamicObjectsCount, levelSM64->updateDynamicTimeTaken);
                 Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
+
+                for(int i=0; i<MAX_MARIO_PLAYERS; i++)
+                {
+                    SM64::MarioPlayer *player = &(levelSM64->marioPlayers[i]);
+                    if(player->marioId!=-1)
+                    {
+                        int index = sprintf(buf, "Mario Id: %d, tickTime: %.4fms, clipBoxes = %d, clipTime: %.4fms, roomsLoaded:", 
+                            player->marioId, player->marioTickTimeTaken, player->lastClipsFound, player->clipsTimeTaken);
+
+                        for (int j=0; j<player->loadedRoomsCount; j++)
+                        {
+                            index += sprintf(&buf[index], " %d", player->loadedRooms[j]);
+                        }
+
+                        index += sprintf(&buf[index], " discardedRooms:");
+                        for (int j=0; j<player->discardedRoomsCount; j++)
+                        {
+                            index += sprintf(&buf[index], " %d", player->discardedRooms[j]);
+                        }
+
+                        Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
+                    }                    
+                }
             }
 
             y += 16;

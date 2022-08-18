@@ -133,14 +133,14 @@ struct Mario : Lara
 		for (int i=0; i<0x22; i++)
 			sm64_stop_background_music(i);
 
-		if (marioId != -1) sm64_mario_delete(marioId);
+		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
 	}
 
 	virtual void reset(int room, const vec3 &pos, float angle, Stand forceStand = STAND_GROUND)
 	{
 		Lara::reset(room, pos, angle, forceStand);
 
-		if (marioId != -1) sm64_mario_delete(marioId);
+		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
 
 		marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
 		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
@@ -1169,13 +1169,7 @@ struct Mario : Lara
 			sm64_set_mario_water_level(marioId, marioWaterLevel);
 		}
 		
-		// We only need to update loaded rooms when we change rooms.
-		// Map flips are handled elsewhere and transparently
-		if(getRoomIndex()!=previousRoomIndex)
-		{
-			previousRoomIndex = getRoomIndex();
-			levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, getRoomIndex(), getRoomIndex(), 2, true);
-		}
+		levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 2, true);
 	}
 
 	void update()
@@ -1227,27 +1221,6 @@ struct Mario : Lara
 			updateState();
 			Controller::update();
 
-			for (int i=0; i< levelSM64->dynamicObjectsCount ; i++)
-			{
-				struct SM64::MarioControllerObj *obj = &(levelSM64->dynamicObjects[i]);
-
-				if (!obj->entity || !obj->spawned || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
-
-				if (obj->entity->controller)
-				{
-					Controller *c = (Controller*)obj->entity->controller;
-
-					levelSM64->updateTransformation(obj->entity, &obj->transform);
-					sm64_surface_object_move(obj->ID, &obj->transform);
-
-					if (obj->entity->type == TR::Entity::TRAP_FLOOR && !c->isCollider())
-					{
-						obj->spawned = false;
-						sm64_surface_object_delete(obj->ID);
-					}
-				}
-			}
-
 			if (burn)
 			{
 				if (marioState.action != 0x010208B4 && marioState.action != 0x010208B5 && marioState.action != 0x010208B7 && marioState.action != 0x00020449)
@@ -1281,7 +1254,7 @@ struct Mario : Lara
 					for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
 					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
 
-					sm64_mario_tick(marioId, &marioInputs, &marioState, &marioGeometry);
+					levelSM64->marioTick(marioId, &marioInputs, &marioState, &marioGeometry);
 					marioTicks -= 1./30;
 					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
 

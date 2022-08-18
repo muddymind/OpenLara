@@ -2512,7 +2512,7 @@ struct MarioDoppelganger: Enemy
 		delete TRmarioMesh;
 		delete marioDoppelgangerTex;
 
-		if (marioId != -1) sm64_mario_delete(marioId);
+		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
 	}
 
 	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
@@ -2555,7 +2555,7 @@ struct MarioDoppelganger: Enemy
 
         if(marioId!=-1)
         {
-            levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, getRoomIndex(), getRoomIndex(), 1);
+            levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 1);
         }
 
 		if (stand != STAND_AIR && tickedOnce)

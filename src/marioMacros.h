@@ -3,6 +3,7 @@
 
 #define MARIO_SCALE 4.f
 #define IMARIO_SCALE 4
+#define MAX_MARIO_PLAYERS 10
 
 extern "C" {
 	#include <libsm64/src/libsm64.h>
@@ -202,5 +203,29 @@ extern "C" {
 			face1->limits[0][0] >= face2->limits[0][1] || face1->limits[0][1] <= face2->limits[0][0] ) \
 		|| face1->otherAxis[0] >= face2->otherAxis[1] || face1->otherAxis[1] <= face2->otherAxis[0] \
 	)\
+
+#ifdef DEBUG_RENDER
+#define DEBUG_TIME_INIT() \
+struct timespec start, stop; \
+clock_gettime( CLOCK_REALTIME, &start);
+#else
+#define DEBUG_TIME_INIT() do { } while(0)
+#endif
+
+#ifdef DEBUG_RENDER
+#define DEBUG_TIME_END(target) \
+clock_gettime( CLOCK_REALTIME, &stop); \
+target = (( stop.tv_sec - start.tv_sec ) + ( stop.tv_nsec - start.tv_nsec )/1E9L)*1E3L;
+#else
+#define DEBUG_TIME_END(target) do { } while(0)
+#endif
+
+#ifdef DEBUG_RENDER
+#define DEBUG_TIME_END_AVERAGED(target) \
+clock_gettime( CLOCK_REALTIME, &stop); \
+target = (target*(59.0/60.0))+((( stop.tv_sec - start.tv_sec ) + ( stop.tv_nsec - start.tv_nsec )/1E9L)*1E3L*1.0/60.0);
+#else
+#define DEBUG_TIME_END(target) do { } while(0)
+#endif
 
 #endif // H_MARIOMACROS
