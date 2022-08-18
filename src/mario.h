@@ -1346,9 +1346,70 @@ struct Mario : Lara
 				{
 					angle.x = (stand == STAND_UNDERWATER) ? marioState.pitchAngle : 0;
 					angle.y = (state == STATE_UNUSED_5) ? bowserAngle : -marioState.faceAngle + M_PI;
-					pos.x = (state == STATE_UNUSED_5) ? marioState.position[0] + (sin(-marioState.faceAngle + M_PI)*32) : (marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? marioState.position[0] - (sin(angle.y)*128) : marioState.position[0]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
-					pos.y = (marioState.action == 0x0800034B) ? -marioState.position[1]+384 : (marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F) ? -marioState.position[1]-128 : -marioState.position[1]; // ACT_LEDGE_GRAB or ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
-					pos.z = (state == STATE_UNUSED_5) ? -marioState.position[2] + (cos(-marioState.faceAngle + M_PI)*32) :(marioState.action == 0x0000054C || marioState.action == 0x0000054F) ? -marioState.position[2] - (cos(angle.y)*128) : -marioState.position[2]; // ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+
+					/*
+					 * Logic for x position
+					 */
+					if( state == STATE_UNUSED_5 )
+					{
+						pos.x = marioState.position[0] + (sin(-marioState.faceAngle + M_PI)*32);
+					}
+					else if ( marioState.action == 0x0800034B /*|| marioState.action == 0x0000054C || marioState.action == 0x0000054F*/ )
+					{
+						// ACT_LEDGE_GRAB
+						pos.x= marioState.position[0] - (sin(angle.y)*140);
+					}
+					else if (marioState.action == 0x0000054C || marioState.action == 0x0000054F)
+					{
+						// ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+						pos.x = marioState.position[0] - (sin(angle.y)*128); 
+					}
+					else
+					{
+						pos.x = marioState.position[0];
+					}
+
+					/*
+					 * Logic for y position
+					 */
+					if ( marioState.action == 0x0800034B /*|| marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F*/ )
+					{
+						// ACT_LEDGE_GRAB
+						pos.y=-marioState.position[1]+722;
+					}
+					else if ( marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F )
+					{
+						// ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
+						pos.y=-marioState.position[1]-128;
+					}
+					else
+					{
+						pos.y=-marioState.position[1];
+					}
+					
+					/*
+					 * Logic for z position
+					 */
+					if(state == STATE_UNUSED_5)
+					{
+						pos.z = -marioState.position[2] + (cos(-marioState.faceAngle + M_PI)*32);
+					}
+					else if ( marioState.action == 0x0800034B /*|| marioState.action == 0x0000054C || marioState.action == 0x0000054F*/ )
+					{
+						// ACT_LEDGE_GRAB
+						pos.z=-marioState.position[2] - (cos(angle.y)*140);
+					}
+					else if (marioState.action == 0x0000054C || marioState.action == 0x0000054F)
+					{
+						// ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+						pos.z=-marioState.position[2] - (cos(angle.y)*128);
+					}
+					else
+					{
+						pos.z=-marioState.position[2];
+					}
+					
+
 					velocity.x = marioState.velocity[0] * 2;
 					velocity.y = -marioState.velocity[1] * 2;
 					velocity.z = -marioState.velocity[2] * 2;
