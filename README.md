@@ -23,7 +23,7 @@ Levels tested and finished as Mario:
 - [x] The Great Pyramid
 
 Final quality of life improvements:
-- [ ] Add collisions to all entities (doors, trapdoors, trap floors)
+- [x] Add collisions to all entities (doors, trapdoors, trap floors) (muddymind)
 - [x] Mario fall damage
 - [x] Correct mesh loading between rooms (muddymind)
 - [ ] Make Mario's lighting blend in correctly with the rooms he is in (a glsl shader thing...)
