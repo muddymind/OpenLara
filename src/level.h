@@ -1130,8 +1130,6 @@ struct Level : IGame {
 
     virtual ~Level() {
         UI::init(NULL);
-        if(levelSM64!=NULL)
-            delete levelSM64;
         Network::stop();
 
         for (int i = 0; i < level.entitiesCount; i++)
@@ -1151,6 +1149,9 @@ struct Level : IGame {
             delete atlasGlyphs;
         #endif
         delete mesh;
+
+        if(levelSM64!=NULL)
+            delete levelSM64;
 
         Sound::stopAll();
     }
@@ -2369,6 +2370,7 @@ struct Level : IGame {
                     c->update();
                     c = next;
                 }
+                levelSM64->updateDynamicObjects();
             } else {
                 if (camera->spectator) {
                     camera->update();
