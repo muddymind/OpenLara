@@ -607,7 +607,7 @@ namespace Debug {
             }
         }
 
-        void sm64debug(Lara *lara, TR::Level *level, SM64::ILevelSM64 *levelSM64) {
+        void sm64debug(Lara *lara, TR::Level *level) {
 
             if(!lara->surfaceDebuggerEnabled || !lara->isMario || !level)
             {
