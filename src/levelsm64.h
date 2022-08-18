@@ -837,9 +837,6 @@ struct LevelSM64 : SM64::ILevelSM64
 
 		if(count < 3)
 		{
-			#ifdef DEBUG_RENDER	
-			printf("Clip evaluaiton: room %d and room %d don't intersect.\n", roomId1, roomId2);
-			#endif
 			return false;
 		}
 		return true;
