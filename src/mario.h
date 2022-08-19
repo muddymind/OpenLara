@@ -1350,7 +1350,7 @@ struct Mario : Lara
 					angle.x = (stand == STAND_UNDERWATER) ? marioState.pitchAngle : 0;
 					angle.y = (state == STATE_UNUSED_5) ? bowserAngle : -marioState.faceAngle + M_PI;
 
-					// boss figth
+					// boss fight
 					if( state == STATE_UNUSED_5 ) 
 					{
 						pos.x = marioState.position[0] + (sin(-marioState.faceAngle + M_PI)*32);
