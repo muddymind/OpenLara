@@ -29,6 +29,15 @@ namespace SM64
         bool spawned;
     };
 
+    struct CrossedPortal
+    {
+        int from;
+        int to;
+        bool valid;
+        TR::Room::Portal *portal;
+        int limits[3][2];
+    };
+
     struct MarioPlayer
     {
         int marioId=-1;
@@ -42,6 +51,12 @@ namespace SM64
 
         int discardedRooms[256];
 	    int discardedRoomsCount = 0;
+
+        int discardedPortals[256];
+        int discardedPortalsCount = 0;
+
+        struct CrossedPortal crossedPortals[256];
+        int crossedPortalsCount;
     };
 
     struct ILevelSM64 
