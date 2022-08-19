@@ -73,6 +73,7 @@ struct Level : IGame {
     bool paused;
 
     bool surfaceDebugger=false;
+    bool portalDebugger=false;
 
     TR::LevelID nextLevel;
 
@@ -2455,6 +2456,10 @@ struct Level : IGame {
             Input::down[ikF4] = false;
         }
         if (Input::down[ikF5]) {
+            portalDebugger=!portalDebugger;
+            Input::down[ikF5] = false;
+        }
+        if (Input::down[ikF6]) {
             Lara *lara = (Lara *)getLara(0);
             if(lara!=NULL && lara->isMario)
             {
@@ -3185,6 +3190,14 @@ struct Level : IGame {
 
                 if(lara){
                     Debug::Level::sm64debugrooms(&level, lara->getRoomIndex());
+                }
+            }
+
+            if(portalDebugger)
+            {
+                Lara *lara = (Lara *)getLara(0);
+                if(lara && lara->isMario){
+                    Debug::Level::sm64DebugActivePortals(&level, levelSM64, lara);
                 }
             }
             

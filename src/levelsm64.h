@@ -984,16 +984,128 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 	}
 
+	/**
+	 * This will help discard overlapped rooms 
+	 */
+	void discardDistantPortals(SM64::MarioPlayer *player, vec3 position)
+	{
+		for(int i=0; i<player->crossedPortalsCount; i++)
+		{
+			SM64::CrossedPortal *cportal = &(player->crossedPortals[i]);
+			// bool found=false;
+
+			// for(int j=0; j<player->loadedRoomsCount; j++)
+			// {
+			// 	if(player->loadedRooms[j]==cportal->to)
+			// 	{
+			// 		found=true;
+			// 		break;
+			// 	}
+			// }
+			// // 1st we invalid portals that lead to rooms we already discarded
+			// if(!found)
+			// {
+			// 	cportal->valid=false;
+			// }
+			// else
+			// {
+				// Since this portal is going to be evaluated we calculate it's limits and if it is in range
+				for(int j=0; j<3; j++)
+				{
+					cportal->limits[j][0]=INT_MAX;
+					cportal->limits[j][1]=INT_MIN;
+				}
+
+				TR::Room::Portal *portal = cportal->portal;
+				TR::Room::Info *ri = &(level->rooms[cportal->from].info);
+
+				//we only need to get the values from opposite corners to have all limits
+				for(int j=0; j<2; j++)
+				{
+					if(cportal->limits[0][0] > portal->vertices[j*2].x+ri->x) cportal->limits[0][0] = portal->vertices[j*2].x+ri->x;
+					if(cportal->limits[0][1] < portal->vertices[j*2].x+ri->x) cportal->limits[0][1] = portal->vertices[j*2].x+ri->x;
+
+					if(cportal->limits[1][0] > portal->vertices[j*2].y) cportal->limits[1][0] = portal->vertices[j*2].y;
+					if(cportal->limits[1][1] < portal->vertices[j*2].y) cportal->limits[1][1] = portal->vertices[j*2].y;
+
+					if(cportal->limits[2][0] > portal->vertices[j*2].z+ri->z) cportal->limits[2][0] = portal->vertices[j*2].z+ri->z;
+					if(cportal->limits[2][1] < portal->vertices[j*2].z+ri->z) cportal->limits[2][1] = portal->vertices[j*2].z+ri->z;
+				}
+
+				vec3 p=position;
+
+				//middlepoint for mario's height
+				p.y-=MARIO_MIDDLE_Y; 
+
+				if( 
+					(portal->normal.x!=0 && (abs(cportal->limits[0][0]-p.x) > PORTAL_DISPLACEMENT || // x portal
+					p.y + PORTAL_DISPLACEMENT < cportal->limits[1][0] || p.y - PORTAL_DISPLACEMENT > cportal->limits[1][1] ||
+					p.z + PORTAL_DISPLACEMENT < cportal->limits[2][0] || p.z - PORTAL_DISPLACEMENT > cportal->limits[2][1]))
+					|| 
+					(portal->normal.y!=0 && (abs(cportal->limits[1][0]-p.y) > PORTAL_DISPLACEMENT || // y portal
+					p.x + PORTAL_DISPLACEMENT < cportal->limits[0][0] || p.x - PORTAL_DISPLACEMENT > cportal->limits[0][1] ||
+					p.z + PORTAL_DISPLACEMENT < cportal->limits[2][0] || p.z - PORTAL_DISPLACEMENT > cportal->limits[2][1]))
+					||
+					(portal->normal.z!=0 && (abs(cportal->limits[2][0]-p.z) > PORTAL_DISPLACEMENT || // z portal
+					p.x + PORTAL_DISPLACEMENT < cportal->limits[0][0] || p.x - PORTAL_DISPLACEMENT > cportal->limits[0][1] ||
+					p.y + PORTAL_DISPLACEMENT < cportal->limits[1][0] || p.y - PORTAL_DISPLACEMENT > cportal->limits[1][1])
+					)
+				)
+				{
+					player->crossedPortals[i].valid=false;
+					continue;
+				}
+			//}
+		}
+
+		// remove all rooms that don't have a valid portal to them (except the 1st room which is always valid)
+		int prevLoadedRooms[player->loadedRoomsCount];
+		int prevLoadedRoomsCount = player->loadedRoomsCount;
+
+		for(int i=0; i<player->loadedRoomsCount; i++)
+		{
+			prevLoadedRooms[i]=player->loadedRooms[i];
+		}
+
+		player->loadedRoomsCount=1;
+		player->discardedPortalsCount=0;
+		for(int i=1; i<prevLoadedRoomsCount; i++)
+		{
+			int roomId = prevLoadedRooms[i];
+			bool found=false;
+			for(int j=0; j<player->crossedPortalsCount; j++)
+			{
+				if(player->crossedPortals[j].to == roomId && player->crossedPortals[j].valid)
+				{
+					found=true;
+					break;
+				}
+			}
+			if(found)
+			{
+				player->loadedRooms[player->loadedRoomsCount++]=roomId;
+			}
+			else
+			{
+				player->discardedPortals[player->discardedPortalsCount++]=roomId;
+			}
+		}
+	}
+
 	virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, vec3 position, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false) 
 	{
 		SM64::MarioPlayer *player = getMarioPlayer(marioId);
 
 		DEBUG_TIME_INIT();
 
-		getCurrentAndAdjacentRooms(player->loadedRooms, &(player->loadedRoomsCount), currentRoomIndex, to, maxDepth);
+		player->crossedPortalsCount=0;
+		getCurrentAndAdjacentRooms(player, player->loadedRooms, &(player->loadedRoomsCount), -1, currentRoomIndex, to, maxDepth);
 
 		// If Mario is too far away from the room then there's no need to have them loaded
-		discardDistantRooms(player, position);
+		//discardDistantRooms(player, position);
+
+		// If Mario is too far from the portal that leads to a room then there's no need to have that room loaded
+		discardDistantPortals(player, position);
 
 		if(evaluateClips)
 		{
@@ -1012,7 +1124,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		return;			
 	}
 
-	void getCurrentAndAdjacentRooms(int *loadedRooms, int *loadedRoomsCount, int currentRoomIndex, int to, int maxDepth, int count=0) {
+	void getCurrentAndAdjacentRooms(SM64::MarioPlayer *player, int *loadedRooms, int *loadedRoomsCount, int currentRoomIndex, int from, int to, int maxDepth, int count=0) {
 		if(count==0)
 		{
 			*loadedRoomsCount=0;
@@ -1028,33 +1140,6 @@ struct LevelSM64 : SM64::ILevelSM64
 			for (int i = 0; i < level->roomsCount; i++)
 				level->rooms[i].flags.visible = false;
 		}
-
-		//Hardcoded exceptions to avoid invisible collisions
-		switch (level->id)
-		{
-		case TR::LevelID::LVL_TR1_6: //Palace Midas
-			switch (currentRoomIndex)
-			{
-			case 25: //room with huge pillar that goes down
-				if(to==63)
-					return;
-				break;
-			case 63: //corridor that goes down the huge pillar
-				if(to==25)
-					return;
-				break;
-			}
-			break;
-		case TR::LVL_TR1_10B: //Atlantis
-			switch (currentRoomIndex)
-			{
-			case 47: //room with blocks and switches to trapdoors
-				if(to==84)
-					return;
-				break;
-			}
-			break;
-		}
 		
 
 		count++;
@@ -1066,15 +1151,22 @@ struct LevelSM64 : SM64::ILevelSM64
 			loadedRooms[(*loadedRoomsCount)++] = to;
 		}
 
-		for (int i = 0; i < room.portalsCount; i++) {
-			getCurrentAndAdjacentRooms(loadedRooms, loadedRoomsCount, currentRoomIndex, room.portals[i].roomIndex, maxDepth, count);
+		for (int i = 0; i < room.portalsCount && count<=maxDepth; i++) {
+
+			// Let's avoid going backwards.
+			if(to == room.portals[i].roomIndex)
+				continue;
+
+			if(player!=NULL)
+				player->crossedPortals[player->crossedPortalsCount++]={to, room.portals[i].roomIndex, true, &(room.portals[i])};
+			getCurrentAndAdjacentRooms(player, loadedRooms, loadedRoomsCount, currentRoomIndex, to, room.portals[i].roomIndex, maxDepth, count);
 		}
     }
 
 	virtual int createMarioInstance(int roomIndex, vec3 pos)
 	{
 		SM64::MarioPlayer *player = getMarioPlayer(-1);
-		getCurrentAndAdjacentRooms(player->loadedRooms, &(player->loadedRoomsCount), roomIndex, roomIndex, 2);
+		getCurrentAndAdjacentRooms(NULL, player->loadedRooms, &(player->loadedRoomsCount), -1, roomIndex, roomIndex, 2);
 		int marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, player->loadedRooms, player->loadedRoomsCount);
 		player->marioId=marioId;
 		return marioId;

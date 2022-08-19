@@ -529,7 +529,7 @@ namespace Debug {
 
         void portals(const TR::Level &level) {
             Core::setBlendMode(bmAdd);
-            glColor3f(0, 0.25f, 0.25f);
+            glColor4f(0, 0.25f, 0.25f, 0.5f);
             glDepthMask(GL_FALSE);
 
             glBegin(GL_QUADS);
@@ -787,6 +787,50 @@ namespace Debug {
             Core::setDepthTest(true);                        
         }
 
+        void sm64DebugActivePortals(TR::Level *level, SM64::ILevelSM64 *levelSM64, Lara *lara)
+        {
+            SM64::MarioPlayer *player=NULL;
+            for(int j=0; j<MAX_MARIO_PLAYERS; j++)
+            {
+                if(levelSM64->marioPlayers[j].marioId != -1)
+                {
+                    player= &(levelSM64->marioPlayers[j]);
+                }
+            }
+
+            vec3 p = lara->pos;
+            p.y-=MARIO_MIDDLE_Y; 
+
+            Debug::Draw::sphere(p, 256, vec4(1.0f, 1.0f, 1.0f, 0.5f));
+
+            Debug::Draw::box(p-vec3(PORTAL_DISPLACEMENT, PORTAL_DISPLACEMENT, PORTAL_DISPLACEMENT), p+vec3(PORTAL_DISPLACEMENT, 2*PORTAL_DISPLACEMENT, PORTAL_DISPLACEMENT), vec4(1.0f, 1.0f, 1.0f, 0.5f));
+
+            for (int j = 0; j < player->crossedPortalsCount; j++) {
+                TR::Room::Portal &p = *(player->crossedPortals[j].portal);
+                TR::Room::Info &ri = level->rooms[player->crossedPortals[j].from].info;
+
+                if(player->crossedPortals[j].valid)
+                {
+                    Debug::Draw::staticface(
+                        vec3((float)p.vertices[0].x + ri.x, (float)p.vertices[0].y, (float)p.vertices[0].z + ri.z),
+                        vec3((float)p.vertices[1].x + ri.x, (float)p.vertices[1].y, (float)p.vertices[1].z + ri.z),
+                        vec3((float)p.vertices[2].x + ri.x, (float)p.vertices[2].y, (float)p.vertices[2].z + ri.z),
+                        vec3((float)p.vertices[3].x + ri.x, (float)p.vertices[3].y, (float)p.vertices[3].z + ri.z),
+                        vec4(0.0f, 1.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 0.2f));
+                }
+                else
+                {
+                    Debug::Draw::staticface(
+                        vec3((float)p.vertices[0].x + ri.x, (float)p.vertices[0].y, (float)p.vertices[0].z + ri.z),
+                        vec3((float)p.vertices[1].x + ri.x, (float)p.vertices[1].y, (float)p.vertices[1].z + ri.z),
+                        vec3((float)p.vertices[2].x + ri.x, (float)p.vertices[2].y, (float)p.vertices[2].z + ri.z),
+                        vec3((float)p.vertices[3].x + ri.x, (float)p.vertices[3].y, (float)p.vertices[3].z + ri.z),
+                        vec4(0.0f, 1.0f, 0.0f, 0.6f), vec4(0.0f, 1.0f, 0.0f, 0.01f));
+                }
+                
+            }
+        }
+
         void lights(const TR::Level &level, int room, Controller *lara) {
             glPointSize(8);
             for (int i = 0; i < level.roomsCount; i++)
@@ -1020,18 +1064,28 @@ namespace Debug {
                     SM64::MarioPlayer *player = &(levelSM64->marioPlayers[i]);
                     if(player->marioId!=-1)
                     {
-                        int index = sprintf(buf, "Mario Id: %d, tickTime: %.4fms, clipBoxes = %d, clipTime: %.4fms, roomsLoaded:", 
+                        y += 16;
+                        int index = sprintf(buf, "Mario Id: %d, tickTime: %.4fms, clipBoxes = %d, clipTime: %.4fms", 
                             player->marioId, player->marioTickTimeTaken, player->lastClipsFound, player->clipsTimeTaken);
+                        Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
+
+                        index = sprintf(buf, "roomsLoaded:");
 
                         for (int j=0; j<player->loadedRoomsCount; j++)
                         {
                             index += sprintf(&buf[index], " %d", player->loadedRooms[j]);
                         }
 
-                        index += sprintf(&buf[index], " discardedRooms:");
-                        for (int j=0; j<player->discardedRoomsCount; j++)
+                        // index += sprintf(&buf[index], " distanceDiscarded:");
+                        // for (int j=0; j<player->discardedRoomsCount; j++)
+                        // {
+                        //     index += sprintf(&buf[index], " %d", player->discardedRooms[j]);
+                        // }
+
+                        index += sprintf(&buf[index], " roomsDiscarded:");
+                        for (int j=0; j<player->discardedPortalsCount; j++)
                         {
-                            index += sprintf(&buf[index], " %d", player->discardedRooms[j]);
+                            index += sprintf(&buf[index], " %d", player->discardedPortals[j]);
                         }
 
                         Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
