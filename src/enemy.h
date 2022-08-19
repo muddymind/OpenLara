@@ -3,6 +3,7 @@
 
 extern "C" {
 	#include <libsm64/src/libsm64.h>
+    #include <libsm64/src/decomp/include/sm64shared.h>
 }
 
 #include "character.h"
@@ -2576,7 +2577,7 @@ struct MarioDoppelganger: Enemy
 		if (flags.active)
 		{
 			float hp = target->health / 1000.f;
-			if (hp > 0.f) sm64_mario_set_health(marioId, (hp <= 0.2f) ? 0x200 : 0x880); // mario panting animation if low on health
+			if (hp > 0.f) sm64_mario_set_health(marioId, (hp <= 0.2f) ? MARIO_LOW_HEALTH : MARIO_FULL_HEALTH); // mario panting animation if low on health
 			else sm64_mario_kill(marioId);
 
 			marioTicks += Core::deltaTime;
@@ -2655,8 +2656,8 @@ struct MarioDoppelganger: Enemy
 		if (stand == STAND_AIR)
 		{
 			pos.y = -marioState.position[1];
-			if (marioState.action == 0x0C400201) stand = STAND_GROUND; // ACT_IDLE
-			marioInputs.buttonZ = (marioState.action == 0x0800034B); // ACT_LEDGE_GRAB (let go of ledge)
+			if (marioState.action == ACT_IDLE) stand = STAND_GROUND; 
+			marioInputs.buttonZ = (marioState.action == ACT_LEDGE_GRAB);
 
 			if (selfHeight < 128.0f)
 			{

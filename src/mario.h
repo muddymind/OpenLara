@@ -9,6 +9,7 @@ extern "C" {
 	#include <libsm64/src/decomp/include/audio_defines.h>
 	#include <libsm64/src/decomp/include/seq_ids.h>
 	#include <libsm64/src/decomp/include/mario_animation_ids.h>
+	#include <libsm64/src/decomp/include/sm64shared.h>
 }
 
 
@@ -21,6 +22,7 @@ extern "C" {
 #include "inventory.h"
 #include "mesh.h"
 #include "format.h"
+#include "enemy.h"
 
 #include "marioMacros.h"
 
@@ -130,7 +132,7 @@ struct Mario : Lara
 		free(marioRenderState.mario.index);
 		delete TRmarioMesh;
 
-		for (int i=0; i<0x22; i++)
+		for (int i=0; i<SEQ_EVENT_CUTSCENE_LAKITU; i++)
 			sm64_stop_background_music(i);
 
 		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
@@ -152,7 +154,7 @@ struct Mario : Lara
 	{
 		marioInputs.buttonB = false;
 		if (type == TR::Entity::MIDAS_HAND)
-			sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
+			sm64_set_mario_action(marioId, ACT_UNLOCKING_STAR_DOOR);
 	}
 
 	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
@@ -160,11 +162,11 @@ struct Mario : Lara
 		//Lara::render(frustum, mesh, type, caustics);
 
 		Core::setCullMode(cmBack);
-		glUseProgram(marioState.flags & 0x00000004 ? Core::metalMarioShader : Core::marioShader);
+		glUseProgram(marioState.flags & MARIO_METAL_CAP ? Core::metalMarioShader : Core::marioShader);
 
 		GAPI::Texture *dtex = Core::active.textures[sDiffuse];
 
-		if (marioState.flags & 0x00000004)
+		if (marioState.flags & MARIO_METAL_CAP)
 		{
 			game->setRoomParams(getRoomIndex(), Shader::MIRROR, 1.2f, 1.0f, 0.2f, 1.0f, false);
 			//environment->bind(sDiffuse);
@@ -186,7 +188,7 @@ struct Mario : Lara
 		if (Core::active.shader) glUseProgram(Core::active.shader->ID);
 
 		Core::setCullMode(cmFront);
-		if (marioState.flags & 0x00000004)
+		if (marioState.flags & MARIO_METAL_CAP)
 		{
 			visibleMask ^= 0xFFFFFFFF;
 		}
@@ -197,23 +199,23 @@ struct Mario : Lara
 	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
 	{
 		if (dozy || level->isCutsceneLevel()) return;
-		if (!burn && !marioState.fallDamage && marioState.action != 0x010208B7 && hitType != TR::HIT_SPIKES && (marioState.action & 1 << 12 || marioState.action & 1 << 17)) return; // ACT_LAVA_BOOST, ACT_FLAG_INTANGIBLE || ACT_FLAG_INVULNERABLE
+		if (!burn && !marioState.fallDamage && marioState.action != ACT_LAVA_BOOST && hitType != TR::HIT_SPIKES && (marioState.action & ACT_FLAG_INTANGIBLE || marioState.action & ACT_FLAG_INVULNERABLE)) return;
 		if (health <= 0.0f && hitType != TR::HIT_FALL && hitType != TR::HIT_LAVA) return;
 
 		if (hitType == TR::HIT_MIDAS)
 		{
-			if (!(marioState.flags & 0x00000004))
+			if (!(marioState.flags & MARIO_METAL_CAP))
 			{
 				// it's a secret... ;)
 				bakeEnvironment(environment);
-				sm64_mario_interact_cap(marioId, 0x00000004, 0, true);
+				sm64_mario_interact_cap(marioId, MARIO_METAL_CAP, 0, true);
 			}
 			return;
 		}
 		else if (hitType == TR::HIT_LAVA)
 		{
 			if (damageTime > 0) return;
-			sm64_set_mario_action(marioId, 0x010208B7); // ACT_LAVA_BOOST
+			sm64_set_mario_action(marioId, ACT_LAVA_BOOST);
 			if (health <= 0) return;
 		}
 
@@ -235,8 +237,8 @@ struct Mario : Lara
 
 		if (enemy && 
 		    (
-		     (!(marioState.action & 1 << 23) && (enemy->getEntity().type != TR::Entity::ENEMY_BEAR && enemy->getEntity().type != TR::Entity::ENEMY_REX)) || // 1<<23 == ACT_FLAG_ATTACKING (mario is not attacking and the enemy is not one of these, or...)
-		     (!(marioState.action & 1 << 11) && (enemy->getEntity().type == TR::Entity::ENEMY_BEAR || enemy->getEntity().type == TR::Entity::ENEMY_REX)) // 1<<11 == ACT_FLAG_AIR (mario is not in the air, and the enemy is one of these)
+		     (!(marioState.action & ACT_FLAG_ATTACKING) && (enemy->getEntity().type != TR::Entity::ENEMY_BEAR && enemy->getEntity().type != TR::Entity::ENEMY_REX)) || // (mario is not attacking and the enemy is not one of these, or...)
+		     (!(marioState.action & ACT_FLAG_AIR) && (enemy->getEntity().type == TR::Entity::ENEMY_BEAR || enemy->getEntity().type == TR::Entity::ENEMY_REX)) // (mario is not in the air, and the enemy is one of these)
 			)
 		   )
 		{
@@ -324,9 +326,9 @@ struct Mario : Lara
 		}
 
 		static bool lookSnd = false;
-		if (canMove && Input::state[pid][cLook] && marioState.action & (1 << 26)) // ACT_FLAG_ALLOW_FIRST_PERSON
+		if (canMove && Input::state[pid][cLook] && marioState.action & ACT_FLAG_ALLOW_FIRST_PERSON)
 		{
-			sm64_set_mario_action(marioId, 0x0C000227); // ACT_FIRST_PERSON
+			sm64_set_mario_action(marioId, ACT_FIRST_PERSON);
 			if (!lookSnd) sm64_play_sound_global(SOUND_MENU_CAMERA_ZOOM_IN);
 			lookSnd = true;
 			camera->mode = Camera::MODE_LOOK;
@@ -359,11 +361,11 @@ struct Mario : Lara
 
 		if (dozy) return STAND_UNDERWATER;
 
-		if ((marioState.action & 0x000001C0) == (3 << 6)) // ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) (check if mario is in the water)
+		if ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) // (check if mario is in the water)
 			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
-		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
+		else if (marioState.action == ACT_LEDGE_GRAB)
 			return STAND_HANG;
-		return (!(marioState.action & 1<<11)) ? STAND_GROUND : STAND_AIR; // 1<<11 = ACT_FLAG_AIR
+		return (!(marioState.action & ACT_FLAG_AIR)) ? STAND_GROUND : STAND_AIR;
 	}
 
 	void setStateFromMario()
@@ -385,7 +387,7 @@ struct Mario : Lara
                 if (block && (pushState == STATE_PUSH_BLOCK || block->doMarioMove(input & FORTH != 0)))
 				{
 					movingBlock = block;
-					sm64_set_mario_action(marioId, (pushState == STATE_PUSH_BLOCK) ? 0x00800380 : 0x00000390); // ACT_PUNCHING or ACT_PICKING_UP_BOWSER
+					sm64_set_mario_action(marioId, (pushState == STATE_PUSH_BLOCK) ? ACT_PUNCHING : ACT_PICKING_UP_BOWSER);
 					state = pushState;
 				}
 			}
@@ -393,17 +395,17 @@ struct Mario : Lara
 		}
 
 		state = STATE_STOP;
-		if (marioState.action == 0x01000889) // marioState.action == ACT_WATER_JUMP
+		if (marioState.action == ACT_WATER_JUMP)
 			state = STATE_WATER_OUT;
 		else if (stand == STAND_ONWATER)
 			state = (marioState.velocity[0] == 0 && marioState.velocity[2] == 0) ? STATE_SURF_TREAD : STATE_SURF_SWIM;
 		else if (stand == STAND_UNDERWATER)
 			state = STATE_TREAD;
-		else if (marioState.action == 0x0800034B) // marioState.action == ACT_LEDGE_GRAB
+		else if (marioState.action == ACT_LEDGE_GRAB)
 			state = STATE_HANG;
 		else if (stand == STAND_AIR)
 			state = (marioState.velocity[0] == 0 && marioState.velocity[2] == 0) ? STATE_UP_JUMP : STATE_FORWARD_JUMP;
-		else if (!(marioState.action & (1 << 22)) && marioState.action != 0x800380 && stand != STAND_UNDERWATER) // !(marioState.action & ACT_FLAG_IDLE)
+		else if (!(marioState.action & ACT_FLAG_IDLE) && marioState.action != ACT_PUNCHING && stand != STAND_UNDERWATER)
 			state = STATE_RUN;
 	}
 
@@ -452,7 +454,7 @@ struct Mario : Lara
 
 		if (pickupListCount > 0)
 		{
-			sm64_set_mario_action(marioId, (pickupList[0]->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER) ? 0x0000132E : (stand != STAND_UNDERWATER) ? 0x00800380 : 0x300024E1); // ACT_PUNCHING, ACT_UNLOCKING_KEY_DOOR or ACT_WATER_PUNCH
+			sm64_set_mario_action(marioId, (pickupList[0]->getEntity().type == TR::Entity::SCION_PICKUP_HOLDER) ? ACT_UNLOCKING_KEY_DOOR : (stand != STAND_UNDERWATER) ? ACT_PUNCHING : ACT_WATER_PUNCH);
 			timer = 0;
 			state = STATE_PICK_UP;
 			return true;
@@ -567,7 +569,7 @@ struct Mario : Lara
 
 						if (stand != STAND_UNDERWATER)
 						{
-							sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
+							sm64_set_mario_action(marioId, ACT_UNLOCKING_STAR_DOOR);
 							if ((actionState == STATE_SWITCH_DOWN && controller->getEntity().type == TR::Entity::SWITCH) || controller->getEntity().type == TR::Entity::SWITCH_BUTTON) reverseAnim = true;
 						}
 						state = actionState;
@@ -641,7 +643,7 @@ struct Mario : Lara
 
 					//printf("yup\n");
 					state = actionState;
-					sm64_set_mario_action(marioId, 0x0000132E); // ACT_UNLOCKING_KEY_DOOR
+					sm64_set_mario_action(marioId, ACT_UNLOCKING_KEY_DOOR);
 				}
 
 				if (controller->flags.state != TR::Entity::asInactive)
@@ -845,7 +847,7 @@ struct Mario : Lara
 				bowserSwing->pos.z = pos.z + (cos(-marioState.faceAngle + M_PI)*512);
 				bowserSwing->angle.y = -marioState.faceAngle + M_PI;
 				static float angleVel = fabs(marioState.angleVel[1]);
-				if (!bowserSwing || marioState.action == 0x00000392) // ACT_RELEASING_BOWSER
+				if (!bowserSwing || marioState.action == ACT_RELEASING_BOWSER)
 				{
 					state = STATE_STOP;
 					bowserSwing->activate();
@@ -880,12 +882,12 @@ struct Mario : Lara
 					}
 					else if (marioAnim->animFrame == 61)
 					{
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						sm64_set_mario_action(marioId, ACT_IDLE);
 						reverseAnim = false;
 						customTimer = 0;
 					}
 				}
-				else if (marioState.action == 0x0000132F) // ACT_UNLOCKING_STAR_DOOR
+				else if (marioState.action == ACT_UNLOCKING_STAR_DOOR)
 				{
 					if (!switchSndPlayed)
 					{
@@ -901,7 +903,7 @@ struct Mario : Lara
 					}
 					else if (marioAnim->animFrame == 68)
 					{
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						sm64_set_mario_action(marioId, ACT_IDLE);
 						reverseAnim = false;
 						customTimer = 0;
 					}
@@ -913,10 +915,10 @@ struct Mario : Lara
 					{
 						game->playSound(switchSnd[1], pos, Sound::PAN);
 						switchSndPlayed = true;
-						sm64_set_mario_action(marioId, 0x300024E1); // ACT_WATER_PUNCH
+						sm64_set_mario_action(marioId, ACT_WATER_PUNCH);
 					}
 					sm64_set_mario_velocity(marioId, 0, 0, 0);
-					if (marioState.action != 0x300024E1) sm64_add_mario_position(marioId, 0, ((marioWaterLevel - 80) - (marioState.position[1]/MARIO_SCALE) < 400.0f) ? -0.625f : 1, 0);
+					if (marioState.action != ACT_WATER_PUNCH) sm64_add_mario_position(marioId, 0, ((marioWaterLevel - 80) - (marioState.position[1]/MARIO_SCALE) < 400.0f) ? -0.625f : 1, 0);
 				}
 				break;
 
@@ -937,7 +939,7 @@ struct Mario : Lara
 					}
 					else if (marioAnim->animFrame == 61)
 					{
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						sm64_set_mario_action(marioId, ACT_IDLE); // ACT_IDLE
 						reverseAnim = false;
 						customTimer = 0;
 					}
@@ -950,7 +952,7 @@ struct Mario : Lara
 						switchSndPlayed = true;
 					}
 					else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						sm64_set_mario_action(marioId, ACT_IDLE); // ACT_IDLE
 				}
 				break;
 
@@ -982,7 +984,7 @@ struct Mario : Lara
 					}
 					if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
 					{
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						sm64_set_mario_action(marioId, ACT_IDLE);
 						state = STATE_STOP;
 					}
 				}
@@ -993,7 +995,7 @@ struct Mario : Lara
 					static bool moved = false;
 					if (!movingBlock)
 						state = STATE_STOP;
-					else if (marioState.flags & 0x00100000 && !movingBlock->marioAnim && !moved) // MARIO_PUNCHING
+					else if (marioState.flags & MARIO_PUNCHING && !movingBlock->marioAnim && !moved) // MARIO_PUNCHING
 					{
 						movingBlock->doMarioMove(true);
 						moved = true;
@@ -1011,7 +1013,7 @@ struct Mario : Lara
 				if (!movingBlock) state = STATE_STOP;
 				else if (!movingBlock->marioAnim)
 				{
-					if (marioState.action != 0x00000392) sm64_set_mario_action(marioId, 0x00000392);
+					if (marioState.action != ACT_RELEASING_BOWSER) sm64_set_mario_action(marioId, ACT_RELEASING_BOWSER);
 					else if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
 					{
 						movingBlock = NULL;
@@ -1026,37 +1028,37 @@ struct Mario : Lara
 					{
 						switch(marioState.action)
 						{
-							case 0x0000132E: // ACT_UNLOCKING_KEY_DOOR
+							case ACT_UNLOCKING_KEY_DOOR:
 								if (marioAnim->animFrame == 20)
 								{
 									marioAnim->animFrame--;
 									if (customTimer == 0) customTimer++;
 									else if (customTimer >= 25)
 									{
-										sm64_set_mario_action(marioId, 0x0000132F); // ACT_UNLOCKING_STAR_DOOR
+										sm64_set_mario_action(marioId, ACT_UNLOCKING_STAR_DOOR);
 										customTimer = 0;
 									}
 								}
 								break;
 
-							case 0x0000132F: // ACT_UNLOCKING_STAR_DOOR
+							case ACT_UNLOCKING_STAR_DOOR:
 								if (marioAnim->animFrame == marioAnim->curAnim->loopEnd-1)
-									sm64_set_mario_action(marioId, 0x80000588); // ACT_THROWING
+									sm64_set_mario_action(marioId, ACT_THROWING);
 								break;
 
-							case 0x80000588: // ACT_THROWING
+							case ACT_THROWING:
 								if (marioAnim->animFrame == 7) // mario touches the scion
 									game->loadNextLevel();
 								break;
 						}
 					}
 
-					int end = (marioState.action == 0x00001319) ? 60 : marioAnim->curAnim->loopEnd-1;
+					int end = (marioState.action == ACT_CREDITS_CUTSCENE) ? 60 : marioAnim->curAnim->loopEnd-1;
 					if (marioAnim->animFrame == end) // anim done, pick up
 					{
-						if (marioState.action == 0x800380 || marioState.action == 0x00800457 || marioState.action == 0x300024E1) // punching action || ACT_MOVE_PUNCHING || ACT_WATER_PUNCH
+						if (marioState.action == ACT_PUNCHING || marioState.action == ACT_MOVE_PUNCHING || marioState.action == ACT_WATER_PUNCH)
 						{
-							if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) sm64_set_mario_action(marioId, 0x00000383); // ACT_PICKING_UP
+							if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) sm64_set_mario_action(marioId, ACT_PICKING_UP);  
 							else
 								state = STATE_STOP;
 
@@ -1091,23 +1093,23 @@ struct Mario : Lara
 							}
 							pickupListCount = 0;
 						}
-						else if (marioState.action == 0x00000383) // ACT_PICKING_UP
+						else if (marioState.action == ACT_PICKING_UP) // ACT_PICKING_UP
 						{
 							if (pickupList[0] && pickupList[0]->getEntity().type == TR::Entity::SCION_PICKUP_QUALOPEC)
 							{
-								sm64_set_mario_action(marioId, 0x00001319); // ACT_CREDITS_CUTSCENE
+								sm64_set_mario_action(marioId, ACT_CREDITS_CUTSCENE); // ACT_CREDITS_CUTSCENE
 								sm64_set_mario_animation(marioId, MARIO_ANIM_CREDITS_RAISE_HAND);
 							}
 							else
 							{
 								state = STATE_STOP;
-								sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+								sm64_set_mario_action(marioId, ACT_IDLE); // ACT_IDLE
 							}
 						}
-						else if (marioState.action == 0x00001319) // ACT_CREDITS_CUTSCENE
+						else if (marioState.action == ACT_CREDITS_CUTSCENE) // ACT_CREDITS_CUTSCENE
 						{
 							state = STATE_STOP;
-							sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+							sm64_set_mario_action(marioId, ACT_IDLE); // ACT_IDLE
 							if (level->id == 16 && level->version & TR::VER_TR1) // hack for ending at Sanctuary of the Scion
 								game->loadNextLevel();
 						}
@@ -1121,9 +1123,9 @@ struct Mario : Lara
 				if (keyHole)
 				{
 					int end = (state == STATE_USE_KEY) ? 15 : 57;
-					if (marioState.action == 0x0000132E && marioAnim->animFrame == marioAnim->curAnim->loopEnd-end)
+					if (marioState.action == ACT_UNLOCKING_KEY_DOOR && marioAnim->animFrame == marioAnim->curAnim->loopEnd-end)
 					{
-						sm64_set_mario_action(marioId, 0x0C400201); // ACT_IDLE
+						sm64_set_mario_action(marioId, ACT_IDLE);
 						state = STATE_STOP;
 						keyHole->activate();
 						keyHole = NULL;
@@ -1223,9 +1225,9 @@ struct Mario : Lara
 
 			if (burn)
 			{
-				if (marioState.action != 0x010208B4 && marioState.action != 0x010208B5 && marioState.action != 0x010208B7 && marioState.action != 0x00020449)
+				if (marioState.action != ACT_BURNING_JUMP && marioState.action != ACT_BURNING_FALL && marioState.action != ACT_LAVA_BOOST && marioState.action != ACT_BURNING_GROUND)
 				{
-					sm64_set_mario_action_arg(marioId, 0x010208B4, 1);
+					sm64_set_mario_action_arg(marioId, ACT_BURNING_JUMP, 1);
 					sm64_play_sound_global(SOUND_MARIO_ON_FIRE);
 				}
 				else if (marioState.burnTimer <= 2)
@@ -1285,15 +1287,15 @@ struct Mario : Lara
 					switch(stand)
 					{
 						case STAND_UNDERWATER:
-							sm64_mario_set_health(marioId, (ox <= 0.2f) ? 0x200 : 0x880); // if low on oxygen, play sound
+							sm64_mario_set_health(marioId, (ox <= 0.2f) ? MARIO_LOW_HEALTH : MARIO_FULL_HEALTH); // if low on oxygen, play sound
 							break;
 						
 						case STAND_ONWATER:
-							sm64_mario_set_health(marioId, 0x880); // don't play low oxygen sound on surface
+							sm64_mario_set_health(marioId, MARIO_FULL_HEALTH); // don't play low oxygen sound on surface
 							break;
 						
 						default:
-							sm64_mario_set_health(marioId, (hp <= 0.2f) ? 0x200 : 0x880); // mario panting animation if low on health
+							sm64_mario_set_health(marioId, (hp <= 0.2f) ? MARIO_LOW_HEALTH : MARIO_FULL_HEALTH); // mario panting animation if low on health
 							break;
 					}
 				}
@@ -1310,29 +1312,30 @@ struct Mario : Lara
 						    (sm64_mario_attack(marioId, spheres[i].center.x, spheres[i].center.y, -spheres[i].center.z, 0) ||
 						     sm64_mario_attack(marioId, spheres[i].center.x, -spheres[i].center.y, -spheres[i].center.z, 0)))
 						{
-							if (stand == STAND_GROUND && i == 0 && target->getEntity().type == TR::Entity::ENEMY_GIANT_MUTANT && (marioState.action == 0x00800457 || marioState.action == 0x0188088A || marioState.action == 0x00880456)) // ACT_MOVE_PUNCHING or ACT_DIVE or ACT_DIVE_SLIDE
+							if (stand == STAND_GROUND && i == 0 && target->getEntity().type == TR::Entity::ENEMY_GIANT_MUTANT 
+								&& (marioState.action == ACT_MOVE_PUNCHING || marioState.action == ACT_DIVE || marioState.action == ACT_DIVE_SLIDE)) 
 							{
 								// mario picks up the giant mutant and swings it
 								bowserSwing = (Character*)target;
 								bowserAngle = angle.y;
 								game->playSound(TR::SND_HIT_MUTANT, target->pos, Sound::PAN);
 								target->deactivate();
-								sm64_set_mario_action(marioId, 0x00000390); // ACT_PICKING_UP_BOWSER
+								sm64_set_mario_action(marioId, ACT_PICKING_UP_BOWSER);
 								state = STATE_UNUSED_5; // swing the mutant
 								break;
 							}
 
 							float damage = 5.f;
-							if (marioState.action == 0x018008AC) // ACT_JUMP_KICK
+							if (marioState.action == ACT_JUMP_KICK)
 								damage += 5;
-							else if (marioState.action == 0x008008A9) // ACT_GROUND_POUND
+							else if (marioState.action == ACT_GROUND_POUND)
 							{
 								damage += 15;
-								sm64_set_mario_action(marioId, 0x01000882); // ACT_TRIPLE_JUMP
+								sm64_set_mario_action(marioId, ACT_TRIPLE_JUMP);
 								sm64_play_sound_global(SOUND_ACTION_HIT);
 							}
 
-							if (marioState.flags & 0x00000004)
+							if (marioState.flags & MARIO_METAL_CAP)
 								damage += 25;
 
 							printf("attacked sphere %d/%d: %.2f %.2f %.2f - %.2f %.2f %.2f\n", i, count, marioState.position[0], -marioState.position[1], -marioState.position[2], spheres[i].center.x, spheres[i].center.y, spheres[i].center.z);
@@ -1347,68 +1350,35 @@ struct Mario : Lara
 					angle.x = (stand == STAND_UNDERWATER) ? marioState.pitchAngle : 0;
 					angle.y = (state == STATE_UNUSED_5) ? bowserAngle : -marioState.faceAngle + M_PI;
 
-					/*
-					 * Logic for x position
-					 */
-					if( state == STATE_UNUSED_5 )
+					// boss figth
+					if( state == STATE_UNUSED_5 ) 
 					{
 						pos.x = marioState.position[0] + (sin(-marioState.faceAngle + M_PI)*32);
-					}
-					else if ( marioState.action == 0x0800034B /*|| marioState.action == 0x0000054C || marioState.action == 0x0000054F*/ )
-					{
-						// ACT_LEDGE_GRAB
-						pos.x= marioState.position[0] - (sin(angle.y)*140);
-					}
-					else if (marioState.action == 0x0000054C || marioState.action == 0x0000054F)
-					{
-						// ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
-						pos.x = marioState.position[0] - (sin(angle.y)*128); 
-					}
-					else
-					{
-						pos.x = marioState.position[0];
-					}
-
-					/*
-					 * Logic for y position
-					 */
-					if ( marioState.action == 0x0800034B /*|| marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F*/ )
-					{
-						// ACT_LEDGE_GRAB
-						pos.y=-marioState.position[1]+722;
-					}
-					else if ( marioState.action == 0x0000054C || marioState.action == 0x0000054D || marioState.action == 0x0000054F )
-					{
-						// ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_SLOW_2 or ACT_LEDGE_CLIMB_FAST
-						pos.y=-marioState.position[1]-128;
-					}
-					else
-					{
 						pos.y=-marioState.position[1];
-					}
-					
-					/*
-					 * Logic for z position
-					 */
-					if(state == STATE_UNUSED_5)
-					{
 						pos.z = -marioState.position[2] + (cos(-marioState.faceAngle + M_PI)*32);
 					}
-					else if ( marioState.action == 0x0800034B /*|| marioState.action == 0x0000054C || marioState.action == 0x0000054F*/ )
+					else if ( marioState.action == ACT_LEDGE_GRAB ) 
 					{
-						// ACT_LEDGE_GRAB
+						
+						pos.x= marioState.position[0] - (sin(angle.y)*140);
+						pos.y=-marioState.position[1]+722;
 						pos.z=-marioState.position[2] - (cos(angle.y)*140);
 					}
-					else if (marioState.action == 0x0000054C || marioState.action == 0x0000054F)
+					else if (marioState.action == ACT_LEDGE_CLIMB_SLOW_1 || marioState.action == ACT_LEDGE_CLIMB_FAST) 
 					{
-						// ACT_LEDGE_CLIMB_SLOW_1 or ACT_LEDGE_CLIMB_FAST
+						pos.x = marioState.position[0] - (sin(angle.y)*128); 
+						pos.y=-marioState.position[1]-128;
 						pos.z=-marioState.position[2] - (cos(angle.y)*128);
 					}
 					else
 					{
-						pos.z=-marioState.position[2];
+						pos.x = marioState.position[0];
+						if(marioState.action == ACT_LEDGE_CLIMB_SLOW_2) 
+							pos.y=-marioState.position[1]-128;
+						else
+							pos.y =-marioState.position[1];
+						pos.z =-marioState.position[2];
 					}
-					
 
 					velocity.x = marioState.velocity[0] * 2;
 					velocity.y = -marioState.velocity[1] * 2;
