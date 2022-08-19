@@ -787,7 +787,7 @@ namespace Debug {
             Core::setDepthTest(true);                        
         }
 
-        void sm64DebugActivePortals(TR::Level *level, SM64::ILevelSM64 *levelSM64)
+        void sm64DebugActivePortals(TR::Level *level, SM64::ILevelSM64 *levelSM64, Lara *lara)
         {
             SM64::MarioPlayer *player=NULL;
             for(int j=0; j<MAX_MARIO_PLAYERS; j++)
@@ -797,6 +797,14 @@ namespace Debug {
                     player= &(levelSM64->marioPlayers[j]);
                 }
             }
+
+            vec3 p = lara->pos;
+            p.y-=MARIO_MIDDLE_Y; 
+
+            Debug::Draw::sphere(p, 256, vec4(1.0f, 1.0f, 1.0f, 0.5f));
+
+            Debug::Draw::box(p-vec3(PORTAL_DISPLACEMENT, PORTAL_DISPLACEMENT, PORTAL_DISPLACEMENT), p+vec3(PORTAL_DISPLACEMENT, 2*PORTAL_DISPLACEMENT, PORTAL_DISPLACEMENT), vec4(1.0f, 1.0f, 1.0f, 0.5f));
+
             for (int j = 0; j < player->crossedPortalsCount; j++) {
                 TR::Room::Portal &p = *(player->crossedPortals[j].portal);
                 TR::Room::Info &ri = level->rooms[player->crossedPortals[j].from].info;

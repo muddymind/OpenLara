@@ -989,8 +989,6 @@ struct LevelSM64 : SM64::ILevelSM64
 	 */
 	void discardDistantPortals(SM64::MarioPlayer *player, vec3 position)
 	{
-		const int displacement = 768;
-
 		for(int i=0; i<player->crossedPortalsCount; i++)
 		{
 			SM64::CrossedPortal *cportal = &(player->crossedPortals[i]);
@@ -1037,20 +1035,20 @@ struct LevelSM64 : SM64::ILevelSM64
 				vec3 p=position;
 
 				//middlepoint for mario's height
-				p.y-=160*IMARIO_SCALE/2; 
+				p.y-=MARIO_MIDDLE_Y; 
 
 				if( 
-					(portal->normal.x!=0 && (abs(cportal->limits[0][0]-p.x) > displacement || // x portal
-					p.y + displacement < cportal->limits[1][0] || p.y - displacement > cportal->limits[1][1] ||
-					p.z + displacement < cportal->limits[2][0] || p.z - displacement > cportal->limits[2][1]))
+					(portal->normal.x!=0 && (abs(cportal->limits[0][0]-p.x) > PORTAL_DISPLACEMENT || // x portal
+					p.y + PORTAL_DISPLACEMENT < cportal->limits[1][0] || p.y - PORTAL_DISPLACEMENT > cportal->limits[1][1] ||
+					p.z + PORTAL_DISPLACEMENT < cportal->limits[2][0] || p.z - PORTAL_DISPLACEMENT > cportal->limits[2][1]))
 					|| 
-					(portal->normal.y!=0 && (abs(cportal->limits[1][0]-p.y) > 2*displacement || // y portal
-					p.x + displacement < cportal->limits[0][0] || p.x - displacement > cportal->limits[0][1] ||
-					p.z + displacement < cportal->limits[2][0] || p.z - displacement > cportal->limits[2][1]))
+					(portal->normal.y!=0 && (abs(cportal->limits[1][0]-p.y) > PORTAL_DISPLACEMENT || // y portal
+					p.x + PORTAL_DISPLACEMENT < cportal->limits[0][0] || p.x - PORTAL_DISPLACEMENT > cportal->limits[0][1] ||
+					p.z + PORTAL_DISPLACEMENT < cportal->limits[2][0] || p.z - PORTAL_DISPLACEMENT > cportal->limits[2][1]))
 					||
-					(portal->normal.z!=0 && (abs(cportal->limits[2][0]-p.z) > displacement || // z portal
-					p.x + displacement < cportal->limits[0][0] || p.x - displacement > cportal->limits[0][1] ||
-					p.y + displacement < cportal->limits[1][0] || p.y - displacement > cportal->limits[1][1])
+					(portal->normal.z!=0 && (abs(cportal->limits[2][0]-p.z) > PORTAL_DISPLACEMENT || // z portal
+					p.x + PORTAL_DISPLACEMENT < cportal->limits[0][0] || p.x - PORTAL_DISPLACEMENT > cportal->limits[0][1] ||
+					p.y + PORTAL_DISPLACEMENT < cportal->limits[1][0] || p.y - PORTAL_DISPLACEMENT > cportal->limits[1][1])
 					)
 				)
 				{

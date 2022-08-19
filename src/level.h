@@ -3195,7 +3195,10 @@ struct Level : IGame {
 
             if(portalDebugger)
             {
-                Debug::Level::sm64DebugActivePortals(&level, levelSM64);
+                Lara *lara = (Lara *)getLara(0);
+                if(lara && lara->isMario){
+                    Debug::Level::sm64DebugActivePortals(&level, levelSM64, lara);
+                }
             }
             
             Core::setDepthTest(true);

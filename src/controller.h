@@ -14,6 +14,9 @@
 
 #define UNLIMITED_AMMO  10000
 
+#define PORTAL_DISPLACEMENT 768
+#define MARIO_MIDDLE_Y 160*IMARIO_SCALE/2
+
 struct Controller;
 
 namespace SM64
