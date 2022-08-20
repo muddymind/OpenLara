@@ -804,6 +804,7 @@ namespace Core {
 	Texture *marioTexture;
 	GLuint marioShader; // rip any platform that doesn't use opengl
 	GLuint metalMarioShader;
+	GLuint currMarioShader; // for compatibility with metal mario
 }
     #include "gapi/gl.h"
 

@@ -162,14 +162,15 @@ struct Mario : Lara
 		//Lara::render(frustum, mesh, type, caustics);
 
 		Core::setCullMode(cmBack);
-		glUseProgram(marioState.flags & MARIO_METAL_CAP ? Core::metalMarioShader : Core::marioShader);
+		Core::currMarioShader = marioState.flags & MARIO_METAL_CAP ? Core::metalMarioShader : Core::marioShader;
+		glUseProgram(Core::currMarioShader);
 
 		GAPI::Texture *dtex = Core::active.textures[sDiffuse];
 
 		if (marioState.flags & MARIO_METAL_CAP)
 		{
 			game->setRoomParams(getRoomIndex(), Shader::MIRROR, 1.2f, 1.0f, 0.2f, 1.0f, false);
-			//environment->bind(sDiffuse);
+			if (environment) environment->bind(sDiffuse);
 			//Core::marioTexture->bind(sDiffuse);
 			//Core::setBlendMode(BlendMode::bmAdd);
 			visibleMask ^= 0xFFFFFFFF;

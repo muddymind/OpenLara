@@ -1834,9 +1834,10 @@ namespace GAPI {
 
 		if (mesh->isMario)
 		{
-			glUniformMatrix4fv( glGetUniformLocation( Core::marioShader, "view" ), 1, GL_FALSE, (GLfloat*)&Core::mView );
-			glUniformMatrix4fv( glGetUniformLocation( Core::marioShader, "projection" ), 1, GL_FALSE, (GLfloat*)&Core::mProj );
-			glUniform1i( glGetUniformLocation( Core::marioShader, "marioTex" ), 0 );
+			glUniform4fv(glGetUniformLocation(Core::currMarioShader, "uViewPos"), 1, (GLfloat*)&Core::viewPos);
+			glUniformMatrix4fv( glGetUniformLocation( Core::currMarioShader, "view" ), 1, GL_FALSE, (GLfloat*)&Core::mView );
+			glUniformMatrix4fv( glGetUniformLocation( Core::currMarioShader, "projection" ), 1, GL_FALSE, (GLfloat*)&Core::mProj );
+			glUniform1i( glGetUniformLocation( Core::currMarioShader, "marioTex" ), 0 );
 			glDrawElements(GL_TRIANGLES, range.iCount, GL_UNSIGNED_SHORT, (uint16_t*)mesh->iBuffer);
 		}
 		else
