@@ -86,9 +86,7 @@ struct LevelSM64 : SM64::ILevelSM64
 
 	virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0)
     {
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_INIT();
-		#endif
 
 		level=newLevel;
 		controller = (Controller *)player;
@@ -121,9 +119,7 @@ struct LevelSM64 : SM64::ILevelSM64
 
         createDynamicObjects();
 
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_END(loadLevelTimeTaken);
-		#endif
     }
 
     struct SM64Surface* marioLoadRoomSurfaces(int roomId, int *room_surfaces_count)
@@ -783,9 +779,7 @@ struct LevelSM64 : SM64::ILevelSM64
 
 	virtual void updateDynamicObjects()
 	{
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_INIT();
-		#endif
 
 		for (int i=0; i< dynamicObjectsCount ; i++)
 		{
@@ -808,9 +802,7 @@ struct LevelSM64 : SM64::ILevelSM64
 			}
 		}
 
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_END_AVERAGED(updateDynamicTimeTaken);
-		#endif
 	}
 
 	void printface(int roomIdx, int faceIdx)
@@ -1108,9 +1100,7 @@ struct LevelSM64 : SM64::ILevelSM64
 	{
 		SM64::MarioPlayer *player = getMarioPlayer(marioId);
 
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_INIT();
-		#endif
 
 		player->crossedPortalsCount=0;
 		getCurrentAndAdjacentRooms(player, player->loadedRooms, &(player->loadedRoomsCount), -1, currentRoomIndex, to, maxDepth);
@@ -1133,9 +1123,7 @@ struct LevelSM64 : SM64::ILevelSM64
 			sm64_level_update_loaded_rooms_list(marioId, player->loadedRooms, player->loadedRoomsCount);
 		}
 
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_END_AVERAGED(player->clipsTimeTaken);
-		#endif
 
 		return;			
 	}
@@ -1207,15 +1195,11 @@ struct LevelSM64 : SM64::ILevelSM64
 
 	virtual void marioTick(int32_t marioId, const struct SM64MarioInputs *inputs, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers)
 	{
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_INIT();
-		#endif
 
 		sm64_mario_tick(marioId, inputs, outState, outBuffers);
 
-		#ifdef DEBUG_RENDER
 		DEBUG_TIME_END_AVERAGED(getMarioPlayer(marioId)->marioTickTimeTaken);
-		#endif
 	}
 
 	SM64::MarioPlayer *getMarioPlayer(int marioId)
