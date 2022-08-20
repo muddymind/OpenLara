@@ -225,7 +225,7 @@ target = (( stop.tv_sec - start.tv_sec ) + ( stop.tv_nsec - start.tv_nsec )/1E9L
 clock_gettime( CLOCK_REALTIME, &stop); \
 target = (target*(59.0/60.0))+((( stop.tv_sec - start.tv_sec ) + ( stop.tv_nsec - start.tv_nsec )/1E9L)*1E3L*1.0/60.0);
 #else
-#define DEBUG_TIME_END(target) do { } while(0)
+#define DEBUG_TIME_END_AVERAGED(target) do { } while(0)
 #endif
 
 #endif // H_MARIOMACROS
