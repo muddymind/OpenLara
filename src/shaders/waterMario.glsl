@@ -7,6 +7,7 @@ uniform vec4 uViewPos;
 uniform vec4 uParam;
 uniform sampler2D marioTex;
 
+v2f vec3 v_position;
 v2f vec3 v_color;
 v2f vec3 v_normal;
 v2f vec3 v_light;
@@ -21,6 +22,7 @@ v2f vec2 v_uv;
 
 	void main()
 	{
+		v_position = position;
 		v_color = color;
 		v_normal = normal;
 		v_light = transpose( mat3( view )) * normalize( vec3( 1 ));
@@ -40,6 +42,11 @@ v2f vec2 v_uv;
 		vec4 texColor = texture2D( marioTex, v_uv );
 		vec3 mainColor = mix( v_color, texColor.rgb, texColor.a ); // v_uv.x >= 0. ? texColor.a : 0. );
 		color = vec4( mainColor * light, 1 );
+
+		float uwSign = 1.0;
+		//uwSign = step(uParam.y, v_position.y);
+		color.xyz = mix(color.xyz, color.xyz * UNDERWATER_COLOR, uwSign);
+		color.xyz = mix(UNDERWATER_COLOR * 0.2, color.xyz, 1);
 	}
 
 #endif

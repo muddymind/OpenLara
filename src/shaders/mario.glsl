@@ -2,6 +2,7 @@ R"====(
 uniform mat4 view;
 uniform mat4 projection;
 uniform vec4 uViewPos;
+uniform vec4 uParam;
 uniform sampler2D marioTex;
 
 v2f vec3 v_color;
