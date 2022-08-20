@@ -3,103 +3,17 @@
 
 #include "core.h"
 
-// some code taken from libsm64 test program
-// i'm so sorry, xproger... call me a noob all you want but i TRIED
 const char *MARIO_SHADER =
-"\n uniform mat4 view;"
-"\n uniform mat4 projection;"
-"\n uniform vec4 uViewPos;"
-"\n uniform sampler2D marioTex;"
-"\n "
-"\n v2f vec3 v_color;"
-"\n v2f vec3 v_normal;"
-"\n v2f vec3 v_light;"
-"\n v2f vec2 v_uv;"
-"\n "
-"\n #ifdef VERTEX"
-"\n "
-"\n     in vec3 position;"
-"\n     in vec3 normal;"
-"\n     in vec3 color;"
-"\n     in vec2 uv;"
-"\n "
-"\n     void main()"
-"\n     {"
-"\n         v_color = color;"
-"\n         v_normal = normal;"
-"\n         v_light = transpose( mat3( view )) * normalize( vec3( 1 ));"
-"\n         v_uv = uv;"
-"\n "
-"\n         gl_Position = projection * view * vec4( position, 1. );"
-"\n     }"
-"\n "
-"\n #endif"
-"\n #ifdef FRAGMENT"
-"\n "
-"\n     out vec4 color;"
-"\n "
-"\n     void main() "
-"\n     {"
-"\n         float light = .5 + .5 * clamp( dot( v_normal, v_light ), 0., 1. );"
-"\n         vec4 texColor = texture2D( marioTex, v_uv );"
-"\n         vec3 mainColor = mix( v_color, texColor.rgb, texColor.a ); // v_uv.x >= 0. ? texColor.a : 0. );"
-"\n         color = vec4( mainColor * light, 1 );"
-"\n     }"
-"\n "
-"\n #endif";
+	#include "shaders/mario.glsl"
+;
 
 const char *METAL_MARIO_SHADER =
-"\n uniform mat4 view;"
-"\n uniform mat4 projection;"
-"\n uniform vec4 uViewPos;"
-"\n uniform samplerCube marioTex;"
-"\n "
-"\n v2f vec3 v_color;"
-"\n v2f vec3 v_normal;"
-"\n v2f vec3 v_light;"
-"\n v2f vec2 v_uv;"
-"\n "
-"\n #ifdef VERTEX"
-"\n "
-"\n     in vec3 position;"
-"\n     in vec3 normal;"
-"\n     in vec3 color;"
-"\n     in vec2 uv;"
-"\n "
-"\n     void main()"
-"\n     {"
-"\n         v_color = color;"
-"\n         v_normal = normal;"
-"\n         v_light = transpose( mat3( view )) * normalize( vec3( 1 ));"
-"\n         v_uv = uv;"
-"\n "
-"\n         gl_Position = projection * view * vec4( position, 1. );"
-"\n     }"
-"\n "
-"\n #endif"
-"\n #ifdef FRAGMENT"
-"\n "
-"\n     out vec4 color;"
-"\n     vec4 vViewVec;	// xyz - dir * dist, w - coord.y * clipPlaneSign"
-"\n "
-"\n     vec3 mulQuat(vec4 q, vec3 v) {"
-"\n         return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + v * q.w);"
-"\n     }"
-"\n "
-"\n     vec3 mulBasis(vec4 rot, vec3 pos, vec3 v) {"
-"\n         return mulQuat(rot, v) + pos;"
-"\n     }"
-"\n "
-"\n     void main() "
-"\n     {"
-"\n         vec3 coord = vec3(1);"
-"\n         vViewVec = vec4((uViewPos.xyz - coord) * 1, 0.0);"
-"\n         vec3 rv = reflect(-normalize(vViewVec.xyz), normalize(v_normal.xyz));"
-"\n         //float light = .5 + .5 * clamp( dot( v_normal, v_light ), 0., 1. );"
-"\n         color = textureCube(marioTex, rv);"
-"\n     }"
-"\n "
-"\n #endif";
+	#include "shaders/metalMario.glsl"
+;
+
+const char *WATER_MARIO_SHADER =
+	#include "shaders/waterMario.glsl"
+;
 
 GLuint shader_compile( const char *shaderContents, size_t shaderContentsLength, GLenum shaderType )
 {
@@ -346,6 +260,7 @@ namespace Game {
         // Put Mario texture in OpenLara
         Core::marioShader = shader_load( MARIO_SHADER );
         Core::metalMarioShader = shader_load( METAL_MARIO_SHADER );
+        Core::waterMarioShader = shader_load( WATER_MARIO_SHADER );
         Core::marioTexture = new Texture(SM64_TEXTURE_WIDTH, SM64_TEXTURE_HEIGHT, 1, FMT_RGBA, 0, marioTextureUint8, true);
     }
 
