@@ -72,6 +72,9 @@ v2f vec3 vLightVec;
 		vec3 rv = reflect(-normalize(vViewVec.xyz), normalize(v_normal.xyz));
 
 		vec4 texColor = textureCube(marioTex, rv);
+		texColor.r *= 0.9;
+		texColor.g *= 0.8;
+		texColor.b *= 0.3;
 		vec3 light = v_light.xyz;
 
 		color = texColor * v_light;
