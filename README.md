@@ -26,15 +26,15 @@ Final quality of life improvements:
 - [x] Add collisions to all entities (doors, trapdoors, trap floors) (muddymind)
 - [x] Mario fall damage
 - [x] Correct mesh loading between rooms (muddymind)
-- [ ] Make Mario's lighting blend in correctly with the rooms he is in (a glsl shader thing...)
+- [x] Make Mario's lighting blend in correctly with the rooms he is in (a glsl shader thing...)
 - [x] Fix Mario's collisions with movable boxes on Atlantis and The Great Pyramid
 - [x] Give Mario animations for certain events like pulling switches
 - [x] Fix Mario's collisions with static meshes
 - [x] Fix Mario being teleported below the map when jumping on an enemy (sometimes)
 - [x] Allow moving Mario with analog stick/joystick
 - [x] Add an option for each player to switch between Mario and Lara
-
-And some more I will remember later on...
+- [ ] Fix City of Vilcabamba water level at the end
+- [ ] Fix Mario not being able to swim inside passages that are 128 units tall (Cistern, Obelisk, Qualopec)
 
 Big thanks to muddymind for the huge help during the development!
 
