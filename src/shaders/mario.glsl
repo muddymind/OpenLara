@@ -57,6 +57,7 @@ v2f vec3 vLightVec;
 		v_light.xyz = uLightColor[1].xyz * light.y + uLightColor[2].xyz * light.z + uLightColor[3].xyz * light.w;
 		v_light.w = 0.0;
 		v_light.xyz += ambient + uLightColor[0].xyz * light.x;
+		v_light *= 1.5;
 
 		gl_Position = projection * view * vec4( position, 1. );
 	}
