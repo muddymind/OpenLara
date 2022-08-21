@@ -1836,6 +1836,9 @@ namespace GAPI {
 		{
 			glUniform4fv(glGetUniformLocation(Core::currMarioShader, "uViewPos"), 1, (GLfloat*)&Core::viewPos);
 			glUniform4fv(glGetUniformLocation(Core::currMarioShader, "uParam"), 1, (GLfloat*)&Core::params);
+			glUniform4fv(glGetUniformLocation(Core::currMarioShader, "uLightPos"), 4, (GLfloat*)&lightPos);
+			glUniform4fv(glGetUniformLocation(Core::currMarioShader, "uLightColor"), 4, (GLfloat*)&lightColor);
+			glUniform4fv(glGetUniformLocation(Core::currMarioShader, "uMaterial"), 1, (GLfloat*)&Core::active.material);
 			glUniformMatrix4fv( glGetUniformLocation( Core::currMarioShader, "view" ), 1, GL_FALSE, (GLfloat*)&Core::mView );
 			glUniformMatrix4fv( glGetUniformLocation( Core::currMarioShader, "projection" ), 1, GL_FALSE, (GLfloat*)&Core::mProj );
 			glUniform1i( glGetUniformLocation( Core::currMarioShader, "marioTex" ), 0 );

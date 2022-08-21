@@ -1,10 +1,14 @@
 R"====(
 #define UNDERWATER_COLOR	vec3(0.6, 0.9, 0.9)
+#define MAX_LIGHTS 4
 
 uniform mat4 view;
 uniform mat4 projection;
 uniform vec4 uViewPos;
 uniform vec4 uParam;
+uniform vec4 uLightPos[MAX_LIGHTS];
+uniform vec4 uLightColor[MAX_LIGHTS]; // xyz - color, w - radius * intensity
+uniform vec4 uMaterial;	// x - diffuse, y - ambient, z - specular, w - alpha
 uniform sampler2D marioTex;
 
 v2f vec3 v_position;
@@ -43,8 +47,7 @@ v2f vec2 v_uv;
 		vec3 mainColor = mix( v_color, texColor.rgb, texColor.a ); // v_uv.x >= 0. ? texColor.a : 0. );
 		color = vec4( mainColor * light, 1 );
 
-		float uwSign = 1.0;
-		//uwSign = step(uParam.y, v_position.y);
+		float uwSign = step(uParam.y, v_position.y);
 		color.xyz = mix(color.xyz, color.xyz * UNDERWATER_COLOR, uwSign);
 		color.xyz = mix(UNDERWATER_COLOR * 0.2, color.xyz, 1);
 	}
