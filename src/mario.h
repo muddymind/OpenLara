@@ -1573,7 +1573,7 @@ struct Mario : Lara
         if (damageTime > 0.0f)
             damageTime = max(0.0f, damageTime - Core::deltaTime);
 
-        if (stand == STAND_UNDERWATER && !dozy) {
+        if (stand == STAND_UNDERWATER && !dozy && !(marioState.flags & MARIO_METAL_CAP)) {
             if (oxygen > 0.0f)
                 oxygen -= Core::deltaTime;
             else
