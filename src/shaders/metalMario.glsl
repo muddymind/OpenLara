@@ -4,10 +4,11 @@ R"====(
 uniform mat4 view;
 uniform mat4 projection;
 uniform vec4 uViewPos;
-uniform vec4 uParam;
+uniform vec4 uParam; // x - time, y - water height, z - clip plane sign, w - clip plane height
 uniform vec4 uLightPos[MAX_LIGHTS];
 uniform vec4 uLightColor[MAX_LIGHTS]; // xyz - color, w - radius * intensity
 uniform vec4 uMaterial;	// x - diffuse, y - ambient, z - specular, w - alpha
+uniform vec4 uAmbient[6];
 uniform samplerCube marioTex;
 
 v2f vec3 v_position;

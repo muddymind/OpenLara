@@ -697,6 +697,7 @@ struct Level : IGame {
 
     virtual void renderModelFull(int modelIndex, bool underwater, Basis *joints) {
         vec4 ambient[6] = { vec4(0), vec4(0), vec4(0), vec4(0), vec4(0), vec4(0) };
+        for (int i=0; i<6; i++) Core::active.ambient[i] = ambient[i];
 
         // opaque
         Core::setBlendMode(bmPremult); // inventory items has fade-out/in alpha
@@ -2229,6 +2230,7 @@ struct Level : IGame {
                         controller->ambient[5] = vec4(Core::active.material.y);
                     }
                 }
+                for (int i=0; i<6; i++) Core::active.ambient[i] = controller->ambient[i];
                 Core::active.shader->setParam(uAmbient, controller->ambient[0], 6);
             }
         }

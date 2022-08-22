@@ -792,6 +792,7 @@ namespace UI {
         Core::updateLights();
 
         vec4 ambient[6] = { vec4(0), vec4(0), vec4(0), vec4(0), vec4(0), vec4(0) };
+        for (int i=0; i<6; i++) Core::active.ambient[i] = ambient[i];
         Core::active.shader->setParam(uAmbient, ambient[0], 6);
     }
 

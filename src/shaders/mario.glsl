@@ -4,10 +4,11 @@ R"====(
 uniform mat4 view;
 uniform mat4 projection;
 uniform vec4 uViewPos;
-uniform vec4 uParam;
+uniform vec4 uParam; // x - time, y - water height, z - clip plane sign, w - clip plane height
 uniform vec4 uLightPos[MAX_LIGHTS];
 uniform vec4 uLightColor[MAX_LIGHTS]; // xyz - color, w - radius * intensity
 uniform vec4 uMaterial;	// x - diffuse, y - ambient, z - specular, w - alpha
+uniform vec4 uAmbient[6];
 uniform sampler2D marioTex;
 
 v2f vec3 v_position;
@@ -25,6 +26,15 @@ v2f vec3 vLightVec;
 	in vec3 normal;
 	in vec3 color;
 	in vec2 uv;
+
+	vec3 calcAmbient(vec3 n)
+	{
+		vec3 sqr = n * n;
+		vec3 pos = step(0.0, n);
+		return	sqr.x * mix(uAmbient[1].xyz, uAmbient[0].xyz, pos.x) +
+				sqr.y * mix(uAmbient[3].xyz, uAmbient[2].xyz, pos.y) +
+				sqr.z * mix(uAmbient[5].xyz, uAmbient[4].xyz, pos.z);
+	}
 
 	void main()
 	{
@@ -52,7 +62,7 @@ v2f vec3 vLightVec;
 		lum.w = dot(normal, normalize(lv3)); att.w = dot(lv3, lv3);
 		vec4 light = max(vec4(0.0), lum) * max(vec4(0.0), vec4(1.0) - att);
 
-		vec3 ambient = vec3(uMaterial.y);
+		vec3 ambient = calcAmbient(v_normal);
 
 		v_light.xyz = uLightColor[1].xyz * light.y + uLightColor[2].xyz * light.z + uLightColor[3].xyz * light.w;
 		v_light.w = 0.0;

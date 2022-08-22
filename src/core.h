@@ -736,6 +736,7 @@ namespace Core {
         short4        viewport; // x, y, width, height
         short4        scissor;  // x, y, width, height
         vec4          material;
+        vec4          ambient[6];
 
     #ifdef _GAPI_GL
         uint32 VAO;
