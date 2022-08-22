@@ -74,6 +74,7 @@ struct Level : IGame {
 
     bool surfaceDebugger=false;
     bool portalDebugger=false;
+    bool marioPositionDebugger=false;
 
     TR::LevelID nextLevel;
 
@@ -2460,12 +2461,16 @@ struct Level : IGame {
             Input::down[ikF5] = false;
         }
         if (Input::down[ikF6]) {
+            marioPositionDebugger=!marioPositionDebugger;
+            Input::down[ikF6] = false;
+        }
+        if (Input::down[ikF7]) {
             Lara *lara = (Lara *)getLara(0);
             if(lara!=NULL && lara->isMario)
             {
                 lara->setDozy(true);
             }
-            Input::down[ikF5] = false;
+            Input::down[ikF7] = false;
         }
     #endif
     }
@@ -3198,6 +3203,15 @@ struct Level : IGame {
                 Lara *lara = (Lara *)getLara(0);
                 if(lara && lara->isMario){
                     Debug::Level::sm64DebugActivePortals(&level, levelSM64, lara);
+                }
+            }
+
+            if(marioPositionDebugger)
+            {
+                Lara *lara = (Lara *)getLara(0);
+                if(lara && lara->isMario){
+                    Mario *mario = (Mario *)lara;
+                    Debug::Level::sm64DebugMarioPosition(mario->marioId, levelSM64);
                 }
             }
             

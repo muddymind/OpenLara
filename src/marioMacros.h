@@ -10,19 +10,19 @@ extern "C" {
 	#include <libsm64/src/decomp/include/surface_terrains.h>
 }
 
-#define ADD_ROOM_FACE_ABSOLUTE(surfaces, surface_ind, room, d, f, slippery) \
+#define ADD_ROOM_FACE_ABSOLUTE(surfaces, surface_ind, room, d, f, slippery, roomId, faceId) \
 	surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, { \
 		{(room.info.x + d->vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
 		{(room.info.x + d->vertices[f.vertices[1]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[1]].pos.z)/IMARIO_SCALE}, \
 		{(room.info.x + d->vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
-	}}; \
+	}, roomId, faceId}; \
 	if (!f.triangle) \
 	{ \
 		surfaces[surface_ind++] = {(int16_t)(slippery ? SURFACE_SLIPPERY : SURFACE_NOT_SLIPPERY), 0, TERRAIN_STONE, { \
 			{(room.info.x + d->vertices[f.vertices[0]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[0]].pos.z)/IMARIO_SCALE}, \
 			{(room.info.x + d->vertices[f.vertices[3]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[3]].pos.z)/IMARIO_SCALE}, \
 			{(room.info.x + d->vertices[f.vertices[2]].pos.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].pos.y/IMARIO_SCALE, -(room.info.z + d->vertices[f.vertices[2]].pos.z)/IMARIO_SCALE}, \
-		}}; \
+		}, roomId, faceId}; \
 	}
 
 
@@ -31,14 +31,14 @@ extern "C" {
 		{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
 		{(d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE}, \
 		{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
-	}}; \
+	}, -1, -1}; \
 	if (!f.triangle) \
 	{ \
 		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
 			{(d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE}, \
 			{(d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE}, \
 			{(d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE, -d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE, -(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE}, \
-		}}; \
+		}, -1, -1}; \
 	}
 
 
@@ -92,7 +92,7 @@ extern "C" {
 		{ v2x , v2y, v2z }, \
 		{ v1x , v1y, v1z }, \
 		{ v0x , v0y, v0z } \
-	}};
+	}, -1, -1};
 
 
 #define CREATE_BOUNDING_BOX(boundingBox, minx, maxx, miny, maxy, minz, maxz) \

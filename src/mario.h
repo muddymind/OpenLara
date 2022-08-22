@@ -26,6 +26,8 @@ extern "C" {
 
 #include "marioMacros.h"
 
+#define SUBMERGE_DISPLACEMENT_DELAY 1.0f
+
 struct MarioMesh
 {
 	size_t num_vertices;
@@ -62,7 +64,8 @@ struct Mario : Lara
 	bool reverseAnim;
 	float marioTicks;
 	bool postInit;
-	int previousRoomIndex=-1;
+	int16 previousRoomIndex;
+	float submergedTime;
 
 	Mesh* TRmarioMesh;
 
@@ -85,6 +88,8 @@ struct Mario : Lara
 		customTimer = 0;
 		marioWaterLevel = 0;
 		switchInteraction = 0;
+		previousRoomIndex = TR::NO_ROOM;
+		submergedTime = 0.0f;
 
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 		{
@@ -253,7 +258,7 @@ struct Mario : Lara
 	void setDozy(bool enable)
 	{
 		dozy = enable;
-		updateMarioVisibleRooms();
+		updateWaterLevel();
 	}
 
 	int getInput()
@@ -353,15 +358,61 @@ struct Mario : Lara
 		return input;
 	}
 
+	void increaseSubmergionTime()
+	{
+		if(marioState.flags & MARIO_METAL_CAP)
+		{
+			submergedTime = 0.0f;
+		}
+
+		submergedTime += Core::deltaTime;
+		if( submergedTime > SUBMERGE_DISPLACEMENT_DELAY)
+		{
+			submergedTime = SUBMERGE_DISPLACEMENT_DELAY;
+		}
+		
+	}
+
+	void decreaseSubmergionTime()
+	{
+		if(marioState.flags & MARIO_METAL_CAP)
+		{
+			submergedTime = 0.0f;
+		}
+
+		submergedTime -= Core::deltaTime;
+		if( submergedTime < 0.0f)
+		{
+			submergedTime = 0.0f;
+		}
+	}
+
 	Stand getStand()
 	{
 		if (marioId < 0) return STAND_GROUND;
 
-		if (dozy) return STAND_UNDERWATER;
+		if (dozy)
+		{
+			increaseSubmergionTime();
+			return STAND_UNDERWATER;
+		}
 
 		if ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_SUBMERGED) // (check if mario is in the water)
-			return (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) ? STAND_ONWATER : STAND_UNDERWATER;
-		else if (marioState.action == ACT_LEDGE_GRAB)
+		{
+			if (marioState.position[1] >= (sm64_get_mario_water_level(marioId) - 100)*IMARIO_SCALE) 
+			{
+				decreaseSubmergionTime();			
+				return STAND_ONWATER;
+			}
+			else
+			{
+				increaseSubmergionTime();
+				return STAND_UNDERWATER;
+			}
+		}
+
+		decreaseSubmergionTime();
+		if (marioState.action == ACT_LEDGE_GRAB)
 			return STAND_HANG;
 		return (!(marioState.action & ACT_FLAG_AIR)) ? STAND_GROUND : STAND_AIR;
 	}
@@ -1156,24 +1207,82 @@ struct Mario : Lara
 	}
 
 	#ifdef DEBUG_RENDER	
-	int oldViewedRooms[256];
-	int oldViewedRoomsCount=0;
+	int prevWaterLevel = -32767;
 	#endif
 
-	void updateMarioVisibleRooms()
+	int getRoomAboveWaterLevel(int16 roomId, vec3 position)
+	{
+		int sx = (pos.x - level->rooms[roomId].info.x) / 1024;
+		int sz = (pos.z - level->rooms[roomId].info.z) / 1024;
+
+		TR::Room::Sector *sector = level->rooms[roomId].getSector(sx, sz);
+		if(sector->roomAbove!=TR::NO_ROOM)
+		{
+			TR::Room *roomAbove = &(level->rooms[sector->roomAbove]);
+			if(roomAbove->flags.water && roomAbove->waterLevelSurface != TR::NO_WATER)
+			{
+				return -roomAbove->waterLevelSurface/IMARIO_SCALE;
+			}
+			else if(roomAbove->flags.water)
+			{
+				return 32767;
+			}
+			else
+			{
+				return -32767;
+			}
+		}
+		return -32767;
+	}
+	
+	void updateWaterLevel()
 	{
 		// Set the water level to SM64
 		if (marioId >= 0)
 		{
-			marioWaterLevel = (getRoom().flags.water || dozy) ? ((getRoom().waterLevelSurface != TR::NO_WATER) ? -getRoom().waterLevelSurface/IMARIO_SCALE : 32767) : -32768;
+			marioWaterLevel = -32768;
+
+			if(dozy)
+			{
+				marioWaterLevel = 32767;
+			}
+			else if(getRoom().flags.water)
+			{
+				if(getRoom().waterLevelSurface != TR::NO_WATER)
+				{
+					int currentRoomWaterLevel = -getRoom().waterLevelSurface/IMARIO_SCALE;
+					int aboveRoomWaterLevel = getRoomAboveWaterLevel(roomIndex, pos);
+
+					if(currentRoomWaterLevel>aboveRoomWaterLevel)
+					{
+						marioWaterLevel = currentRoomWaterLevel;
+					}
+					else
+					{
+						marioWaterLevel = aboveRoomWaterLevel;
+					}
+				}
+				else
+				{
+					marioWaterLevel = 32767;
+				}
+			}
+
+			#ifdef DEBUG_RENDER	
+			if(prevWaterLevel != marioWaterLevel)
+			{
+				printf("New water level: %d\n", marioWaterLevel);
+				prevWaterLevel = marioWaterLevel;
+			}
+			#endif
 			sm64_set_mario_water_level(marioId, marioWaterLevel);
 		}
-		
-		levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 2, true);
 	}
 
 	void update()
 	{
+		updateWaterLevel();
+
 		if(marioId==-1)
 		{
 			#ifdef DEBUG_RENDER	
@@ -1182,8 +1291,9 @@ struct Mario : Lara
 			marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
 			if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 		}
+		
+		levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 2, true);
 
-		updateMarioVisibleRooms();
 		if (level->isCutsceneLevel()) {
 			updateAnimation(true);
 
@@ -1267,6 +1377,17 @@ struct Mario : Lara
 						{
 							currGeom[i] = -currGeom[i];
 							marioGeometry.normal[i] = -marioGeometry.normal[i];
+						}
+					}
+
+					if(submergedTime != 0.0f)
+					{
+						float displacement = submergedTime * 280 / SUBMERGE_DISPLACEMENT_DELAY;
+						for (int i=0; i<3 * marioRenderState.mario.num_vertices; i+=3) 
+						{
+							currGeom[i] -=cos(angle.x)*displacement*sin(angle.y);
+							currGeom[i+1] +=displacement;
+							currGeom[i+2] +=sin(angle.x)*displacement*cos(angle.y);
 						}
 					}
 
@@ -1378,6 +1499,12 @@ struct Mario : Lara
 						pos.z =-marioState.position[2];
 					}
 
+					if(submergedTime != 0.0f)
+					{
+						float displacement = submergedTime * 280 / SUBMERGE_DISPLACEMENT_DELAY;
+						pos.y=-marioState.position[1]+displacement;
+					}
+
 					velocity.x = marioState.velocity[0] * 2;
 					velocity.y = -marioState.velocity[1] * 2;
 					velocity.z = -marioState.velocity[2] * 2;
@@ -1407,7 +1534,7 @@ struct Mario : Lara
         if (damageTime > 0.0f)
             damageTime = max(0.0f, damageTime - Core::deltaTime);
 
-        if (stand == STAND_UNDERWATER && !dozy && !(marioState.flags & MARIO_METAL_CAP)) {
+        if (stand == STAND_UNDERWATER && !dozy) {
             if (oxygen > 0.0f)
                 oxygen -= Core::deltaTime;
             else

@@ -170,7 +170,7 @@ struct LevelSM64 : SM64::ILevelSM64
 				slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
 			}
 
-			ADD_ROOM_FACE_ABSOLUTE(collision_surfaces, level_surface_i, room, d, f, slippery);
+			ADD_ROOM_FACE_ABSOLUTE(collision_surfaces, level_surface_i, room, d, f, slippery, roomId, cface);
 		}
 
 		return collision_surfaces;
@@ -1230,6 +1230,21 @@ struct LevelSM64 : SM64::ILevelSM64
 		player->loadedRoomsCount;
 
 		return player;
+	}
+
+	virtual vec3 getMarioPosition(int marioId)
+	{
+		float *rpos = sm64_get_mario_position(marioId);
+
+		if(rpos == NULL)
+			return vec3(0.0f,0.0f,0.0f);
+
+		vec3 pos;
+		pos.x = rpos[0] * MARIO_SCALE;
+		pos.y =-rpos[1] * MARIO_SCALE;
+		pos.z =-rpos[2] * MARIO_SCALE;
+
+		return pos;
 	}
 };
 
