@@ -415,7 +415,8 @@ struct LevelSM64 : SM64::ILevelSM64
 		case TR::LevelID::LVL_TR1_7A: // Cistern
 			switch (meshIndex)
 			{
-				
+				case 1: //railings where Mario can get stuck if he climbs them.
+					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
 		case TR::LevelID::LVL_TR1_7B:
