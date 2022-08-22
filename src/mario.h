@@ -581,7 +581,7 @@ struct Mario : Lara
 		return result;
 	}
 
-	virtual void checkTrigger(Controller *controller, bool heavy, TR::Camera &waterFlow, bool &flowing)
+	virtual void checkTrigger(Controller *controller, bool heavy, TR::Camera &waterFlow, bool *flowing)
 	{
 		TR::Level::FloorInfo info;
 		getFloorInfo(controller->getRoomIndex(), controller->pos, info);
@@ -790,7 +790,7 @@ struct Mario : Lara
 				}
 				case TR::Action::FLOW :
 					waterFlow = level->cameras[cmd.args];
-					flowing = true;
+					*flowing = true;
 					break;
 				case TR::Action::FLIP : {
 					SaveState::ByteFlags &flip = level->state.flipmaps[cmd.args];
@@ -885,6 +885,7 @@ struct Mario : Lara
 			game->setEffect(this, effect);
 			levelSM64->flipMap(roomsSwitched, roomsSwitchedCount);
 		}
+
 	}
 
 	virtual void doCustomCommand(int curFrame, int prevFrame)
@@ -1306,7 +1307,7 @@ struct Mario : Lara
 			#ifdef DEBUG_RENDER	
 			if(prevWaterLevel != marioWaterLevel)
 			{
-				printf("New water level: %d\n", marioWaterLevel);
+				printf("MarioId: %d - new water level: %d\n", marioId, marioWaterLevel);
 				prevWaterLevel = marioWaterLevel;
 			}
 			#endif
@@ -1384,8 +1385,8 @@ struct Mario : Lara
 				// do mario64 tick here
 				marioTicks += Core::deltaTime;
 				TR::Camera waterFlow;
-				bool flowing;
-				checkTrigger(this, false, waterFlow, flowing);
+				bool flowing = false;
+				checkTrigger(this, false, waterFlow, &flowing);
 
 				while (marioTicks > 1./30)
 				{
