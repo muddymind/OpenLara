@@ -831,6 +831,12 @@ namespace Debug {
             }
         }
 
+        void sm64DebugMarioPosition(int marioId, SM64::ILevelSM64 *levelSM64)
+        {
+            vec3 pos = levelSM64->getMarioPosition(marioId);
+            Debug::Draw::sphere(pos, 64, vec4(1.0f, 1.0f, 1.0f, 0.7f));
+        }
+
         void lights(const TR::Level &level, int room, Controller *lara) {
             glPointSize(8);
             for (int i = 0; i < level.roomsCount; i++)

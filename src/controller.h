@@ -89,6 +89,7 @@ namespace SM64
         virtual void updateDynamicObjects(){}
         virtual void marioTick(int32_t marioId, const struct SM64MarioInputs *inputs, struct SM64MarioState *outState, struct SM64MarioGeometryBuffers *outBuffers){}
         virtual void deleteMarioInstance(int marioId) {}
+        virtual vec3 getMarioPosition(int marioId) {return vec3(0.0f, 0.0f, 0.0f);}
     };
 }
 
