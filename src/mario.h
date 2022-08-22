@@ -569,7 +569,7 @@ struct Mario : Lara
 
 	virtual void applyFlow(TR::Camera &sink)
 	{
-		if (stand != STAND_UNDERWATER) return;
+		if (stand != STAND_UNDERWATER && stand != STAND_ONWATER) return;
 		Lara::applyFlow(sink);
 		sm64_add_mario_position(marioId, flowVelocity.x/MARIO_SCALE, -flowVelocity.y/MARIO_SCALE, -flowVelocity.z/MARIO_SCALE);
 	}
@@ -581,7 +581,7 @@ struct Mario : Lara
 		return result;
 	}
 
-	virtual void checkTrigger(Controller *controller, bool heavy)
+	virtual void checkTrigger(Controller *controller, bool heavy, TR::Camera &waterFlow, bool &flowing)
 	{
 		TR::Level::FloorInfo info;
 		getFloorInfo(controller->getRoomIndex(), controller->pos, info);
@@ -789,7 +789,8 @@ struct Mario : Lara
 					break;
 				}
 				case TR::Action::FLOW :
-					applyFlow(level->cameras[cmd.args]);
+					waterFlow = level->cameras[cmd.args];
+					flowing = true;
 					break;
 				case TR::Action::FLIP : {
 					SaveState::ByteFlags &flip = level->state.flipmaps[cmd.args];
@@ -1382,10 +1383,13 @@ struct Mario : Lara
 			if (flags.active) {
 				// do mario64 tick here
 				marioTicks += Core::deltaTime;
-				checkTrigger(this, false);
+				TR::Camera waterFlow;
+				bool flowing;
+				checkTrigger(this, false, waterFlow, flowing);
 
 				while (marioTicks > 1./30)
 				{
+					if (flowing) applyFlow(waterFlow);
 					if (customTimer) customTimer++;
 					if (reverseAnim)
 					{
