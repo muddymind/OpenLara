@@ -1234,6 +1234,31 @@ struct Mario : Lara
 		}
 		return -32767;
 	}
+
+	int getRoomBellowWaterLevel(int16 roomId, vec3 position)
+	{
+		int sx = (pos.x - level->rooms[roomId].info.x) / 1024;
+		int sz = (pos.z - level->rooms[roomId].info.z) / 1024;
+
+		TR::Room::Sector *sector = level->rooms[roomId].getSector(sx, sz);
+		if(sector->roomBelow!=TR::NO_ROOM)
+		{
+			TR::Room *roomBelow = &(level->rooms[sector->roomBelow]);
+			if(roomBelow->flags.water && roomBelow->waterLevelSurface != TR::NO_WATER)
+			{
+				return -roomBelow->waterLevelSurface/IMARIO_SCALE;
+			}
+			else if(roomBelow->flags.water)
+			{
+				return 32767;
+			}
+			else
+			{
+				return -32767;
+			}
+		}
+		return -32767;
+	}
 	
 	void updateWaterLevel()
 	{
@@ -1266,6 +1291,10 @@ struct Mario : Lara
 				{
 					marioWaterLevel = 32767;
 				}
+			}
+			else
+			{
+				marioWaterLevel = getRoomBellowWaterLevel(roomIndex, pos);
 			}
 
 			#ifdef DEBUG_RENDER	
