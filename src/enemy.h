@@ -2519,6 +2519,7 @@ struct MarioDoppelganger: Enemy
 	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
 	{
 		Core::setCullMode(cmBack);
+		Core::currMarioShader = Core::marioShader;
 		glUseProgram(Core::marioShader);
 
 		GAPI::Texture *dtex = Core::active.textures[sDiffuse];
@@ -2547,6 +2548,8 @@ struct MarioDoppelganger: Enemy
 
 	virtual void update()
 	{
+		updateLights(true);
+
 		if (!target)
 		{
             marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);

@@ -238,7 +238,7 @@ struct Mario : Lara
 			default                : ;
 		}
 
-		if (enemy && 
+		if (enemy && (hitType != TR::HIT_DART || marioState.action != ACT_LEDGE_GRAB) && // don't knockback mario with darts while holding onto a ledge
 		    (
 		     (!(marioState.action & ACT_FLAG_ATTACKING) && (enemy->getEntity().type != TR::Entity::ENEMY_BEAR && enemy->getEntity().type != TR::Entity::ENEMY_REX)) || // (mario is not attacking and the enemy is not one of these, or...)
 		     (!(marioState.action & ACT_FLAG_AIR) && (enemy->getEntity().type == TR::Entity::ENEMY_BEAR || enemy->getEntity().type == TR::Entity::ENEMY_REX)) // (mario is not in the air, and the enemy is one of these)
@@ -281,8 +281,13 @@ struct Mario : Lara
 		if (!camera->spectator)
 		{
 			Input::Joystick &joy = Input::joy[Core::settings.controls[pid].joyIndex];
-			marioInputs.stickX = fabsf(joy.L.x) > INPUT_JOY_DZ_STICK/2.f ? joy.L.x : 0;
-			marioInputs.stickY = fabsf(joy.L.y) > INPUT_JOY_DZ_STICK/2.f ? joy.L.y : 0;
+			bool horizontal = (fabsf(joy.L.x) > INPUT_JOY_DZ_STICK/2.f);
+			bool vertical = (fabsf(joy.L.y) > INPUT_JOY_DZ_STICK/2.f);
+
+			if (horizontal) input |= (joy.L.x < 0.0f) ? LEFT : RIGHT;
+			if (vertical) input |= (joy.L.y < 0.0f) ? FORTH : BACK;
+			marioInputs.stickX = (horizontal && canMove) ? joy.L.x : 0;
+			marioInputs.stickY = (vertical && canMove) ? joy.L.y : 0;
 		}
 
 		float dir;
