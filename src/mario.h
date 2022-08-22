@@ -238,7 +238,7 @@ struct Mario : Lara
 			default                : ;
 		}
 
-		if (enemy && 
+		if (enemy && (hitType != TR::HIT_DART || marioState.action != ACT_LEDGE_GRAB) && // don't knockback mario with darts while holding onto a ledge
 		    (
 		     (!(marioState.action & ACT_FLAG_ATTACKING) && (enemy->getEntity().type != TR::Entity::ENEMY_BEAR && enemy->getEntity().type != TR::Entity::ENEMY_REX)) || // (mario is not attacking and the enemy is not one of these, or...)
 		     (!(marioState.action & ACT_FLAG_AIR) && (enemy->getEntity().type == TR::Entity::ENEMY_BEAR || enemy->getEntity().type == TR::Entity::ENEMY_REX)) // (mario is not in the air, and the enemy is one of these)
