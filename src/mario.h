@@ -281,8 +281,13 @@ struct Mario : Lara
 		if (!camera->spectator)
 		{
 			Input::Joystick &joy = Input::joy[Core::settings.controls[pid].joyIndex];
-			marioInputs.stickX = fabsf(joy.L.x) > INPUT_JOY_DZ_STICK/2.f ? joy.L.x : 0;
-			marioInputs.stickY = fabsf(joy.L.y) > INPUT_JOY_DZ_STICK/2.f ? joy.L.y : 0;
+			bool horizontal = (fabsf(joy.L.x) > INPUT_JOY_DZ_STICK/2.f);
+			bool vertical = (fabsf(joy.L.y) > INPUT_JOY_DZ_STICK/2.f);
+
+			if (horizontal) input |= (joy.L.x < 0.0f) ? LEFT : RIGHT;
+			if (vertical) input |= (joy.L.y < 0.0f) ? FORTH : BACK;
+			marioInputs.stickX = (horizontal && canMove) ? joy.L.x : 0;
+			marioInputs.stickY = (vertical && canMove) ? joy.L.y : 0;
 		}
 
 		float dir;
