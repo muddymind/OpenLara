@@ -33,8 +33,8 @@ Final quality of life improvements:
 - [x] Fix Mario being teleported below the map when jumping on an enemy (sometimes)
 - [x] Allow moving Mario with analog stick/joystick
 - [x] Add an option for each player to switch between Mario and Lara
-- [ ] Fix City of Vilcabamba water level at the end
-- [ ] Fix Mario not being able to swim inside passages that are 128 units tall (Cistern, Obelisk, Qualopec)
+- [x] Fix City of Vilcabamba water level at the end (muddymind)
+- [x] Fix Mario not being able to swim inside passages that are 128 units tall (Cistern, Obelisk, Qualopec) (muddymind)
 
 Big thanks to muddymind for the huge help during the development!
 
