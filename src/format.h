@@ -1590,6 +1590,10 @@ namespace TR {
             0, -100, 180,   ::Box(vec3(-256, -100, -256), vec3(256, 100, 100)), false, true
         };
 
+        Limit PICKUP_MARIO = {
+            0, -100, 180,   ::Box(vec3(-300, -100, -300), vec3(300, 100, 300)), false, true
+        };
+
         Limit PICKUP_UNDERWATER = {
             -200, -350, 45, ::Box(vec3(-512, -512, -512), vec3(512, 512, 512)), false, true
         };
