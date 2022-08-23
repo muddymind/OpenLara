@@ -540,11 +540,12 @@ namespace UI {
     #undef MAX_CHARS
 
     void init(IGame *game) {
-        ensureLanguage(Core::settings.audio.language);
-        UI::game = game;
-        showHelp = false;
-        helpTipTime = 5.0f;
-        hintTime = subsTime = 0.0f;
+		ensureLanguage(Core::settings.audio.language);
+		UI::game = game;
+		showHelp = false;
+		helpTipTime = 5.0f;
+		hintTime = subsTime = 0.0f;
+		pickups.clear();
     }
 
     void deinit() {
