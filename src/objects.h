@@ -1922,7 +1922,7 @@ struct Bullet : Controller {
             default : ;
         }
 
-        if (directHit)
+        if (directHit && !lara->isMario)
             game->playSound(lara->stand == Character::STAND_UNDERWATER ? TR::SND_HIT_UNDERWATER : TR::SND_HIT, lara->pos, Sound::PAN);
 
         game->removeEntity(this);
