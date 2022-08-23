@@ -1079,7 +1079,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     wcex.lpfnWndProc    = &WndProc;
     RegisterClassEx(&wcex);
 
-    hWnd = CreateWindow(wcex.lpszClassName, "OpenLara", WS_OVERLAPPEDWINDOW, r.left, r.top, r.right - r.left, r.bottom - r.top, 0, 0, 0, 0);
+    hWnd = CreateWindow(wcex.lpszClassName, "OpenLara SM64", WS_OVERLAPPEDWINDOW, r.left, r.top, r.right - r.left, r.bottom - r.top, 0, 0, 0, 0);
 
     ContextCreate();
 
