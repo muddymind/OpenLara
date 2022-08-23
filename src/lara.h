@@ -1850,7 +1850,15 @@ struct Lara : Character {
         switch (type) {
             case TR::Entity::SCION_PICKUP_QUALOPEC : limit = (isMario) ? &TR::Limits::SCION_MARIO : &TR::Limits::SCION; break;
             case TR::Entity::SCION_PICKUP_HOLDER   : limit = &TR::Limits::SCION_HOLDER; break;
-            default : limit = level->rooms[getRoomIndex()].flags.water ? &TR::Limits::PICKUP_UNDERWATER : &TR::Limits::PICKUP;
+            default : 
+                if(!isMario)
+                {
+                    limit = level->rooms[getRoomIndex()].flags.water ? &TR::Limits::PICKUP_UNDERWATER : &TR::Limits::PICKUP;
+                }
+                else
+                {
+                    limit = level->rooms[getRoomIndex()].flags.water ? &TR::Limits::PICKUP_UNDERWATER : &TR::Limits::PICKUP_MARIO;
+                }                
         }
 
         if (!checkInteraction(controller, limit, true))

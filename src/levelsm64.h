@@ -131,6 +131,12 @@ struct LevelSM64 : SM64::ILevelSM64
 		TR::Room::Data *d = &room.data;
 		TR::Room::Info *info = &room.info;
 
+		bool foundfloors[level->floorsCount];
+		for(int i=0; i<level->floorsCount; i++)
+		{
+			foundfloors[i]=0;
+		}
+
 		// Count the number of static surface triangles
 		for (int j = 0; j < d->fCount; j++)
 		{
@@ -141,6 +147,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 
 		struct SM64Surface *collision_surfaces = (struct SM64Surface *)malloc(sizeof(struct SM64Surface) * (*room_surfaces_count));
+
 
 		// Generate all static surface triangles
 		for (int cface = 0; cface < d->fCount; cface++)
@@ -168,9 +175,37 @@ struct LevelSM64 : SM64::ILevelSM64
 			if(controller) {
 				controller->getFloorInfo(roomId, vec3(room.info.x + midX, topY, room.info.z + midZ), info); 
 				slippery = (abs(info.slantX) > 2 || abs(info.slantZ) > 2);
+				foundfloors[info.floorIndex]=true;
 			}
 
 			ADD_ROOM_FACE_ABSOLUTE(collision_surfaces, level_surface_i, room, d, f, slippery, roomId, cface);
+		}
+
+		// This next block is to add special dynamic objects for pickups floating in the air.
+		if(controller)
+		{
+			for (int z = 0; z < room.zSectors; z++)
+			{
+                for (int x = 0; x < room.xSectors; x++)
+				{
+					TR::Room::Sector *sector = level->rooms[roomId].getSector(x, z);
+					if(sector->boxIndex < level->boxesCount && !foundfloors[sector->floorIndex])
+					{
+						
+						TR::Box box = level->boxes[sector->boxIndex];
+						TR::Level::FloorInfo finfo;
+						controller->getFloorInfo(roomId, vec3((box.minX+box.maxX)/2.0,0.0, (box.minZ+box.maxZ)/2.0), finfo);
+
+						if(finfo.trigger == TR::Level::Trigger::PICKUP)
+						{
+							#ifdef DEBUG_RENDER	
+							printf("created exceptional dynamic object with box %d in room %d for sector xz(%d,%d)\n", sector->boxIndex, roomId, x, z);
+							#endif
+							createExceptionalDynamicObject(sector->boxIndex);
+						}
+					}
+				}                    
+			}
 		}
 
 		return collision_surfaces;
@@ -220,16 +255,9 @@ struct LevelSM64 : SM64::ILevelSM64
 
 		for (int cface = 0; cface < d->fCount; cface++)
 		{
-			if(roomId==12 && cface==404)
-			{
-				printface(12, 404);
-			}
 			FaceLimits * fl=NULL;
 
 			TR::Face &f = d->faces[cface];
-			
-			// //we don't care about water, non vertical faces or triangles
-			// if (f.water || f.normal.y != 0 || f.triangle) continue;
 
 			if( f.normal.y == 0 && !f.water && !f.triangle )
 			{
@@ -419,28 +447,34 @@ struct LevelSM64 : SM64::ILevelSM64
 					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
-		case TR::LevelID::LVL_TR1_7B:
+		case TR::LevelID::LVL_TR1_7B: // Tomb of Tihocan
 			switch (meshIndex)
 			{
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_CUT_2:
+		case TR::LevelID::LVL_TR1_CUT_2: // cut scene after Pierres's fight
 			switch (meshIndex)
 			{
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_8A:
+		case TR::LevelID::LVL_TR1_8A: // city of kahmoon
 			switch (meshIndex)
 			{
-				
+				case 9: // Door with very weird mesh - Mario has stumbles against it
+					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
 		case TR::LevelID::LVL_TR1_8B: // Obelisk of Khamoon
 			switch (meshIndex)
 			{
-				
+				case 3: // Furniture where Mario can get stuck
+				case 4: // Furniture where Mario can get stuck
+				case 5:	// Furniture where Mario can get stuck
+				case 6: // Furniture where Mario can get stuck
+				case 9: // Panel with weird mesh that Mario stumbles against
+					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
 		case TR::LevelID::LVL_TR1_8C:
@@ -693,6 +727,40 @@ struct LevelSM64 : SM64::ILevelSM64
 		cObj.ID = sm64_surface_object_create(&obj);
 		cObj.transform = obj.transform;
 		cObj.entity = entity;
+
+		dynamicObjects[dynamicObjectsCount++] = cObj;
+		free(obj.surfaces);
+	}
+
+	void createExceptionalDynamicObject(int boxId)
+	{
+		struct SM64SurfaceObject obj;
+		
+		obj.surfaceCount=12;
+		obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+		size_t surface_ind = 0;
+
+		int limits[3][2];
+
+		limits[0][0] = level->boxes[boxId].minX;
+		limits[0][1] = level->boxes[boxId].maxX;
+
+		limits[1][0] = level->boxes[boxId].floor;
+		limits[1][1] = level->boxes[boxId].floor+150;
+
+		limits[2][0] = level->boxes[boxId].minZ;
+		limits[2][1] = level->boxes[boxId].maxZ;
+
+		ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
+
+		for (int j=0; j<3; j++) obj.transform.position[j] = 0.0f;
+		for (int j=0; j<3; j++) obj.transform.eulerRotation[j] = 0.0f;
+
+		SM64::MarioControllerObj cObj;
+		cObj.spawned = false;
+		cObj.ID = sm64_surface_object_create(&obj);
+		cObj.transform = obj.transform;
+		cObj.entity = NULL;
 
 		dynamicObjects[dynamicObjectsCount++] = cObj;
 		free(obj.surfaces);
