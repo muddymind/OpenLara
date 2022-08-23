@@ -134,7 +134,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		bool foundfloors[level->floorsCount];
 		for(int i=0; i<level->floorsCount; i++)
 		{
-			foundfloors[i]=0;
+			foundfloors[i]=false;
 		}
 
 		// Count the number of static surface triangles
@@ -147,7 +147,6 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 
 		struct SM64Surface *collision_surfaces = (struct SM64Surface *)malloc(sizeof(struct SM64Surface) * (*room_surfaces_count));
-
 
 		// Generate all static surface triangles
 		for (int cface = 0; cface < d->fCount; cface++)
@@ -186,7 +185,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		{
 			for (int z = 0; z < room.zSectors; z++)
 			{
-                for (int x = 0; x < room.xSectors; x++)
+				for (int x = 0; x < room.xSectors; x++)
 				{
 					TR::Room::Sector *sector = level->rooms[roomId].getSector(x, z);
 					if(sector->boxIndex < level->boxesCount && !foundfloors[sector->floorIndex])
