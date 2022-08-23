@@ -41,6 +41,21 @@ extern "C" {
 		}, -1, -1}; \
 	}
 
+#define ADD_MESH_FACE_RELATIVE_CUSTOM_SCALING(surfaces, surface_ind, d, f, scale) \
+	surfaces[surface_ind++] = {(int16_t)(SURFACE_DEFAULT), 0, TERRAIN_STONE, { \
+		{(int)((d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE*scale), (int)(-d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE*scale), (int)(-(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE*scale)}, \
+		{(int)((d->vertices[f.vertices[1]].coord.x)/IMARIO_SCALE*scale), (int)(-d->vertices[f.vertices[1]].coord.y/IMARIO_SCALE*scale), (int)(-(d->vertices[f.vertices[1]].coord.z)/IMARIO_SCALE*scale)}, \
+		{(int)((d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE*scale), (int)(-d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE*scale), (int)(-(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE*scale)}, \
+	}, -1, -1}; \
+	if (!f.triangle) \
+	{ \
+		surfaces[surface_ind++] = {(int16_t)((int16_t)(SURFACE_DEFAULT)), 0, TERRAIN_STONE, { \
+			{(int)((d->vertices[f.vertices[0]].coord.x)/IMARIO_SCALE*scale), (int)(-d->vertices[f.vertices[0]].coord.y/IMARIO_SCALE*scale), (int)(-(d->vertices[f.vertices[0]].coord.z)/IMARIO_SCALE*scale)}, \
+			{(int)((d->vertices[f.vertices[3]].coord.x)/IMARIO_SCALE*scale), (int)(-d->vertices[f.vertices[3]].coord.y/IMARIO_SCALE*scale), (int)(-(d->vertices[f.vertices[3]].coord.z)/IMARIO_SCALE*scale)}, \
+			{(int)((d->vertices[f.vertices[2]].coord.x)/IMARIO_SCALE*scale), (int)(-d->vertices[f.vertices[2]].coord.y/IMARIO_SCALE*scale), (int)(-(d->vertices[f.vertices[2]].coord.z)/IMARIO_SCALE*scale)}, \
+		}, -1, -1}; \
+	}
+
 
 #define X_GEOMETRY_TRANSFORMATION(x, displacement) (x+displacement)/IMARIO_SCALE
 #define Y_GEOMETRY_TRANSFORMATION(y) -y/IMARIO_SCALE

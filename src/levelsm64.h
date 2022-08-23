@@ -678,16 +678,53 @@ struct LevelSM64 : SM64::ILevelSM64
 		struct SM64SurfaceObject obj;
 		obj.surfaceCount = 0;
 		
-		obj.surfaceCount=12;
+		if(entity->type == TR::Entity::TRAP_BOULDER)
+		{
+			int mindex = level->meshOffsets[model->mStart];
+			if (mindex || model->mStart <= 0)
+			{
+				TR::Mesh &d = level->meshes[mindex];
+				for (int j = 0; j < d.fCount; j++)
+				{
+					obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+				}
+			}
+		}
+		else
+		{
+			obj.surfaceCount=12;
+		}
+			
+
+
 		obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
 		size_t surface_ind = 0;
 
 		switch(entity->type)
 		{
+			case TR::Entity::TRAP_BOULDER:
+			{
+				int mindex = level->meshOffsets[model->mStart];
+				if (mindex || model->mStart<= 0)
+				{
+					TR::Mesh *d = &(level->meshes[mindex]);
+					for (int j = 0; j < d->fCount; j++)
+					{
+						TR::Face &f = d->faces[j];
+
+						ADD_MESH_FACE_RELATIVE_CUSTOM_SCALING(obj.surfaces, surface_ind, d, f, 1.15f);
+					}
+				}
+				break;
+			}
+
 			case TR::Entity::TRAP_FLOOR:
+			{
 				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -10, 10, -128, 128);
 				break;
+			}
 			default:
+			{
 
 				int limits[3][2];
 				for(int i=0; i<3; i++)
@@ -717,6 +754,7 @@ struct LevelSM64 : SM64::ILevelSM64
 				}
 				ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
 				break;
+			}
 		}
 
 		updateTransformation(entity, &obj.transform);
@@ -774,14 +812,15 @@ struct LevelSM64 : SM64::ILevelSM64
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !e->isDoor() && !e->isBlock() && e->type != TR::Entity::MOVING_BLOCK && e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 && e->type != TR::Entity::DRAWBRIDGE)
+			if (!(e->type >= 68 && e->type <= 70) && !e->isDoor() && !e->isBlock() && e->type != TR::Entity::MOVING_BLOCK && e->type != TR::Entity::TRAP_FLOOR 
+			&& e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 && e->type != TR::Entity::DRAWBRIDGE && e->type != TR::Entity::TRAP_BOULDER)
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
 			if (!model)
 				continue;
 
-			if (e->isDoor() || e->isTrapdoor() || e->type == TR::Entity::DRAWBRIDGE || e->type == TR::Entity::TRAP_FLOOR || e->isBlock())
+			if (e->isDoor() || e->isTrapdoor() || e->isBlock() || e->type == TR::Entity::DRAWBRIDGE || e->type == TR::Entity::TRAP_FLOOR || e->type == TR::Entity::TRAP_BOULDER)
 			{
 				create_door(i, model);
 				continue;
