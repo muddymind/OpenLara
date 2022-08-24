@@ -289,6 +289,8 @@ struct Mario : Lara
 			marioInputs.stickX = (horizontal && canMove) ? joy.L.x : 0;
 			marioInputs.stickY = (vertical && canMove) ? joy.L.y : 0;
 		}
+		else
+			marioInputs.stickX = marioInputs.stickY = 0;
 
 		float dir;
 		float spd = 0;
