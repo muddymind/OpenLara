@@ -723,7 +723,7 @@ struct Mario : Lara
 
 			case TR::Level::Trigger::PAD :
 			case TR::Level::Trigger::ANTIPAD :
-				if (pos.y != info.floor) return;
+				if (abs(pos.y - info.floor)>2.0f) return;
 				break;
 
 			case TR::Level::Trigger::HEAVY :
