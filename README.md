@@ -2,8 +2,10 @@
 Classic Tomb Raider open-source engine
 
 ### Super Mario 64 in Tomb Raider by Headshotnoby
-This is still a work in progress.
 ![Mario in Tomb Raider](screenshot.png)
+
+If you find any issues or bugs, please [open an issue](https://github.com/headshot2017/OpenLara/issues) and provide a savefile and steps to reproduce the bug.
+Savefile is located in `%appdata%\OpenLara\savegame.dat`
 
 Levels tested and finished as Mario:
 - [x] The Caves
