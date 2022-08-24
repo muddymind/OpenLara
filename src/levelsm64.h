@@ -482,10 +482,12 @@ struct LevelSM64 : SM64::ILevelSM64
 				
 			}
 			break;
-		case TR::LevelID::LVL_TR1_10A:
+		case TR::LevelID::LVL_TR1_10A: // Natla's Mines
 			switch (meshIndex)
 			{
-				
+				case 10: // coal cart - Mario get's stuck
+				case 16: // coal cart - Mario get's stuck
+					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
 		case TR::LevelID::LVL_TR1_CUT_3:
@@ -678,7 +680,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		struct SM64SurfaceObject obj;
 		obj.surfaceCount = 0;
 		
-		if(entity->type == TR::Entity::TRAP_BOULDER)
+		if(entity->type == TR::Entity::TRAP_BOULDER /*|| entity->type == TR::Entity::MOVING_OBJECT*/)
 		{
 			int mindex = level->meshOffsets[model->mStart];
 			if (mindex || model->mStart <= 0)
@@ -703,6 +705,7 @@ struct LevelSM64 : SM64::ILevelSM64
 		switch(entity->type)
 		{
 			case TR::Entity::TRAP_BOULDER:
+			//case TR::Entity::MOVING_OBJECT:
 			{
 				int mindex = level->meshOffsets[model->mStart];
 				if (mindex || model->mStart<= 0)
@@ -812,15 +815,17 @@ struct LevelSM64 : SM64::ILevelSM64
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 
-			if (!(e->type >= 68 && e->type <= 70) && !e->isDoor() && !e->isBlock() && e->type != TR::Entity::MOVING_BLOCK && e->type != TR::Entity::TRAP_FLOOR 
-			&& e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 && e->type != TR::Entity::DRAWBRIDGE && e->type != TR::Entity::TRAP_BOULDER)
+			if (!(e->type >= 68 && e->type <= 70) && !e->isDoor() && !e->isBlock() && e->type != TR::Entity::MOVING_BLOCK 
+				&& e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 
+				&& e->type != TR::Entity::DRAWBRIDGE && e->type != TR::Entity::TRAP_BOULDER && e->type != TR::Entity::MOVING_OBJECT)
 				continue;
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
 			if (!model)
 				continue;
 
-			if (e->isDoor() || e->isTrapdoor() || e->isBlock() || e->type == TR::Entity::DRAWBRIDGE || e->type == TR::Entity::TRAP_FLOOR || e->type == TR::Entity::TRAP_BOULDER)
+			if (e->isDoor() || e->isTrapdoor() || e->isBlock() || e->type == TR::Entity::DRAWBRIDGE || e->type == TR::Entity::TRAP_FLOOR 
+				|| e->type == TR::Entity::TRAP_BOULDER || e->type == TR::Entity::MOVING_OBJECT) 
 			{
 				create_door(i, model);
 				continue;
