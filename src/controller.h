@@ -21,17 +21,6 @@ struct Controller;
 
 namespace SM64
 {
-    struct MarioControllerObj
-    {
-        MarioControllerObj() : ID(0), entity(NULL), spawned(false) {}
-
-        uint32_t ID;
-        struct SM64ObjectTransform transform;
-        TR::Entity* entity;
-        vec3 offset;
-        bool spawned;
-    };
-
     struct CrossedPortal
     {
         int from;
@@ -77,9 +66,6 @@ namespace SM64
 
         double updateDynamicTimeTaken=0.0;
         double loadLevelTimeTaken=0.0;
-
-        struct MarioControllerObj dynamicObjects[4096];
-	    int dynamicObjectsCount=0;
 
         virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0){}
         virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, vec3 position, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false){}

@@ -25,6 +25,330 @@ struct LevelSM64 : SM64::ILevelSM64
 	 */
 	#define CLIPPER_DISPLACEMENT 40
 
+	/**
+	 * @brief The maximum joints available for a dynamic object 
+	 */
+	#define MAX_DYNAMIC_OBJECT_JOINTS 10
+	#define MAX_DYNAMIC_OBJECTS 1024
+
+	struct MarioControllerObj
+    {   
+        int jointsCount;
+        uint32_t id[MAX_DYNAMIC_OBJECT_JOINTS];
+        struct SM64ObjectTransform transforms[MAX_DYNAMIC_OBJECT_JOINTS];
+        TR::Entity *entity;
+		Controller *controller;
+        bool spawned;
+
+        MarioControllerObj() : jointsCount(0), entity(NULL), controller(NULL), spawned(false) 
+        {
+			jointsCount = 0;
+            for(int i=0; i<MAX_DYNAMIC_OBJECT_JOINTS; i++)
+            {
+                id[i] = -1;
+            }
+        }
+
+		void Update(TR::Level *level)
+		{
+			if(!spawned || !entity || controller == NULL) return;
+
+			controller->updateJoints();
+
+			for(int i=0; i<jointsCount; i++)
+			{
+				UpdateSingleJoint(level, i);
+			}
+
+			if(spawned)
+			{
+				if (entity->type == TR::Entity::TRAP_FLOOR && !controller->isCollider())
+				{
+					spawned = false;
+					sm64_surface_object_delete(id[0]);
+				}
+			}
+		}
+
+		void UpdateSingleJoint(TR::Level *level, int i, bool updateSM64=true)
+		{
+			if(i>=jointsCount) return;
+
+			struct SM64ObjectTransform *transform = &(transforms[i]);
+
+			transform->position[0] = controller->joints[i].pos[0];
+			transform->position[1] = -controller->joints[i].pos[1];
+			transform->position[2] = -controller->joints[i].pos[2];
+
+			vec3(0.0f,0.0f,0.0f).copyToArray(transform->eulerRotation);
+
+			if(entity->type == TR::Entity::TRAP_FLOOR)
+			{
+				//This is composed by multiple meshes (joints).
+				//We grab the x,z position of the entire entity and the z from one of the joints.
+				transform->position[0] = controller->pos[0];
+				transform->position[1] = -controller->joints[i].pos[1];
+				transform->position[2] = -controller->pos[2];
+			}
+			else if(entity->isBlock())
+			{
+				// y position from the joint has different slight offsets that differ depending on the level.
+				// using the controller y position and offsetting from the middle point to the ground fixes it.
+				// Why does the joint position is wrong? Who knows?
+				transform->position[1] = -controller->pos[1]+512;
+
+				// for the x and z displacements we just increase Marios' interaction limits.
+			}
+			else
+			{
+				vec3 newAngle = ((controller->animation.frameA->getAngle(level->version, i)*vec3(-1,1,-1))+controller->angle)/ M_PI * 180.f;
+
+				newAngle.copyToArray(transform->eulerRotation);
+			}
+
+			for(int i=0; i<3; i++)
+			{
+				transform->position[i] = transform->position[i]/MARIO_SCALE;
+			}
+
+			if(updateSM64) sm64_surface_object_move(id[i], transform);
+		}
+
+		bool useOriginalGeometry()
+		{
+			return entity->type == TR::Entity::TRAP_BOULDER 
+				|| entity->type == TR::Entity::CABIN
+				|| entity->type == TR::Entity::BRIDGE_1
+				|| entity->type == TR::Entity::BRIDGE_2
+				|| entity->type == TR::Entity::BRIDGE_3;
+		}
+
+		SM64Surface* CreateCabin(uint32_t *count)
+		{
+			//We just need to define the roof and floor. The clipper boxes algorithm will do the rest.
+			*count = 2*12;
+
+			SM64Surface* result = (SM64Surface*)malloc(sizeof(SM64Surface)*(*count));
+
+			int idx = 0;
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1550, 1512, 32, 132, -1024, 1024); //top
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1550, 1512, 1215, 1310, -1024, 1024); //bottom
+			
+			return result;
+		}
+
+		SM64Surface* GetCustomGeometry(int joint, uint32_t *count)
+		{
+			switch (entity->type)
+			{
+				case TR::Entity::CABIN:
+					switch (joint)
+					{
+						case 1:
+							return CreateCabin(count);
+						
+						default:
+							return NULL;
+					}
+				
+				default:
+					return NULL;
+			}
+		}
+
+		void debugObject(TR::Level *level, TR::Model *model, int i)
+		{
+			printf("Cabin joint: %d\n", i);
+			int limits[3][2];
+			for(int i=0; i<3; i++)
+			{
+				limits[i][0]=INT16_MAX;
+				limits[i][1]=INT16_MIN;
+			}
+
+			int index = level->meshOffsets[model->mStart + i];
+			if (index || model->mStart + i <= 0)
+			{
+				TR::Mesh *d = &(level->meshes[index]);
+				for (int fi = 0; fi < d->fCount; fi++)
+				{
+					TR::Face &f = d->faces[fi]; 
+					for(int v = 0; v<(f.triangle ? 3 : 4); v++)
+					{
+						for(int w = 0; w < 3; w++)
+						{
+							if(d->vertices[f.vertices[v]].coord[w] < limits[w][0]) limits[w][0] = d->vertices[f.vertices[v]].coord[w];
+							if(d->vertices[f.vertices[v]].coord[w] > limits[w][1]) limits[w][1] = d->vertices[f.vertices[v]].coord[w];
+						}
+					}
+				}
+			}
+			printf("x(%d,%d) y(%d,%d) z(%d,%d)\n", limits[0][0], limits[0][1], limits[1][0], limits[1][1], limits[2][0], limits[2][1]);	
+		}
+
+		void LoadDynamicObject(TR::Level *level, TR::Entity* e)
+		{
+			entity = e;
+			controller = (Controller*) e->controller;
+			spawned = true;
+
+			controller->updateJoints();
+
+			TR::Model *model = &level->models[e->modelIndex - 1];
+			jointsCount = model->mCount;
+
+			// number of joints override
+			switch(e->type)
+			{
+				case TR::Entity::TRAP_FLOOR:
+					jointsCount = 1;
+					break;
+			}
+
+			TR::AnimFrame *frame = controller->animation.frameA;
+
+			for(int i=0; i<jointsCount; i++)
+			{				
+				struct SM64SurfaceObject obj;
+				obj.surfaceCount = 0;
+
+				obj.surfaces = GetCustomGeometry(i, &(obj.surfaceCount));
+
+				if(obj.surfaces!=NULL)
+				{
+					UpdateSingleJoint(level, i, false);
+					obj.transform = transforms[i];
+					id[i] = sm64_surface_object_create(&obj);
+					free(obj.surfaces);
+					continue;
+				}
+				
+				if(useOriginalGeometry())
+				{
+					int index = level->meshOffsets[model->mStart + i];
+					if (index || model->mStart + i <= 0)
+					{
+						TR::Mesh &d = level->meshes[index];
+						for (int j = 0; j < d.fCount; j++)
+							obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
+					}
+				}
+				else
+				{
+					obj.surfaceCount=12;
+				}
+
+				// if(entity->type == TR::Entity::CABIN)
+				// {
+				//		debugObject(level, model, i);
+				// }
+					
+				obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+				size_t surface_ind = 0;
+
+				if(useOriginalGeometry())
+				{
+					int index = level->meshOffsets[model->mStart + i];
+					if (index || model->mStart + i <= 0)
+					{
+						TR::Mesh *d = &(level->meshes[index]);
+						for (int j = 0; j < d->fCount; j++)
+						{
+							TR::Face &f = d->faces[j];
+							ADD_MESH_FACE_RELATIVE(obj.surfaces, surface_ind, d, f);
+						}
+					}				
+				}
+				else
+				{
+					switch(entity->type)
+					{
+						case TR::Entity::TRAP_FLOOR:
+						{
+							ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -10, 10, -128, 128);
+							break;
+						}
+						default:
+						{
+
+							int limits[3][2];
+							for(int j=0; j<3; j++)
+							{
+								limits[j][0]=INT16_MAX;
+								limits[j][1]=INT16_MIN;
+							}
+
+							int index = level->meshOffsets[model->mStart + i];
+							if (index || model->mStart + i <= 0)
+							{
+								TR::Mesh *d = &(level->meshes[index]);
+								for (int fi = 0; fi < d->fCount; fi++)
+								{
+									TR::Face &f = d->faces[fi]; 
+									for(int v = 0; v<(f.triangle ? 3 : 4); v++)
+									{
+										for(int w = 0; w < 3; w++)
+										{
+											if(d->vertices[f.vertices[v]].coord[w] < limits[w][0]) limits[w][0] = d->vertices[f.vertices[v]].coord[w];
+											if(d->vertices[f.vertices[v]].coord[w] > limits[w][1]) limits[w][1] = d->vertices[f.vertices[v]].coord[w];
+										}
+									}
+								}
+							}
+							if(entity->isTrapdoor())
+							{
+								// raise the top limit of the trapdoor a bit to avoid Mario crossing the portal to the next room which would cause havoc with the camera.
+								limits[1][0]-=10;
+							}
+							ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
+							break;
+						}
+					}
+				}				
+
+				UpdateSingleJoint(level, i, false);
+				obj.transform = transforms[i];
+				id[i] = sm64_surface_object_create(&obj);
+				free(obj.surfaces);
+			}
+		}
+
+		void LoadSpecialDynamicObject(TR::Level *level, int boxId)
+		{
+			struct SM64ObjectTransform *transform = &(transforms[0]);
+			spawned = false;
+	
+			struct SM64SurfaceObject obj;
+			obj.surfaceCount=12;
+			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
+			size_t surface_ind = 0;
+
+			int limits[3][2];
+
+			limits[0][0] = level->boxes[boxId].minX;
+			limits[0][1] = level->boxes[boxId].maxX;
+
+			limits[1][0] = level->boxes[boxId].floor;
+			limits[1][1] = level->boxes[boxId].floor+150;
+
+			limits[2][0] = level->boxes[boxId].minZ;
+			limits[2][1] = level->boxes[boxId].maxZ;
+
+			ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
+
+			for (int j=0; j<3; j++) transform->position[j] = 0.0f;
+			for (int j=0; j<3; j++) transform->eulerRotation[j] = 0.0f;
+
+			obj.transform = *transform;
+			id[0] = sm64_surface_object_create(&obj);
+			free(obj.surfaces);
+		}
+    };
+
+	struct MarioControllerObj dynamicObjects[1024];
+	int dynamicObjectsCount=0;
+
+
 	struct FaceLimits
 	{
 		int roomId, faceId; //only for debugging necessities
@@ -336,6 +660,22 @@ struct LevelSM64 : SM64::ILevelSM64
 		boundingBox->vCount = 8;
 		boundingBox->vertices = (TR::Mesh::Vertex *)malloc(sizeof(TR::Mesh::Vertex)*boundingBox->vCount);
 
+		if( abs(box.max.x-box.min.x) <2*CLIPPER_DISPLACEMENT)
+		{
+			box.max.x+=CLIPPER_DISPLACEMENT;
+			box.min.x-=CLIPPER_DISPLACEMENT;
+		}
+		if( abs(box.max.y-box.min.y) <2*CLIPPER_DISPLACEMENT)
+		{
+			box.max.y+=CLIPPER_DISPLACEMENT;
+			box.min.y-=CLIPPER_DISPLACEMENT;
+		}
+		if( abs(box.max.z-box.min.z) <2*CLIPPER_DISPLACEMENT)
+		{
+			box.max.z+=CLIPPER_DISPLACEMENT;
+			box.min.z-=CLIPPER_DISPLACEMENT;
+		}
+
 		CREATE_BOUNDING_BOX(boundingBox, box.min.x, box.max.x, box.min.y, box.max.y, box.min.z, box.max.z);
 
 		return boundingBox;
@@ -487,6 +827,7 @@ struct LevelSM64 : SM64::ILevelSM64
 			{
 				case 10: // coal cart - Mario get's stuck
 				case 16: // coal cart - Mario get's stuck
+				case 20: // cabin door - Mario get's stuck
 					return MESH_LOADING_BOUNDING_BOX;
 			}
 			break;
@@ -671,139 +1012,9 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
 	}
 
-	void create_door(int entityIndex, TR::Model *model)
-	{
-		TR::Entity *entity = &(level->entities[entityIndex]);
-
-		Controller *controller = (Controller *)entity->controller;
-		TR::AnimFrame *frame = controller->animation.frameA;
-		struct SM64SurfaceObject obj;
-		obj.surfaceCount = 0;
-		
-		if(entity->type == TR::Entity::TRAP_BOULDER /*|| entity->type == TR::Entity::MOVING_OBJECT*/)
-		{
-			int mindex = level->meshOffsets[model->mStart];
-			if (mindex || model->mStart <= 0)
-			{
-				TR::Mesh &d = level->meshes[mindex];
-				for (int j = 0; j < d.fCount; j++)
-				{
-					obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
-				}
-			}
-		}
-		else
-		{
-			obj.surfaceCount=12;
-		}
-			
-
-
-		obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
-		size_t surface_ind = 0;
-
-		switch(entity->type)
-		{
-			case TR::Entity::TRAP_BOULDER:
-			//case TR::Entity::MOVING_OBJECT:
-			{
-				int mindex = level->meshOffsets[model->mStart];
-				if (mindex || model->mStart<= 0)
-				{
-					TR::Mesh *d = &(level->meshes[mindex]);
-					for (int j = 0; j < d->fCount; j++)
-					{
-						TR::Face &f = d->faces[j];
-
-						ADD_MESH_FACE_RELATIVE_CUSTOM_SCALING(obj.surfaces, surface_ind, d, f, 1.15f);
-					}
-				}
-				break;
-			}
-
-			case TR::Entity::TRAP_FLOOR:
-			{
-				ADD_CUBE_GEOMETRY_NON_TRANSFORMED(obj.surfaces, surface_ind, -128, 128, -10, 10, -128, 128);
-				break;
-			}
-			default:
-			{
-
-				int limits[3][2];
-				for(int i=0; i<3; i++)
-				{
-					limits[i][0]=INT16_MAX;
-					limits[i][1]=INT16_MIN;
-				}
-
-				int index = level->meshOffsets[model->mStart];
-				TR::Mesh *d = &(level->meshes[index]);
-				for (int i = 0; i < d->fCount; i++)
-				{
-					TR::Face &f = d->faces[i]; 
-					for(int j = 0; j<(f.triangle ? 3 : 4); j++)
-					{
-						for(int w = 0; w < 3; w++)
-						{
-							if(d->vertices[f.vertices[j]].coord[w] < limits[w][0]) limits[w][0] = d->vertices[f.vertices[j]].coord[w];
-							if(d->vertices[f.vertices[j]].coord[w] > limits[w][1]) limits[w][1] = d->vertices[f.vertices[j]].coord[w];
-						}
-					}
-				}
-				if(entity->isTrapdoor())
-				{
-					// raise the top limit of the trapdoor a bit to avoid Mario crossing the portal to the next room which would cause havoc with the camera.
-					limits[1][0]-=10;
-				}
-				ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
-				break;
-			}
-		}
-
-		updateTransformation(entity, &obj.transform);
-
-		SM64::MarioControllerObj cObj;
-		cObj.spawned = true;
-		cObj.ID = sm64_surface_object_create(&obj);
-		cObj.transform = obj.transform;
-		cObj.entity = entity;
-
-		dynamicObjects[dynamicObjectsCount++] = cObj;
-		free(obj.surfaces);
-	}
-
 	void createExceptionalDynamicObject(int boxId)
 	{
-		struct SM64SurfaceObject obj;
-		
-		obj.surfaceCount=12;
-		obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
-		size_t surface_ind = 0;
-
-		int limits[3][2];
-
-		limits[0][0] = level->boxes[boxId].minX;
-		limits[0][1] = level->boxes[boxId].maxX;
-
-		limits[1][0] = level->boxes[boxId].floor;
-		limits[1][1] = level->boxes[boxId].floor+150;
-
-		limits[2][0] = level->boxes[boxId].minZ;
-		limits[2][1] = level->boxes[boxId].maxZ;
-
-		ADD_CUBE_GEOMETRY_ALTERNATE(obj.surfaces, surface_ind, 0, 0, limits);
-
-		for (int j=0; j<3; j++) obj.transform.position[j] = 0.0f;
-		for (int j=0; j<3; j++) obj.transform.eulerRotation[j] = 0.0f;
-
-		SM64::MarioControllerObj cObj;
-		cObj.spawned = false;
-		cObj.ID = sm64_surface_object_create(&obj);
-		cObj.transform = obj.transform;
-		cObj.entity = NULL;
-
-		dynamicObjects[dynamicObjectsCount++] = cObj;
-		free(obj.surfaces);
+		dynamicObjects[dynamicObjectsCount++].LoadSpecialDynamicObject(level, boxId);
 	}
 
     void createDynamicObjects()
@@ -817,75 +1028,16 @@ struct LevelSM64 : SM64::ILevelSM64
 
 			if (!(e->type >= 68 && e->type <= 70) && !e->isDoor() && !e->isBlock() && e->type != TR::Entity::MOVING_BLOCK 
 				&& e->type != TR::Entity::TRAP_FLOOR && e->type != TR::Entity::TRAP_DOOR_1 && e->type != TR::Entity::TRAP_DOOR_2 
-				&& e->type != TR::Entity::DRAWBRIDGE && e->type != TR::Entity::TRAP_BOULDER && e->type != TR::Entity::MOVING_OBJECT)
+				&& e->type != TR::Entity::DRAWBRIDGE && e->type != TR::Entity::TRAP_BOULDER && e->type != TR::Entity::MOVING_OBJECT
+				&& e->type != TR::Entity::CABIN)
 				continue;
+
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
 			if (!model)
 				continue;
 
-			if (e->isDoor() || e->isTrapdoor() || e->isBlock() || e->type == TR::Entity::DRAWBRIDGE || e->type == TR::Entity::TRAP_FLOOR 
-				|| e->type == TR::Entity::TRAP_BOULDER || e->type == TR::Entity::MOVING_OBJECT) 
-			{
-				create_door(i, model);
-				continue;
-			}
-
-			struct SM64SurfaceObject obj;
-			obj.surfaceCount = 0;
-			obj.transform.position[0] = e->x / MARIO_SCALE;
-			obj.transform.position[1] = -e->y / MARIO_SCALE;
-			obj.transform.position[2] = -e->z / MARIO_SCALE;
-			for (int j=0; j<3; j++) obj.transform.eulerRotation[j] = (j == 1) ? float(e->rotation) / M_PI * 180.f : 0;
-
-			size_t surface_ind = 0;
-			vec3 offset(0,0,0);
-			bool doOffsetY = true;
-			int16 topPointSign = 1;
-			if (e->type >= 68 && e->type <= 70) topPointSign = -1;
-			for (int c = 0; c < model->mCount; c++)
-			{
-				int index = level->meshOffsets[model->mStart + c];
-				if (index || model->mStart + c <= 0)
-				{
-					TR::Mesh &d = level->meshes[index];
-					for (int j = 0; j < d.fCount; j++)
-						obj.surfaceCount += (d.faces[j].triangle) ? 1 : 2;
-				}
-			}
-			obj.surfaces = (SM64Surface*)malloc(sizeof(SM64Surface) * obj.surfaceCount);
-
-			for (int c = 0; c < model->mCount; c++)
-			{
-				int index = level->meshOffsets[model->mStart + c];
-				if (index || model->mStart + c <= 0)
-				{
-					TR::Mesh *d = &(level->meshes[index]);
-					for (int j = 0; j < d->fCount; j++)
-					{
-						TR::Face &f = d->faces[j];
-
-						if (!offset.y) offset.y = topPointSign * max(offset.y, (float)d->vertices[f.vertices[0]].coord.y, max((float)d->vertices[f.vertices[1]].coord.y, (float)d->vertices[f.vertices[2]].coord.y, (f.triangle) ? 0.f : (float)d->vertices[f.vertices[3]].coord.y));
-
-						ADD_MESH_FACE_RELATIVE(obj.surfaces, surface_ind, d, f);
-					}
-				}
-			}
-			
-			obj.transform.position[0] += offset.x/MARIO_SCALE;
-			obj.transform.position[1] += offset.y/MARIO_SCALE;
-			obj.transform.position[2] += offset.z/MARIO_SCALE;
-
-			// and finally add the object (this returns an uint32_t which is the object's ID)
-			SM64::MarioControllerObj cObj;
-			cObj.spawned = true;
-			cObj.ID = sm64_surface_object_create(&obj);
-			cObj.transform = obj.transform;
-			cObj.entity = e;
-			cObj.offset = offset;
-
-			dynamicObjects[dynamicObjectsCount++] = cObj;
-			free(obj.surfaces);
+			dynamicObjects[dynamicObjectsCount++].LoadDynamicObject(level, e);	
 		}
 	}
 
@@ -895,23 +1047,7 @@ struct LevelSM64 : SM64::ILevelSM64
 
 		for (int i=0; i< dynamicObjectsCount ; i++)
 		{
-			struct SM64::MarioControllerObj *obj = &(dynamicObjects[i]);
-
-			if (!obj->entity || !obj->spawned || (obj->entity->type >= 68 && obj->entity->type <= 70)) continue;
-
-			if (obj->entity->controller)
-			{
-				Controller *c = (Controller*)obj->entity->controller;
-
-				updateTransformation(obj->entity, &obj->transform);
-				sm64_surface_object_move(obj->ID, &obj->transform);
-
-				if (obj->entity->type == TR::Entity::TRAP_FLOOR && !c->isCollider())
-				{
-					obj->spawned = false;
-					sm64_surface_object_delete(obj->ID);
-				}
-			}
+			dynamicObjects[i].Update(level);
 		}
 
 		DEBUG_TIME_END_AVERAGED(updateDynamicTimeTaken);
