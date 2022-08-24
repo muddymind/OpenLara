@@ -1061,8 +1061,8 @@ namespace Debug {
 
             if(levelSM64)
             {
-                sprintf(buf, "SM64: RoomsLoaded = %d, LevelLoadTime: %.2fms, dynamicObjects: %d, dynamicObjectsUpdateTime: %.3fms", 
-                    level.roomsCount, levelSM64->loadLevelTimeTaken, levelSM64->dynamicObjectsCount, levelSM64->updateDynamicTimeTaken);
+                sprintf(buf, "SM64: RoomsLoaded = %d, LevelLoadTime: %.2fms, dynamicObjectsUpdateTime: %.3fms", 
+                    level.roomsCount, levelSM64->loadLevelTimeTaken, levelSM64->updateDynamicTimeTaken);
                 Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
 
                 for(int i=0; i<MAX_MARIO_PLAYERS; i++)
