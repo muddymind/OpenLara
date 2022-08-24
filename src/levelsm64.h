@@ -126,13 +126,18 @@ struct LevelSM64 : SM64::ILevelSM64
 		SM64Surface* CreateCabin(uint32_t *count)
 		{
 			//We just need to define the roof and floor. The clipper boxes algorithm will do the rest.
-			*count = 2*12;
+			*count = 7*12;
 
 			SM64Surface* result = (SM64Surface*)malloc(sizeof(SM64Surface)*(*count));
 
 			int idx = 0;
-			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1550, 1512, 32, 132, -1024, 1024); //top
-			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1550, 1512, 1215, 1310, -1024, 1024); //bottom
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1600, 1600, 0, 232, -1100, 1100); //top
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1600, 1600, 1215, 1310, -1100, 1100); //bottom
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1600, -1450, 232, 1215, -1100, 1100); //right
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, 1412, 1600, 232, 1215, -1100, 1100); //left
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1600, 1600, 232, 1215, -1100, -1000); //back
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, -1600, -50, 232, 1215, 1000, 1100); //front right
+			ADD_CUBE_GEOMETRY(result, idx, 0, 0, 550, 1600, 232, 1215, 1000, 1100); //front left
 			
 			return result;
 		}
