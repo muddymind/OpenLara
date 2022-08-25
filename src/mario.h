@@ -419,6 +419,8 @@ struct Mario : Lara
 		decreaseSubmergionTime();
 		if (marioState.action == ACT_LEDGE_GRAB)
 			return STAND_HANG;
+		if ((marioState.action & ACT_GROUP_MASK) == ACT_GROUP_LADDER)
+			return STAND_HANG;
 		return (!(marioState.action & ACT_FLAG_AIR)) ? STAND_GROUND : STAND_AIR;
 	}
 
@@ -590,6 +592,15 @@ struct Mario : Lara
 			hit(LARA_MAX_HEALTH/3., NULL, TR::HIT_LAVA);
 			return;
 		}
+
+		bool climbDirection[2][2]={{false,false},{false,false}};
+
+		if (info.climb & 0x01) climbDirection[1][0] = true; //+Z (it's inverted)
+		if (info.climb & 0x02) climbDirection[0][1] = true; //+X
+		if (info.climb & 0x04) climbDirection[1][1] = true; //-Z (it's inverted)
+		if (info.climb & 0x08) climbDirection[0][0] = true; //+X
+
+		sm64_set_mario_climbing_vector(marioId, climbDirection);
 
 		if (!info.trigCmdCount) return; // has no trigger
 
@@ -1515,7 +1526,7 @@ struct Mario : Lara
 						pos.y=-marioState.position[1];
 						pos.z = -marioState.position[2] + (cos(-marioState.faceAngle + M_PI)*32);
 					}
-					else if ( marioState.action == ACT_LEDGE_GRAB ) 
+					else if ( marioState.action == ACT_LEDGE_GRAB || (marioState.action & ACT_GROUP_MASK) == ACT_GROUP_LADDER) 
 					{
 						
 						pos.x= marioState.position[0] - (sin(angle.y)*140);
