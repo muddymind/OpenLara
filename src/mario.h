@@ -60,6 +60,7 @@ struct Mario : Lara
 
 	int customTimer;
 	int switchInteraction;
+	vec3 addPos;
 	int marioWaterLevel;
 	bool reverseAnim;
 	float marioTicks;
@@ -983,7 +984,7 @@ struct Mario : Lara
 						sm64_set_mario_action(marioId, ACT_WATER_PUNCH);
 					}
 					sm64_set_mario_velocity(marioId, 0, 0, 0);
-					if (marioState.action != ACT_WATER_PUNCH) sm64_add_mario_position(marioId, 0, ((marioWaterLevel - 80) - (marioState.position[1]/MARIO_SCALE) < 400.0f) ? -0.625f : 1, 0);
+					if (marioState.action != ACT_WATER_PUNCH) addPos.y = ((marioWaterLevel - 80) - (marioState.position[1]/MARIO_SCALE) < 400.0f) ? -1.25f : 2;
 				}
 				break;
 
@@ -1401,6 +1402,7 @@ struct Mario : Lara
 				{
 					if (flowing) applyFlow(waterFlow);
 					if (customTimer) customTimer++;
+					if (addPos.x || addPos.y || addPos.z) sm64_add_mario_position(marioId, addPos.x, addPos.y, addPos.z);
 					if (reverseAnim)
 					{
 						int16_t rot[3];
@@ -1442,6 +1444,8 @@ struct Mario : Lara
 					if (marioState.fallDamage)
 						hit(marioState.fallDamage / 8 * 250);
 				}
+
+				addPos.x = addPos.y = addPos.z = 0;
 
 				for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
 				for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
