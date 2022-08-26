@@ -313,7 +313,7 @@ const char *helpText =
     "While running at full speed: Action - Dive attack@"
     "While moving: Press opposite direction then Jump to do a high flip jump@"
     "While swimming: Press Jump at a rhythm to swim faster@"
-    "While swimming: Hold Down key then press Jump to jump out of the water@";
+    "While swimming: Hold the Down key then press Jump to jump out of the water@";
     "Some enemies are easier to kill with Slide kicks and Dive attacks@";
 
 #include "lang/en.h"
