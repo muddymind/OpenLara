@@ -310,10 +310,11 @@ const char *helpText =
     "While standing: Crouch and Jump - Backflip@"
     "While moving: Crouch and Jump - Long jump@"
     "While moving: Crouch and Action - Slide kick@"
-    "While moving: Press opposite direction then Jump to do a high flip jump@"
     "While running at full speed: Action - Dive attack@"
+    "While moving: Press opposite direction then Jump to do a high flip jump@"
     "While swimming: Press Jump at a rhythm to swim faster@"
     "While swimming: Hold Down key then press Jump to jump out of the water@";
+    "Some enemies are easier to kill with Slide kicks and Dive attacks@";
 
 #include "lang/en.h"
 #include "lang/fr.h"
