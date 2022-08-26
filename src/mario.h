@@ -247,6 +247,7 @@ struct Mario : Lara
 		   )
 		{
 			sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
+			if (hitType == TR::HIT_LIGHTNING) sm64_set_mario_action(marioId, ACT_SHOCKED);
 		}
 
 		if (health > 0.0f)
