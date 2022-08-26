@@ -1591,7 +1591,7 @@ namespace TR {
         };
 
         Limit PICKUP_MARIO = {
-            0, -100, 180,   ::Box(vec3(-300, -100, -300), vec3(300, 100, 300)), false, true
+            0, -100, 180,   ::Box(vec3(-350, -100, -350), vec3(350, 100, 350)), false, true
         };
 
         Limit PICKUP_UNDERWATER = {

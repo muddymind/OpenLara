@@ -473,7 +473,14 @@ struct Mario : Lara
 
 	virtual bool doPickUp()
 	{
-		if ((marioState.velocity[0] != 0 || marioState.velocity[1] != 0 || marioState.velocity[2] != 0) && state != STATE_TREAD) return false;
+		if (!(marioState.action & ACT_FLAG_STATIONARY) &&
+		    marioState.action != ACT_BRAKING &&
+		    marioState.action != ACT_MOVE_PUNCHING &&
+		    marioState.action != ACT_DECELERATING &&
+		    marioState.action != ACT_BRAKING &&
+		    state != STATE_TREAD)
+		    return false;
+		if (state == STATE_PICK_UP) return false;
 
 		int room = getRoomIndex();
 

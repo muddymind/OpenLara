@@ -1912,7 +1912,7 @@ struct Lara : Character {
 
 
     virtual bool checkInteraction(Controller *controller, const TR::Limits::Limit *limit, bool action) {
-        if ((state != STATE_STOP && state != STATE_TREAD && state != STATE_PUSH_PULL_READY) || !action || !emptyHands())
+        if ((!isMario && state != STATE_STOP && state != STATE_TREAD && state != STATE_PUSH_PULL_READY) || !action || !emptyHands())
             return false;
 
         vec3 tmpAngle = controller->angle;
@@ -2586,7 +2586,7 @@ struct Lara : Character {
         if (waterDepth > 0.0f && !(animation.frameIndex % 4))
             game->waterDrop(getJoint(jointChest).pos + vec3(randf(), 0.0f, randf()) * 64.0f, 96.0f, 0.02f);
 
-        if ((input == ACTION) && (state == STATE_STOP) && emptyHands() && doPickUp())
+        if ((input == ACTION) && (isMario || state == STATE_STOP) && emptyHands() && doPickUp())
             return state;
 
         if (checkClimb())
