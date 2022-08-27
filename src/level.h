@@ -1015,6 +1015,7 @@ struct Level : IGame {
     Level(Stream &stream) : level(stream), waitTrack(false), isEnded(false), cutsceneWaitTimer(0.0f), animTexTimer(0.0f), statsTimeDelta(0.0f) {
         paused = false;
         levelSM64 = new LevelSM64();
+        gameEndTimer = 0;
 
         level.simpleItems = Core::settings.detail.simple == 1;
         level.initModelIndices();
@@ -2266,6 +2267,9 @@ struct Level : IGame {
             UI::update();
             return;
         }
+
+        if (gameEndTimer)
+            return;
 
         if (level.isCutsceneLevel() && waitTrack) {
             if (!sndTrack && TR::LEVEL_INFO[level.id].track != TR::NO_TRACK) {
@@ -3698,6 +3702,23 @@ struct Level : IGame {
             UI::begin(float(Core::width) / float(Core::height));
             atlasGlyphs->bind(sDiffuse);
             UI::textOut(vec2(0, 480 - 16), STR_LOADING, UI::aCenter, UI::width);
+            UI::end();
+            return;
+        }
+
+        if (gameEndTimer && !inventory->video) {
+            gameEndTimer -= Core::deltaTime;
+            if (gameEndTimer < 0)
+            {
+                inventory->titleTimer = 0.0f;
+                inventory->toggle(0, Inventory::PAGE_OPTION);
+                gameEndTimer = 0;
+            }
+
+            Core::setTarget(NULL, NULL, RT_CLEAR_COLOR | RT_STORE_COLOR);
+            UI::begin(float(Core::width) / float(Core::height));
+            atlasGlyphs->bind(sDiffuse);
+            UI::textOut(vec2(0, 240 - 32), tysm, UI::aCenter, UI::width);
             UI::end();
             return;
         }

@@ -119,6 +119,8 @@ struct RoomDesc {
 };
 
 struct IGame {
+    float gameEndTimer;
+
     virtual ~IGame() {}
     virtual void         loadLevel(TR::LevelID id) {}
     virtual void         loadNextLevel() {}

@@ -316,6 +316,12 @@ const char *helpText =
     "While swimming: Hold the Down key then press Jump to jump out of the water@"
     "Some enemies are easier to kill with Slide kicks and Dive attacks@";
 
+const char *tysm =
+	"Thank you for playing!@"
+	"@"
+	"OpenLara by XProger@"
+	"Super Mario 64 mod by Headshotnoby and muddymind@";
+
 #include "lang/en.h"
 #include "lang/fr.h"
 #include "lang/de.h"

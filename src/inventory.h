@@ -1,6 +1,13 @@
 #ifndef H_INVENTORY
 #define H_INVENTORY
 
+extern "C" {
+	#include <libsm64/src/libsm64.h>
+	#include <libsm64/src/decomp/include/PR/ultratypes.h>
+	#include <libsm64/src/decomp/include/audio_defines.h>
+	#include <libsm64/src/decomp/include/seq_ids.h>
+}
+
 #include "format.h"
 #include "controller.h"
 #include "ui.h"
@@ -1119,7 +1126,7 @@ struct Inventory {
         playVideo = false;
         UI::showSubs(STR_EMPTY);
         game->playTrack(0);
-        if (game->getLevel()->isTitle()) {
+        if (game->getLevel()->isTitle() && !game->gameEndTimer) {
             titleTimer = 0.0f;
             toggle(0, Inventory::PAGE_OPTION);
         }
@@ -1132,6 +1139,11 @@ struct Inventory {
             Input::lastState[1] == cInventory || Input::lastState[1] == cAction)
         {
             if (video) {
+                if (TR::isGameEnded)
+                {
+                    sm64_play_sound_global(SOUND_MENU_THANK_YOU_PLAYING_MY_GAME);
+                    game->gameEndTimer = 10;
+                }
                 skipVideo();
             } else if (titleTimer > 1.0f && titleTimer < 2.5f) {
                 titleTimer = 1.0f;
@@ -1142,6 +1154,11 @@ struct Inventory {
             video->update();
             if (video->isPlaying)
                 return;
+            if (TR::isGameEnded)
+            {
+                sm64_play_sound_global(SOUND_MENU_THANK_YOU_PLAYING_MY_GAME);
+                game->gameEndTimer = 10;
+            }
             skipVideo();
         }
 
