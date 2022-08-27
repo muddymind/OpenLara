@@ -307,9 +307,14 @@ namespace Game {
             }
         }
 
-        if (!level->level.isTitle()) {
-            if (Input::lastState[0] == cStart) level->addPlayer(0);
-            if (Input::lastState[1] == cStart) level->addPlayer(1);
+        // Only check for cStart if the inventory is not active.
+        // Otherwise if cStart was binded to item selection key in inventory it would reset the player.
+        if(!inventory->isActive())
+        {
+            if (!level->level.isTitle()) {
+                if (Input::lastState[0] == cStart) level->addPlayer(0);
+                if (Input::lastState[1] == cStart) level->addPlayer(1);
+            }
         }
 
         float dt = Core::deltaTime;
