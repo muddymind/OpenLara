@@ -92,7 +92,7 @@ const char *STR_DE[] = { ""
     , "Lara"
 	, "Marios Bewegungen"
 	, "Kamera"
-	, "Panzer Steuerung"
+	, "Tanksteuerung"
     // controls
     , "Links", "Rechts", "Vorw~arts", "R~uckw~arts", "Springen", "Gehen", "Handlung", "Waffe ziehen", "Umsehen", "Ducken", "Sprinten", "Rolle", "Inventar", "Start"
     , STR_KEYS
