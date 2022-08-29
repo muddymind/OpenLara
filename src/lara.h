@@ -330,6 +330,7 @@ struct Lara : Character {
     int32       networkInput;
 
     bool surfaceDebuggerEnabled = false;
+    bool marioTankMode = false;
 
 #ifdef _DEBUG
     //uint16      *dbgBoxes;

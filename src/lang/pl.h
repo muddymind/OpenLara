@@ -90,6 +90,9 @@ const char *STR_PL[] = { ""
     , "Posta)c" // thanks Sezz
     , "Mario"
     , "Lara"
+	, "Metoda Ruchu Mario"
+	, "Kamera"
+	, "Czołg"
     // controls
     , "Lewo", "Prawo", "Prz)od", "Ty}l", "Skok", "Ch)od", "Akcja", "Bro)n", "Rozgl|adanie si|e", "Kucanie", "Sprint", "Przewr)ot", "Ekwipunek", "Menu pauzy"
     , STR_KEYS

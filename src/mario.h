@@ -151,7 +151,11 @@ struct Mario : Lara
 		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
 
 		marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
-		if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
+		if (marioId >= 0) 
+		{
+			sm64_set_mario_tank_mode(marioId, marioTankMode);			
+			sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
+		}
 	}
 
 	vec3 getPos() {return vec3(marioState.position[0], -marioState.position[1], -marioState.position[2]);}
@@ -1336,7 +1340,11 @@ struct Mario : Lara
 			printf("actual mario loading\n");
 			#endif
 			marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
-			if (marioId >= 0) sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
+			if (marioId >= 0) 
+			{
+				sm64_set_mario_tank_mode(marioId, marioTankMode);
+				sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
+			}
 		}
 		
 		levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 2, true);

@@ -1170,6 +1170,10 @@ struct Level : IGame {
             e.controller = initController(i, (e.type == TR::Entity::LARA && Core::settings.controls[0].character == 0));
             if (e.type == TR::Entity::LARA || ((level.version & TR::VER_TR1) && e.type == TR::Entity::CUT_1))
                 players[0] = (Lara*)e.controller;
+            if(e.type == TR::Entity::LARA)
+            {
+                players[0]->marioTankMode = Core::settings.controls[0].marioTankMode==1;
+            }
         }
 
         Sound::listenersCount = 1;
@@ -1200,6 +1204,7 @@ struct Level : IGame {
         if (!players[index]) {
             players[index] = (Lara*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f, (Core::settings.controls[index].character == 0));
             players[index]->camera->cameraIndex = index;
+            players[index]->marioTankMode = Core::settings.controls[index].marioTankMode == 1;
             Sound::listenersCount = 2;
         } else if (index == 1) {
             removePlayer(index);

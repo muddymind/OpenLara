@@ -90,6 +90,9 @@ const char *STR_FI[] = { "Suomi"
     , "Hahmo" // thanks Ligu
     , "Mario"
     , "Lara"
+	, "Mario's Movement"
+	, "Camera"
+	, "Tank"
     // controls
     , "Vasen", "Oikea", "Juoksu", "Taaksep~ain", "Hypp~a~a", "K~avely", "Toiminto", "Aseet Esiin", "Katso", "Konttaa", "Rynt~ays", "Kier~ahd~a", "Tavaraluettelo", "Aloita"
     , STR_KEYS

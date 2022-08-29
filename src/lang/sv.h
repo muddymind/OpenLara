@@ -90,6 +90,9 @@ const char *STR_SV[] = { ""
     , "Character" // need translation!
     , "Mario"
     , "Lara"
+	, "Mario's Movement"
+	, "Camera"
+	, "Tank"
     // controls
     , "V~anster", "H~oger", "Spring", "Backa", "Hoppa", "G^a", "Action", "Dra Vapen", "Titta", "Ducka", "Rusa", "Rulla", "Lager", "Start"
     , STR_KEYS

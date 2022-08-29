@@ -93,6 +93,9 @@ const char *STR_GR[] = { "Ελληνικά"
     , "Character" // need translation!
     , "Mario"
     , "Lara"
+	, "Mario's Movement"
+	, "Camera"
+	, "Tank"
     // controls
     , "Αριστερό", "Δεξί", "Μπροστά", "Πίσω", "Άλμα", "Περπάτημα", "Δράση", "Χρήση Όπλου", "Κοίταγμα", "Σκύψιμο", "Τρέξιμο", "Τούμπα", "Σακίδιο", "Ξεκίνημα"
     , STR_KEYS
