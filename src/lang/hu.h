@@ -90,8 +90,8 @@ const char *STR_HU[] = { ""
     , "Character" // need translation!
     , "Mario"
     , "Lara"
-	, "Mario's Movement"
-	, "Camera"
+	, "Mario mozgatása"
+	, "Kamera"
 	, "Tank"
     // controls
     , "Bal", "Jobb", "Fut)as", "Vissza", "Ugr)as", "S)eta", "Akci)o", "Fegyver el\"ov)etel", "N)ez", "Gugol", "L~ok", "Gurul", "T)argylista", "Kezd)es"
