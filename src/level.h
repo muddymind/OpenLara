@@ -3718,6 +3718,7 @@ struct Level : IGame {
                 inventory->titleTimer = 0.0f;
                 inventory->toggle(0, Inventory::PAGE_OPTION);
                 gameEndTimer = 0;
+				TR::isGameEnded = false;
             }
 
             Core::setTarget(NULL, NULL, RT_CLEAR_COLOR | RT_STORE_COLOR);
