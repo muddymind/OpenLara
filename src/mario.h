@@ -621,7 +621,13 @@ struct Mario : Lara
 				Switch *controller = (Switch*)level->entities[info.trigCmd[cmdIndex++].args].controller;
 
 				if (controller->flags.state != TR::Entity::asActive) {
-					limit = state == STATE_STOP ? (controller->getEntity().type == TR::Entity::SWITCH_BUTTON ? &TR::Limits::SWITCH_BUTTON : &TR::Limits::SWITCH_MARIO) : &TR::Limits::SWITCH_UNDERWATER;
+					limit =
+						(stand == STAND_GROUND) ? (controller->getEntity().type == TR::Entity::SWITCH_BUTTON ? &TR::Limits::SWITCH_BUTTON : &TR::Limits::SWITCH_MARIO) :
+						(stand == STAND_UNDERWATER) ? &TR::Limits::SWITCH_UNDERWATER :
+						NULL;
+
+					if (!limit) return;
+
 					if (checkInteraction(controller, limit, Input::state[camera->cameraIndex][cAction])) {
 						actionState = (controller->state == Switch::STATE_DOWN && stand == STAND_GROUND) ? STATE_SWITCH_UP : STATE_SWITCH_DOWN;
 
@@ -986,6 +992,11 @@ struct Mario : Lara
 					}
 					sm64_set_mario_velocity(marioId, 0, 0, 0);
 					if (marioState.action != ACT_WATER_PUNCH) addPos.y = ((marioWaterLevel - 80) - (marioState.position[1]/MARIO_SCALE) < 400.0f) ? -1.25f : 2;
+					else
+					{
+						addPos.x = -marioState.velocity[0];
+						addPos.z = -marioState.velocity[2];
+					}
 				}
 				break;
 
