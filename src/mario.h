@@ -152,8 +152,7 @@ struct Mario : Lara
 
 		marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
 		if (marioId >= 0) 
-		{
-			sm64_set_mario_tank_mode(marioId, marioTankMode);			
+		{			
 			sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
 		}
 	}
@@ -1353,10 +1352,11 @@ struct Mario : Lara
 			marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
 			if (marioId >= 0) 
 			{
-				sm64_set_mario_tank_mode(marioId, marioTankMode);
 				sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
 			}
 		}
+
+		sm64_set_mario_tank_mode(marioId, marioTankMode);
 		
 		levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 2, true);
 

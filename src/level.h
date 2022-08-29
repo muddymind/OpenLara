@@ -448,6 +448,11 @@ struct Level : IGame {
 
         if (switchModels)
             resetModels();
+
+        for(int i=0; i<2; i++)
+        {
+            if(players[i]) players[i]->marioTankMode = Core::settings.controls[i].marioTankMode == 1;
+        }
     }
 
     virtual TR::Level* getLevel() {
