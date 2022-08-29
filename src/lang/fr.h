@@ -90,6 +90,9 @@ const char *STR_FR[] = { ""
     , "Personnage" // thanks CamilleLRR
     , "Mario"
     , "Lara"
+	, "Mouvement de Mario"
+	, "Caméra"
+	, "Tank"
     // controls
     , "Gauche", "Droite", "Courir", "Arri$ere", "Sauter", "Marcher", "Action", "D)egainer", "Regarder", "Duck", "Dash", "Roulade", "Inventaire", "Start"
     , STR_KEYS

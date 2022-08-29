@@ -90,6 +90,9 @@ const char *STR_CZ[] = { ""
     , "Postava" // thanks Raina Audron
     , "Mario"
     , "Lara"
+	, "Ovládání Maria"
+	, "Podle kamery"
+	, "Jako tank"
     // controls
     , "Vlevo", "Vpravo", "Vp{red", "Vzad", "Skok", "Ch^uze", "Akce", "Tasit zbra{n", "Rozhl)ednout", "D{rep", "Sprint", "Kotoul", "Invent)a{r", "Start"
     , STR_KEYS

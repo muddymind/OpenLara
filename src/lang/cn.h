@@ -93,6 +93,9 @@ const char *STR_CN[] = { "简体中文"
     , "Character" // need translation!
     , "Mario"
     , "Lara"
+	, "马里奥操作模式"
+	, "镜头"
+	, "坦克"
     // controls
     , "左", "右", "上", "下", "跳", "走", "动作", "持枪", "观察", "蹲", "加速跑", "翻滚", "查看背包", "开始"
     , STR_KEYS

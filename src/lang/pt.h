@@ -90,6 +90,9 @@ const char *STR_PT[] = { ""
     , "Personagem" // thanks muddymind
     , "Mario"
     , "Lara"
+	, "Movimento do Mario"
+	, "Camera"
+	, "Tanque"
     // controls
     , "Esquerda", "Direita", "Correr", "Atr)as", "Pular", "Andar", "A|c+ao", "Sacar as Armas", "Olhar", "Abaixar", "Corrida R)apida", "Rolar", "Invent)ario", "Start"
     , STR_KEYS

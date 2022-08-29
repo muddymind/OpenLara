@@ -441,6 +441,7 @@ namespace Core {
             uint8  retarget;
             uint8  multiaim;
             uint8  character; // mario or lara
+            uint8  marioTankMode; // Mario tank mode or camera based controls
             KeySet keys[cMAX];
         } controls[2];
 
@@ -990,6 +991,7 @@ namespace Core {
             ctrl.retarget  = true;
             ctrl.multiaim  = true;
             ctrl.character = 0; // mario
+            ctrl.marioTankMode = 0; //mario tank mode off by default
 
             ctrl.keys[ cLeft      ] = KeySet( ikLeft,   jkLeft   );
             ctrl.keys[ cRight     ] = KeySet( ikRight,  jkRight  );
@@ -1015,6 +1017,7 @@ namespace Core {
             ctrl.retarget  = true;
             ctrl.multiaim  = true;
             ctrl.character = 1; // lara
+            ctrl.marioTankMode = 0; //mario tank mode off by default
 
             ctrl.keys[ cLeft      ] = KeySet( ikNone,   jkLeft   );
             ctrl.keys[ cRight     ] = KeySet( ikNone,   jkRight  );

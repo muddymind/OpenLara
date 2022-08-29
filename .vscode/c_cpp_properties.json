@@ -39,6 +39,7 @@
                 "-DGEOMETRY_EXPORT",
                 "-I../../libs/",
                 "main.cpp",
+                "../../libs/sha1/sha1.c",
                 "../../libs/stb_vorbis/stb_vorbis.c",
                 "../../libs/minimp3/minimp3.cpp",
                 "../../libs/tinf/tinflate.c",
