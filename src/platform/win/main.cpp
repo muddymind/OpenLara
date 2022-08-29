@@ -23,6 +23,7 @@ extern "C" {
 
 // and while it's still in extern C, include this
 #include <libsm64/src/libsm64.h>
+#include <sha1/sha1.h>
 }
 
 #include <stdio.h>
@@ -1093,19 +1094,46 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     Core::defLang = checkLanguage();
 
+    char *romBuffer;
+    size_t romFileLength;
     FILE *f = fopen("sm64.us.z64", "rb");
     if (!f)
-        MessageBoxA(hWnd, "Place sm64.us.z64 in this folder", "Mario 64 US ROM not found", MB_ICONHAND);
+        MessageBoxA(hWnd, "Place sm64.us.z64 in this folder", "Super Mario 64 US ROM not found", MB_ICONHAND);
     else
     {
+		fseek(f, 0, SEEK_END);
+        romFileLength = (size_t)ftell(f);
+        rewind(f);
+        romBuffer = (char*)malloc(romFileLength + 1);
+        fread(romBuffer, 1, romFileLength, f);
+        romBuffer[romFileLength] = 0;
         fclose(f);
-        Game::init((argc > 1 && strstr(argv[1], "--") != argv[1]) ? argv[1] : NULL);
 
-        if (Core::isQuit) {
-            MessageBoxA(hWnd, "Please check the readme file first!", "Game resources not found", MB_ICONHAND);
-        } else {
-            ShowWindow(hWnd, SW_SHOWDEFAULT);
-        }
+		const char *expectedHash = "9bef1128717f958171a4afac3ed78ee2bb4e86ce";
+		char hashResult[21];
+		char hashHexResult[41];
+		SHA1(hashResult, romBuffer, romFileLength);
+
+		for( int offset = 0; offset < 20; offset++)
+			sprintf( ( hashHexResult + (2*offset)), "%02x", hashResult[offset]&0xff);
+
+		if (strcmp(hashHexResult, expectedHash)) // mismatch
+		{
+			Core::isQuit = true;
+			char errormsg[256];
+			sprintf(errormsg, "Invalid sm64.us.z64 ROM file, SHA-1 checksum mismatch\n\nExpected: %s\nYour copy: %s\n\nPlease acquire a correct copy of the ROM", expectedHash, hashHexResult);
+			MessageBoxA(hWnd, errormsg, "Super Mario 64 US ROM mismatch", MB_ICONHAND);
+		}
+		else // match
+		{
+			Game::init((argc > 1 && strstr(argv[1], "--") != argv[1]) ? argv[1] : NULL);
+
+			if (Core::isQuit) {
+				MessageBoxA(hWnd, "Please check the readme file first!", "Game resources not found", MB_ICONHAND);
+			} else {
+				ShowWindow(hWnd, SW_SHOWDEFAULT);
+			}
+		}
     }
 
     MSG msg;
