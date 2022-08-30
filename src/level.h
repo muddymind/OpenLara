@@ -269,6 +269,18 @@ struct Level : IGame {
                         ((Mario*)lara)->currPos[0] = ((Mario*)lara)->lastPos[0] = lara->pos.x;
                         ((Mario*)lara)->currPos[1] = ((Mario*)lara)->lastPos[1] = -lara->pos.y;
                         ((Mario*)lara)->currPos[2] = ((Mario*)lara)->lastPos[2] = -lara->pos.z;
+                        if ((level.version & TR::VER_TR1) && level.id == 21) // natla final boss?
+                        {
+                            int natlaRooms[] = {34, 35, 39, 40, 41, 42, 43, 44, 45, 46, 55, 58, 59, 66};
+                            for (int i=0; i<14; i++)
+                            {
+                                if (lara->roomIndex == natlaRooms[i]) // natla final boss
+                                {
+                                    sm64_play_music(0, ((4 << 8) | SEQ_LEVEL_BOSS_KOOPA_FINAL), 0);
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
 
