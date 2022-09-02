@@ -41,6 +41,7 @@
                 "-DDEBUG_RENDER",
                 "-DNO_TOUCH_SUPPORT",
                 "-DGEOMETRY_EXPORT",
+                //"-DMARIO_FACE_DEBUG",
                 "-I../../libs/",
                 "main.cpp",
                 "../../libs/sha1/sha1.c",

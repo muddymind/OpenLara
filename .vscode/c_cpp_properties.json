@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/src/libs/",
                 "${workspaceFolder}/src/",
-                "C:/msys64/mingw64/include"
+                "C:/msys64/mingw64/include/"
             ],
             "defines": [
                 "UNICODE",
@@ -18,7 +18,8 @@
                 "WIN32",
                 "_WIN32",
                 "GEOMETRY_EXPORT",
-                "DECODE_VAG"
+                "DECODE_VAG",
+                "DMARIO_FACE_DEBUG"
             ],
             "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
             "cStandard": "c17",
@@ -37,6 +38,7 @@
                 "-DDEBUG_RENDER",
                 "-DNO_TOUCH_SUPPORT",
                 "-DGEOMETRY_EXPORT",
+                "-DMARIO_FACE_DEBUG",
                 "-I../../libs/",
                 "main.cpp",
                 "../../libs/sha1/sha1.c",

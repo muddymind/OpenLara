@@ -2492,14 +2492,44 @@ struct Level : IGame {
             marioPositionDebugger=!marioPositionDebugger;
             Input::down[ikF6] = false;
         }
+        #ifdef MARIO_FACE_DEBUG
         if (Input::down[ikF7]) {
             Lara *lara = (Lara *)getLara(0);
             if(lara!=NULL && lara->isMario)
             {
-                lara->setDozy(true);
+                Mario* mario = (Mario*)lara;
+                mario->activeBoneIndex--;
+                if(mario->activeBoneIndex<0) mario->activeBoneIndex=0;
+                printf("boneIdx: %d\n", mario->activeBoneIndex); 
             }
             Input::down[ikF7] = false;
         }
+         if (Input::down[ikF8]) {
+            Lara *lara = (Lara *)getLara(0);
+            if(lara!=NULL && lara->isMario)
+            {
+                Mario* mario = (Mario*)lara;
+                mario->activeBoneIndex++;
+                if(mario->activeBoneIndex>(1024*3)-1) mario->activeBoneIndex=(1024*3)-1;
+                
+                printf("boneIdx: %d\n", mario->activeBoneIndex); 
+            }
+            Input::down[ikF8] = false;
+        }
+        #endif
+
+        // if (Input::down[ikF8]) {
+        //     Lara *lara = (Lara *)getLara(0);
+        //     if(lara!=NULL && lara->isMario)
+        //     {
+        //         Mario* mario = (Mario*)lara;
+        //         for(int i=0; i<mario->marioRig.bonesCount; i++)
+        //         {
+        //             printf("bone %d normal vec3(%f,%f,%f)\n", i, mario->marioRig.bones[i]->normal.x, mario->marioRig.bones[i]->normal.y, mario->marioRig.bones[i]->normal.z);
+        //         }
+        //     }
+        //     Input::down[ikF8] = false;
+        // }
     #endif
     }
 
@@ -3240,6 +3270,44 @@ struct Level : IGame {
                 if(lara && lara->isMario){
                     Mario *mario = (Mario *)lara;
                     Debug::Level::sm64DebugMarioPosition(mario->marioId, levelSM64);
+                }
+            }
+
+            #ifdef MARIO_FACE_DEBUG
+            if(true)
+            {
+                Core::setDepthTest(false);
+                Lara *lara = (Lara *)getLara(0);
+                if(lara && lara->isMario){
+                    Mario *mario = (Mario *)lara;
+                    for(int i=0; i<mario->marioBonesCount; i++)
+                    {
+                        Debug::Draw::sphere(mario->marioBones[i], 4, vec4(1.0f, 1.0f, 1.0f, 0.7f));
+                        Debug::Draw::triangle(mario->marionBoneFace[0], mario->marionBoneFace[1], mario->marionBoneFace[2], vec4(1.0f, 1.0f, 1.0f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 0.7f));
+                    }
+                }
+                Core::setDepthTest(true);
+            }
+            #endif
+
+            Core::setDepthTest(false);
+
+            Lara *lara = (Lara *)getLara(0);
+            if(lara && lara->isMario){
+                Mario *mario = (Mario *)lara;
+                if(mario->isChibiLara && mario->chibiLara)
+                {
+                    struct ChibiLara::MarioRig *marioRig = mario->chibiLara->marioRig;
+
+                    if(marioRig->inited)
+                    {
+                        int ssize=32;
+
+                        for(int i=0; i<marioRig->bonesCount; i++)
+                        {
+                            Debug::Draw::sphere(marioRig->bones[i]->position, ssize, vec4(1.0f, 1.0f, 1.0f, 0.5f)); 
+                        }
+                    }
                 }
             }
             
