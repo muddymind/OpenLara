@@ -195,8 +195,15 @@ struct LevelSM64 : SM64::ILevelSM64
 		{
 			entity = e;
 			controller = (Controller*) e->controller;
-			spawned = true;
 
+			if (!controller)
+			{
+				// prevent a crash on linux
+				spawned = false;
+				return;
+			}
+
+			spawned = true;
 			controller->updateJoints();
 
 			TR::Model *model = &level->models[e->modelIndex - 1];
@@ -1042,7 +1049,7 @@ struct LevelSM64 : SM64::ILevelSM64
 			if (!model)
 				continue;
 
-			dynamicObjects[dynamicObjectsCount++].LoadDynamicObject(level, e);	
+			dynamicObjects[dynamicObjectsCount++].LoadDynamicObject(level, e);
 		}
 	}
 
