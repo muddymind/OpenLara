@@ -94,6 +94,7 @@ const char *STR_RU[] = { ""
 	// Mario and Lara translation, thanks Defrago
     , "Персонаж"
     , "Марио"
+	, "Chibi Lara"
     , "Лара"
 	, "Управление Марио"
 	, "Камера"

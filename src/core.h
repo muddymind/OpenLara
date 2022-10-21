@@ -440,7 +440,7 @@ namespace Core {
             uint8  vibration;
             uint8  retarget;
             uint8  multiaim;
-            uint8  character; // mario or lara
+            uint8  character; // mario, chibi lara or lara
             uint8  marioTankMode; // Mario tank mode or camera based controls
             KeySet keys[cMAX];
         } controls[2];
@@ -779,7 +779,7 @@ namespace Core {
 
         void stop() {
             if (fpsTime < Core::getTime()) {
-                LOG("FPS: %d DIP: %d TRI: %d RT: %d\n", fps, dips, tris, rt);
+                //LOG("FPS: %d DIP: %d TRI: %d RT: %d\n", fps, dips, tris, rt);
             #ifdef PROFILE
                 LOG("frame time: %d mcs\n", tFrame / 1000);
                 LOG("sound: mix %d rev %d ren %d/%d ogg %d\n", Sound::stats.mixer, Sound::stats.reverb, Sound::stats.render[0], Sound::stats.render[1], Sound::stats.ogg);
@@ -990,7 +990,7 @@ namespace Core {
             ctrl.vibration = true;
             ctrl.retarget  = true;
             ctrl.multiaim  = true;
-            ctrl.character = 0; // mario
+            ctrl.character = 1; // chibi Lara
             ctrl.marioTankMode = 0; //mario tank mode off by default
 
             ctrl.keys[ cLeft      ] = KeySet( ikLeft,   jkLeft   );
@@ -1016,7 +1016,7 @@ namespace Core {
             ctrl.vibration = true;
             ctrl.retarget  = true;
             ctrl.multiaim  = true;
-            ctrl.character = 1; // lara
+            ctrl.character = 2; // lara
             ctrl.marioTankMode = 0; //mario tank mode off by default
 
             ctrl.keys[ cLeft      ] = KeySet( ikNone,   jkLeft   );

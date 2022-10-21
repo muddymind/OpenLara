@@ -10,6 +10,7 @@
 #include "camera.h"
 #include "lara.h"
 #include "mario.h"
+#include "chibilara.h"
 #include "objects.h"
 #include "inventory.h"
 #include "savegame.h"
@@ -838,7 +839,7 @@ struct Level : IGame {
         return controller;
     }
 
-    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle, bool mario) {
+    virtual Controller* addEntity(TR::Entity::Type type, int room, const vec3 &pos, float angle, uint8 character) {
         int index;
         for (index = level.entitiesBaseCount; index < level.entitiesCount; index++) {
             TR::Entity &e = level.entities[index];
@@ -871,7 +872,7 @@ struct Level : IGame {
                     e.intensity = 0x1FFF - level.rooms[room].ambient;
             }
 
-        Controller *controller = initController(index, mario);
+        Controller *controller = initController(index, character);
         e.controller = controller;
 
         if (e.isEnemy() || e.isSprite()) {
@@ -1184,7 +1185,7 @@ struct Level : IGame {
     void initEntities() {
         for (int i = 0; i < level.entitiesBaseCount; i++) {
             TR::Entity &e = level.entities[i];
-            e.controller = initController(i, (e.type == TR::Entity::LARA && Core::settings.controls[0].character == 0));
+            e.controller = initController(i, Core::settings.controls[0].character);
             if (e.type == TR::Entity::LARA || ((level.version & TR::VER_TR1) && e.type == TR::Entity::CUT_1))
                 players[0] = (Lara*)e.controller;
             if(e.type == TR::Entity::LARA)
@@ -1219,7 +1220,7 @@ struct Level : IGame {
         }
 
         if (!players[index]) {
-            players[index] = (Lara*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f, (Core::settings.controls[index].character == 0));
+            players[index] = (Lara*)addEntity(TR::Entity::LARA, 0, vec3(0.0f), 0.0f, Core::settings.controls[index].character);
             players[index]->camera->cameraIndex = index;
             players[index]->marioTankMode = Core::settings.controls[index].marioTankMode == 1;
             Sound::listenersCount = 2;
@@ -1249,13 +1250,28 @@ struct Level : IGame {
         players[index] = NULL;
     }
 
-    Controller* initController(int index, bool mario=false) {
+    Controller* initController(int index, uint8 character=2) {
         if (level.entities[index].type == TR::Entity::CUT_1 && (level.version & TR::VER_TR1))
             return new Lara(this, index);
 
         switch (level.entities[index].type) {
-            case TR::Entity::LARA                  : return (mario) ? new Mario(this, index) : new Lara(this, index);
-            case TR::Entity::ENEMY_DOPPELGANGER    : if (players[0]->isMario) return new MarioDoppelganger(this, index); return new Doppelganger(this, index);
+            case TR::Entity::LARA                  : switch (character)
+                                                        {
+                                                        case 0:
+                                                            return new Mario(this, index);
+                                                        case 1:
+                                                            return new ChibiLara(this, index);                
+                                                        default:
+                                                            return new Lara(this, index);
+                                                        }
+            case TR::Entity::ENEMY_DOPPELGANGER    : switch (character)
+                                                        {
+                                                        case 0:
+                                                        case 1:
+                                                            return new MarioDoppelganger(this, index);                
+                                                        default:
+                                                            return new Doppelganger(this, index);
+                                                        }
             case TR::Entity::ENEMY_WOLF            : return new Wolf(this, index);
             case TR::Entity::ENEMY_BEAR            : return new Bear(this, index);
             case TR::Entity::ENEMY_BAT             : return new Bat(this, index);
@@ -2492,31 +2508,17 @@ struct Level : IGame {
             marioPositionDebugger=!marioPositionDebugger;
             Input::down[ikF6] = false;
         }
-        #ifdef MARIO_FACE_DEBUG
-        if (Input::down[ikF7]) {
+
+        if (Input::down[ikF9]) {
             Lara *lara = (Lara *)getLara(0);
             if(lara!=NULL && lara->isMario)
             {
                 Mario* mario = (Mario*)lara;
-                mario->activeBoneIndex--;
-                if(mario->activeBoneIndex<0) mario->activeBoneIndex=0;
-                printf("boneIdx: %d\n", mario->activeBoneIndex); 
+                mario->activeangle++;
+                printf("active angle: %d", mario->activeangle);
             }
-            Input::down[ikF7] = false;
+            Input::down[ikF9] = false;
         }
-         if (Input::down[ikF8]) {
-            Lara *lara = (Lara *)getLara(0);
-            if(lara!=NULL && lara->isMario)
-            {
-                Mario* mario = (Mario*)lara;
-                mario->activeBoneIndex++;
-                if(mario->activeBoneIndex>(1024*3)-1) mario->activeBoneIndex=(1024*3)-1;
-                
-                printf("boneIdx: %d\n", mario->activeBoneIndex); 
-            }
-            Input::down[ikF8] = false;
-        }
-        #endif
 
         // if (Input::down[ikF8]) {
         //     Lara *lara = (Lara *)getLara(0);
@@ -3273,42 +3275,47 @@ struct Level : IGame {
                 }
             }
 
-            #ifdef MARIO_FACE_DEBUG
-            if(true)
-            {
-                Core::setDepthTest(false);
-                Lara *lara = (Lara *)getLara(0);
-                if(lara && lara->isMario){
-                    Mario *mario = (Mario *)lara;
-                    for(int i=0; i<mario->marioBonesCount; i++)
-                    {
-                        Debug::Draw::sphere(mario->marioBones[i], 4, vec4(1.0f, 1.0f, 1.0f, 0.7f));
-                        Debug::Draw::triangle(mario->marionBoneFace[0], mario->marionBoneFace[1], mario->marionBoneFace[2], vec4(1.0f, 1.0f, 1.0f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 0.7f));
-                    }
-                }
-                Core::setDepthTest(true);
-            }
-            #endif
-
             Core::setDepthTest(false);
 
             Lara *lara = (Lara *)getLara(0);
-            if(lara && lara->isMario){
-                Mario *mario = (Mario *)lara;
-                if(mario->isChibiLara && mario->chibiLara)
-                {
-                    struct ChibiLara::MarioRig *marioRig = mario->chibiLara->marioRig;
+            if(lara && lara->isChibiLara){
+                ChibiLara *chibilara = (ChibiLara *)lara;
+                //mario->chibiLara->drawDebugPart(ChibiLara::BodyParts::RIGHT_FOOT);
+                // vec3 dvertices[1024];
+                // mario->chibiLara->getDebugVertices(ChibiLara::BodyParts::RIGHT_FOOT, dvertices);
+                // int fcount;
+                // TR::Face *dfaces = mario->chibiLara->getDebugFaces(ChibiLara::BodyParts::RIGHT_FOOT, &fcount);
+                // for(int i=0; i<fcount; i++)
+                // {
+                //     TR::Face *face = &(dfaces[i]);
+                //     Debug::Draw::triangle(dvertices[face->vertices[0]], dvertices[face->vertices[1]], dvertices[face->vertices[2]], vec4(1.0, 0,0,1), vec4(0,1,0,0.3));
+                // }
 
-                    if(marioRig->inited)
-                    {
-                        int ssize=32;
+                // for(int i=0; i< 16; i++)
+                // {
+                //     Debug::Draw::sphere(dvertices[i], 5, vec4(1.0, 0,0,1));
+                // }
 
-                        for(int i=0; i<marioRig->bonesCount; i++)
-                        {
-                            Debug::Draw::sphere(marioRig->bones[i]->position, ssize, vec4(1.0f, 1.0f, 1.0f, 0.5f)); 
-                        }
-                    }
-                }
+                struct ChibiLara::MarioRig *marioRig = chibilara->marioRig;
+
+                // if(marioRig->inited)
+                // {
+                //     int ssize=8;
+
+                //     for(int i=0; i<marioRig->bonesCount; i++)
+                //     {
+                //         // if(i != ChibiLara::BodyParts::LEFT_UPPER_LEG && i!= ChibiLara::BodyParts::RIGHT_UPPER_LEG)
+                //         //     continue;
+                //         Debug::Draw::sphere(marioRig->bones[i]->position, ssize, vec4(1.0f, 1.0f, 1.0f, 0.5f)); 
+                //     }
+                // }
+
+                // struct ChibiLara::MarioRig::MarioBone *torso= mario->chibiLara->marioRig->bones[ChibiLara::BodyParts::TORSO];
+                // Debug::Draw::sphere(torso->position, 32, vec4(1.0f, 1.0f, 1.0f, 0.5f)); 
+                // Debug::Draw::line(torso->lowJointPoint, torso->upperJointPoint, vec4(1.0,0.0,0.0,1.0));
+                // Debug::Draw::line(torso->leftJointPoint, torso->rightJointPoint, vec4(0.0,1.0,0.0,1.0));
+                // Debug::Draw::line(torso->backJointPoint, torso->frontJointPoint, vec4(0.0,0.0,1.0,1.0));
+                
             }
             
             Core::setDepthTest(true);

@@ -92,6 +92,7 @@ const char *STR_GR[] = { "Ελληνικά"
     , "Πολλαπλή Στόχευση"
     , "Character" // need translation!
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "Κίνηση του Μάριο"
 	, "Κάμερα"

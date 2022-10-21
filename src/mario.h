@@ -26,8 +26,6 @@ extern "C" {
 
 #include "marioMacros.h"
 
-#include "chibilara.h"
-
 #define SUBMERGE_DISPLACEMENT_DELAY 1.0f
 
 struct MarioMesh
@@ -78,23 +76,16 @@ struct Mario : Lara
 	int switchSnd[3];
 	bool switchSndPlayed;
 
-	bool isChibiLara;
-	ChibiLara *chibiLara;
-	
-	#ifdef MARIO_FACE_DEBUG
-	vec3 marioBones[15];
-	int marioBonesCount=0;
+	int activeangle=0;
 
-	
-	vec3 marionBoneFace[3];
-	int activeBoneIndex=0;
-	#endif
+	float animationScale;
 
 	//int activejoint=0;
 
 	Mario(IGame *game, int entity) : Lara(game, entity)
 	{
 		isMario = true;
+		isChibiLara = false;
 		postInit = false;
 		reverseAnim = false;
 		marioId = -1;
@@ -107,7 +98,7 @@ struct Mario : Lara
 		switchInteraction = 0;
 		previousRoomIndex = TR::NO_ROOM;
 		submergedTime = 0.0f;
-		isChibiLara = true;
+		animationScale = 1.0;
 
 		for (int i=0; i<9 * SM64_GEO_MAX_TRIANGLES; i++)
 		{
@@ -143,18 +134,10 @@ struct Mario : Lara
 		switchSndPlayed = false;
 
 		animation.setAnim(ANIM_STAND);
-
-		chibiLara = NULL;
 	}
 	
 	virtual ~Mario()
 	{
-		if(isChibiLara && chibiLara!=NULL)
-		{
-			delete chibiLara;
-			chibiLara = NULL;
-		}
-
 		free(marioGeometry.position);
 		free(marioGeometry.color);
 		free(marioGeometry.normal);
@@ -175,7 +158,7 @@ struct Mario : Lara
 
 		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
 
-		marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
+		marioId = levelSM64->createMarioInstance(getRoomIndex(), pos, animationScale);
 		if (marioId >= 0) 
 		{			
 			sm64_set_mario_faceangle(marioId, (int16_t)((-angle + M_PI) / M_PI * 32768.0f));
@@ -193,14 +176,6 @@ struct Mario : Lara
 
 	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
 	{
-		//Lara::render(frustum, mesh, type, caustics);
-
-		if(isChibiLara) 
-		{
-			chibiLara->render(frustum, mesh, type, caustics);
-			return;
-		}
-
 		Core::setCullMode(cmBack);
 		Core::currMarioShader =
 			(marioState.flags & MARIO_METAL_CAP) ? Core::metalMarioShader :
@@ -1371,20 +1346,42 @@ struct Mario : Lara
 		}
 	}
 
-	#ifdef MARIO_FACE_DEBUG
-	void setMarioBone(int idx, int bidx)
+	virtual void saveLastMarioGeometry(vec3 submergedDisplacement)
 	{
-		marioBones[idx]=vec3(marioGeometry.position[bidx], marioGeometry.position[bidx+1], marioGeometry.position[bidx+2]);
-
-		int cbone = bidx-(bidx%9);
-		marionBoneFace[0]=vec3(marioGeometry.position[cbone], marioGeometry.position[cbone+1], marioGeometry.position[cbone+2]);
-		cbone+=3;
-		marionBoneFace[1]=vec3(marioGeometry.position[cbone], marioGeometry.position[cbone+1], marioGeometry.position[cbone+2]);
-		cbone+=3;
-		marionBoneFace[2]=vec3(marioGeometry.position[cbone], marioGeometry.position[cbone+1], marioGeometry.position[cbone+2]);
-		
+		for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
 	}
-	#endif
+
+	virtual void setNewMarioGeometry(vec3 submergedDisplacement)
+	{
+		marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;			
+		for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++)
+		{
+			currGeom[i] = marioGeometry.position[i] * MARIO_SCALE;
+
+			if (i%3 != 0) // flip y and z
+			{
+				currGeom[i] = -currGeom[i];
+				marioGeometry.normal[i] = -marioGeometry.normal[i];
+			}
+		}
+		
+		if(submergedTime != 0.0f)
+		{
+			for (int i=0; i<3 * marioRenderState.mario.num_vertices; i+=3) 
+			{
+				currGeom[i] += submergedDisplacement.x;
+				currGeom[i+1] += submergedDisplacement.y;
+				currGeom[i+2] += submergedDisplacement.z;
+			}
+		}
+	}
+
+	virtual void updateMarioGeometry(vec3 submergedDisplacement)
+	{
+		for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
+
+		TRmarioMesh->update(&marioGeometry);
+	}
 
 	void update()
 	{
@@ -1395,14 +1392,10 @@ struct Mario : Lara
 			#ifdef DEBUG_RENDER	
 			printf("actual mario loading\n");
 			#endif
-			marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
+			marioId = levelSM64->createMarioInstance(getRoomIndex(), pos, animationScale);
 			if (marioId >= 0) 
 			{
 				sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y + M_PI) / M_PI * 32768.0f));
-			}
-			if(isChibiLara)
-			{
-				chibiLara = new ChibiLara(game, (Controller*)this, marioGeometry.position);
 			}
 		}
 
@@ -1466,7 +1459,14 @@ struct Mario : Lara
 				marioTicks += Core::deltaTime;
 				TR::Camera waterFlow;
 				bool flowing = false;
+				vec3 submergedDisplacement= vec3(0.0f);
 				checkTrigger(this, false, waterFlow, &flowing);
+				
+				if(submergedTime != 0.0f)
+				{
+					float displacement = submergedTime * 280 / SUBMERGE_DISPLACEMENT_DELAY;
+					submergedDisplacement = vec3(-cos(angle.x)*displacement*sin(angle.y), displacement, sin(angle.x)*displacement*cos(angle.y));
+				}
 
 				while (marioTicks > 1./30)
 				{
@@ -1482,34 +1482,13 @@ struct Mario : Lara
 					}
 
 					for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
-					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) lastGeom[i] = marioGeometry.position[i];
+					saveLastMarioGeometry(submergedDisplacement);
 
 					levelSM64->marioTick(marioId, &marioInputs, &marioState, &marioGeometry);
-					marioTicks -= 1./30;
-					marioRenderState.mario.num_vertices = 3 * marioGeometry.numTrianglesUsed;
-
 					for (int i=0; i<3; i++) currPos[i] = marioState.position[i] * MARIO_SCALE;
-					for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++)
-					{
-						currGeom[i] = marioGeometry.position[i] * MARIO_SCALE;
+					marioTicks -= 1./30;
 
-						if (i%3 != 0) // flip y and z
-						{
-							currGeom[i] = -currGeom[i];
-							marioGeometry.normal[i] = -marioGeometry.normal[i];
-						}
-					}
-
-					if(submergedTime != 0.0f)
-					{
-						float displacement = submergedTime * 280 / SUBMERGE_DISPLACEMENT_DELAY;
-						for (int i=0; i<3 * marioRenderState.mario.num_vertices; i+=3) 
-						{
-							currGeom[i] -=cos(angle.x)*displacement*sin(angle.y);
-							currGeom[i+1] +=displacement;
-							currGeom[i+2] +=sin(angle.x)*displacement*cos(angle.y);
-						}
-					}
+					setNewMarioGeometry(submergedDisplacement);
 
 					if (marioState.fallDamage)
 						hit(marioState.fallDamage / 8 * 250);
@@ -1517,16 +1496,9 @@ struct Mario : Lara
 
 				addPos.x = addPos.y = addPos.z = 0;
 
+				updateMarioGeometry(submergedDisplacement);
 				for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
-				for (int i=0; i<3 * marioRenderState.mario.num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
-				TRmarioMesh->update(&marioGeometry);
-
-				#ifdef MARIO_FACE_DEBUG
-				setMarioBone(0, activeBoneIndex*3);
-				marioBonesCount = 1;
-				#endif
-
-				if(isChibiLara) chibiLara->updateRig();
+				
 
 				float hp = health / LARA_MAX_HEALTH;
 				float ox = oxygen / LARA_MAX_OXYGEN;

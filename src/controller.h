@@ -69,7 +69,7 @@ namespace SM64
 
         virtual void loadSM64Level(TR::Level *newLevel, void *player, int initRoom=0){}
         virtual void getCurrentAndAdjacentRoomsWithClips(int marioId, vec3 position, int currentRoomIndex, int to, int maxDepth, bool evaluateClips = false){}
-        virtual int createMarioInstance(int roomIndex, vec3 pos){return 0;}
+        virtual int createMarioInstance(int roomIndex, vec3 pos, float animationScale){return 0;}
         virtual void flipMap(int rooms[][2], int count){}
         virtual void updateTransformation(TR::Entity *entity, struct SM64ObjectTransform *transform){}
         virtual void updateDynamicObjects(){}
@@ -227,9 +227,11 @@ struct Controller {
     float waterLevel, waterDepth;
 
     bool isMario;
+    bool isChibiLara;
 
     Controller(IGame *game, int entity) : next(NULL), game(game), level(game->getLevel()), levelSM64(game->getLevelSM64()), entity(entity), animation(level, getModel(), level->entities[entity].flags.smooth), state(animation.state), invertAim(false), layers(0), explodeMask(0), explodeParts(0), lastPos(0) {
         isMario = false;
+        isChibiLara = false;
 
         const TR::Entity &e = getEntity();
         lockMatrix  = false;

@@ -89,6 +89,7 @@ const char *STR_CZ[] = { ""
     , "Multi-m)i{ren)i"
     , "Postava" // thanks Raina Audron
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "Ovládání Maria"
 	, "Podle kamery"

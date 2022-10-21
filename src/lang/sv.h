@@ -89,6 +89,7 @@ const char *STR_SV[] = { ""
     , "Multi-riktning"
     , "Character" // need translation!
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "Marios Rörelser"
 	, "Kamera"

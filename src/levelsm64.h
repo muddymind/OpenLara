@@ -1420,11 +1420,11 @@ struct LevelSM64 : SM64::ILevelSM64
 		}
     }
 
-	virtual int createMarioInstance(int roomIndex, vec3 pos)
+	virtual int createMarioInstance(int roomIndex, vec3 pos, float animationScale)
 	{
 		SM64::MarioPlayer *player = getMarioPlayer(-1);
 		getCurrentAndAdjacentRooms(NULL, player->loadedRooms, &(player->loadedRoomsCount), -1, roomIndex, roomIndex, 2);
-		int marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, player->loadedRooms, player->loadedRoomsCount);
+		int marioId = sm64_mario_create(pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE, 0, 0, 0, 0, player->loadedRooms, player->loadedRoomsCount, animationScale);
 		player->marioId=marioId;
 		return marioId;
 	}

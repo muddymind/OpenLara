@@ -103,6 +103,7 @@ enum StringID {
     , STR_OPT_CONTROLS_MULTIAIM
     , STR_OPT_CONTROLS_CHARACTER
     , STR_CH_MARIO
+    , STR_CH_CHIBI_LARA
     , STR_CH_LARA
 	, STR_OPT_CONTROLS_MARIO
 	, STR_CH_CAMERA
@@ -263,7 +264,7 @@ enum StringID {
 #ifdef _XBOX // TODO: illegal escape sequence
     #define STR_RUSSIAN "Russian"
 #else
-    #define STR_RUSSIAN "Русски{и"
+    #define STR_RUSSIAN "пїЅпїЅпїЅпїЅпїЅпїЅ{пїЅ"
 #endif
 
 #define STR_LANGUAGES \

@@ -486,13 +486,26 @@ struct vec3 {
         return dot(v) / (length() * v.length());
     }
 
+    float angle2(const vec3 &v) const {
+        return acos(dot(v)) / (length() * v.length());
+    }
+
     float angleX() const { return atan2f(sqrtf(x * x + z * z), y); }
     float angleY() const { return atan2f(z, x); }
+
+  //  yaw = atan(y/x)
+//pitch = atan(z/sqrt(x^2+y^2))
+    float yaw() const { return atan(z/x); }
+    float pitch() const { return atan(z/sqrtf(x*x+y*y)); }
 
     void copyToArray(float *arr) {
         arr[0]=x;
         arr[1]=y;
         arr[2]=z;
+    }
+
+    vec3 mirrorX() const {
+        return vec3(-x, y, z);
     }
 };
 

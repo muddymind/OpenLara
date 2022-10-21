@@ -2552,7 +2552,7 @@ struct MarioDoppelganger: Enemy
 
 		if (!target)
 		{
-            marioId = levelSM64->createMarioInstance(getRoomIndex(), pos);
+            marioId = levelSM64->createMarioInstance(getRoomIndex(), pos, 1.0);
 			sm64_set_mario_state(marioId, 0); // remove cap
 			target = (Character*)game->getLara(0);
 		}

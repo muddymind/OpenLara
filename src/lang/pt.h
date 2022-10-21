@@ -89,6 +89,7 @@ const char *STR_PT[] = { ""
     , "Alvo Duplo"
     , "Personagem" // thanks muddymind
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "Movimento do Mario"
 	, "Camera"

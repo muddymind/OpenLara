@@ -89,6 +89,7 @@ const char *STR_HU[] = { ""
     , "Multi-c)elz)as"
     , "Character" // need translation!
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "Mario mozgatása"
 	, "Kamera"

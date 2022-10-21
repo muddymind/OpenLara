@@ -93,6 +93,7 @@ const char *STR_JA[] = { "日本語"
 	// mario and lara selection. thanks Eringo
     , "キャラクター"
     , "マリオ"
+	, "Chibi Lara"
     , "ララ"
 	, "マリオの制御"
 	, "カメラ"

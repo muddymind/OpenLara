@@ -89,6 +89,7 @@ const char *STR_PL[] = { ""
     , "Wielo-celowanie"
     , "Posta)c" // thanks Sezz
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "Metoda Ruchu Mario"
 	, "Kamera"

@@ -92,6 +92,7 @@ const char *STR_CN[] = { "简体中文"
     , "双手瞄准不同的敌人"
     , "Character" // need translation!
     , "Mario"
+	, "Chibi Lara"
     , "Lara"
 	, "马里奥操作模式"
 	, "镜头"
