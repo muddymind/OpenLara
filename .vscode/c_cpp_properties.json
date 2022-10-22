@@ -24,7 +24,7 @@
             "compilerPath": "C:\\msys64\\mingw64\\bin\\g++.exe",
             "cStandard": "c17",
             "cppStandard": "c++11",
-            "intelliSenseMode": "clang-x86",
+            "intelliSenseMode": "linux-gcc-x64",
             "compilerArgs": [
                 "-std=c++11",
                 "-g",

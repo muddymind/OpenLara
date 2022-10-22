@@ -28,6 +28,8 @@ extern "C" {
 
 #include <stdarg.h>
 
+#define CHIBI_LARA_MAX_JOINTS 30
+
 struct ChibiLara : Mario
 {
     enum BodyParts
@@ -77,285 +79,132 @@ struct ChibiLara : Mario
         MARIO_RIGHT_FOOT = 19
     };
 
-    struct MarioRig
+    struct MarioBone
     {
-        bool inited;
-
-        vec3 leftArmDisplacement, rightArmDisplacement;
-        vec3 leftLegDisplacement, rightLegDisplacement;
-
-        int marioId;
-
-        struct MarioBone
+        bool active;
+        mat4 mat;
+        vec3 position;
+        quat rot;
+        vec3 prevPosition;
+        quat prevRot;
+        vec3 nextPosition;
+        quat nextRot;
+        struct ChibiLara *rig;
+        
+        void initBone(struct ChibiLara *parentRig)
         {
-            bool active;
-            mat4 mat;
-            vec3 position;
-            quat rot;
-            vec3 prevPosition;
-            quat prevRot;
-            vec3 nextPosition;
-            quat nextRot;
-            struct MarioRig *rig;
-           
-            void initBone(struct MarioRig *parentRig)
-            {
-                position = vec3(0.0f);
-                rot = quat(0.0f,0.0f,0.0f,0.0f);
-                prevPosition = vec3(0.0f);
-                prevRot = quat(0.0f,0.0f,0.0f,0.0f);
-                nextPosition = vec3(0.0f);
-                nextRot = quat(0.0f,0.0f,0.0f,0.0f);
-                mat.identity();
-                active=false;
-                rig=parentRig;
-            }
+            position = vec3(0.0f);
+            rot = quat(0.0f,0.0f,0.0f,0.0f);
+            prevPosition = vec3(0.0f);
+            prevRot = quat(0.0f,0.0f,0.0f,0.0f);
+            nextPosition = vec3(0.0f);
+            nextRot = quat(0.0f,0.0f,0.0f,0.0f);
+            mat.identity();
+            active=false;
+            rig=parentRig;
+        }
 
-            void updateBone(SM64BodyParts partId, vec3 submergedDisplacement, vec3 limbDisplacement, float ticks, bool doLerp)
+        void updateBone(ChibiLara::SM64BodyParts partId, vec3 submergedDisplacement, vec3 limbDisplacement, float ticks, bool doLerp)
+        {
+            if(active)
             {
-                if(active)
+                mat = rig->getPartMatrix(rig->marioId, partId);
+
+                if(!doLerp)
                 {
-                    mat = rig->getPartMatrix(rig->marioId, partId);
+                    prevPosition = vec3(nextPosition);
+                    prevRot = quat(nextRot);
 
-                    if(!doLerp)
-                    {
-                        prevPosition = vec3(nextPosition);
-                        prevRot = quat(nextRot);
-
-                        nextPosition=mat.getPos()-limbDisplacement+submergedDisplacement;
-                        nextRot=mat.getRot();
-                    }
-                    else
-                    {
-                        position = prevPosition.lerp(nextPosition, ticks);
-                        rot = prevRot.lerp(nextRot, ticks);
-                    }
+                    nextPosition=mat.getPos()-limbDisplacement+submergedDisplacement;
+                    nextRot=mat.getRot();
                 }
-                //We skip the 1st frame because there's no valid data yet.
-                active=true;
+                else
+                {
+                    position = prevPosition.lerp(nextPosition, ticks);
+                    rot = prevRot.lerp(nextRot, ticks);
+                }
             }
-        };
-
-        struct MarioBone head, torso, pelvis, 
-            leftUpperArm, leftLowerArm, leftHand,
-            rigthUpperArm, rightLowerArm, rightHand,
-            leftUpperLeg, leftLowerLeg, leftFoot,
-            rightUpperLeg, rightLowerLeg, rightFoot;
-
-        struct MarioBone *bones[15];
-        int bonesCount;
-
-        MarioRig()
-        {
-            inited = false;
-            marioId=-1;
-
-            leftArmDisplacement=vec3(0.0f);
-            rightArmDisplacement=vec3(0.0f);
-            leftLegDisplacement=vec3(0.0f);
-            rightLegDisplacement=vec3(0.0f);
-
-            int idx = 0;
-
-            bones[PELVIS]=&pelvis;
-
-            bones[LEFT_UPPER_LEG]=&leftUpperLeg;
-            bones[LEFT_LOWER_LEG]=&leftLowerLeg;		
-            bones[LEFT_FOOT]=&leftFoot;
-
-            bones[RIGHT_UPPER_LEG]=&rightUpperLeg;
-            bones[RIGHT_LOWER_LEG]=&rightLowerLeg;
-            bones[RIGHT_FOOT]=&rightFoot;
-
-            bones[TORSO]=&torso;
-            
-            bones[RIGHT_UPPER_ARM]=&rigthUpperArm;
-            bones[RIGHT_LOWER_ARM]=&rightLowerArm;
-            bones[RIGHT_HAND]=&rightHand;
-
-            bones[LEFT_UPPER_ARM]=&leftUpperArm;
-            bones[LEFT_LOWER_ARM]=&leftLowerArm;
-            bones[LEFT_HAND]=&leftHand;
-
-            bones[HEAD]=&head;
-
-            bonesCount=15;
-
-            for(int i=0; i<bonesCount; i++)
-            {
-                bones[i]->initBone(this);
-            }
-        }
-
-        mat4 getPartMatrix(int marioId, SM64BodyParts partId)
-        {
-            mat4 mat;
-
-            float** originalMatrix = sm64_get_mario_part_animation_matrix(marioId, partId);
-
-            if(originalMatrix==NULL)
-            {
-                mat.identity();
-                return mat;
-            }
-
-            mat = mat4(
-                originalMatrix[0][0], originalMatrix[0][1], originalMatrix[0][2], originalMatrix[0][3], 
-                originalMatrix[1][0], originalMatrix[1][1], originalMatrix[1][2], originalMatrix[1][3], 
-                originalMatrix[2][0], originalMatrix[2][1], originalMatrix[2][2], originalMatrix[2][3],
-                originalMatrix[3][0], originalMatrix[3][1], originalMatrix[3][2], originalMatrix[3][3]
-            );
-
-            mat.rotateX(M_PI/2);
-            mat.rotateZ(-M_PI/2);
-
-            mat4 T = mat4(
-                1.0f,  0.0f,  0.0f,  0.0f,
-                0.0f, -1.0f,  0.0f,  0.0f,
-                0.0f,  0.0f, -1.0f,  0.0f,
-                0.0f,  0.0f,  0.0f,  1.0f
-            );
-
-            mat = T.inverse()*mat*T;
-
-            return mat;
-        }
-
-        void calculateLimpsDisplacements(SM64BodyParts leftPart, SM64BodyParts rightPart, vec3 *lefDisplacement, vec3 *rightDisplacement, float displacement)
-        {
-            vec3 leftPosition = getPartMatrix(marioId, leftPart).getPos();
-            vec3 rightPosition = getPartMatrix(marioId, rightPart).getPos();
-
-            *lefDisplacement = leftPosition-leftPosition.lerp(rightPosition, displacement);
-            *rightDisplacement = rightPosition-rightPosition.lerp(leftPosition, displacement);
-        }
-
-        void updateRig(int marioId, vec3 submergedDisplacement, float ticks, bool doLerp)
-        {
-            inited = true;
-            this->marioId = marioId;
-
-            calculateLimpsDisplacements(SM64BodyParts::MARIO_LEFT_UPPER_ARM, SM64BodyParts::MARIO_RIGHT_UPPER_ARM, &leftArmDisplacement, &rightArmDisplacement, 0.15f);
-            calculateLimpsDisplacements(SM64BodyParts::MARIO_LEFT_UPPER_LEG, SM64BodyParts::MARIO_RIGHT_UPPER_LEG, &leftLegDisplacement, &rightLegDisplacement, 0.15f);
-
-            head.updateBone(SM64BodyParts::MARIO_HEAD, submergedDisplacement, vec3(0), ticks, doLerp);            
-            torso.updateBone(SM64BodyParts::MARIO_TORSO, submergedDisplacement, vec3(0), ticks, doLerp);
-            pelvis.updateBone(SM64BodyParts::MARIO_PELVIS, submergedDisplacement, vec3(0), ticks, doLerp);
-
-            leftUpperArm.updateBone(SM64BodyParts::MARIO_LEFT_UPPER_ARM, submergedDisplacement, leftArmDisplacement, ticks, doLerp);
-            leftLowerArm.updateBone(SM64BodyParts::MARIO_LEFT_LOWER_ARM, submergedDisplacement,leftArmDisplacement, ticks, doLerp);
-            leftHand.updateBone(SM64BodyParts::MARIO_LEFT_HAND, submergedDisplacement, leftArmDisplacement, ticks, doLerp);
-
-            rigthUpperArm.updateBone(SM64BodyParts::MARIO_RIGHT_UPPER_ARM, submergedDisplacement, rightArmDisplacement, ticks, doLerp);
-            rightLowerArm.updateBone(SM64BodyParts::MARIO_RIGHT_LOWER_ARM, submergedDisplacement, rightArmDisplacement, ticks, doLerp);
-            rightHand.updateBone(SM64BodyParts::MARIO_RIGHT_HAND, submergedDisplacement, rightArmDisplacement, ticks, doLerp);
-
-            leftUpperLeg.updateBone(SM64BodyParts::MARIO_LEFT_UPPER_LEG, submergedDisplacement, leftLegDisplacement, ticks, doLerp);
-            leftLowerLeg.updateBone(SM64BodyParts::MARIO_LEFT_LOWER_LEG, submergedDisplacement, leftLegDisplacement, ticks, doLerp);
-            leftFoot.updateBone(SM64BodyParts::MARIO_LEFT_FOOT, submergedDisplacement, leftLegDisplacement, ticks, doLerp);
-
-            rightUpperLeg.updateBone(SM64BodyParts::MARIO_RIGHT_UPPER_LEG, submergedDisplacement, rightLegDisplacement, ticks, doLerp);
-            rightLowerLeg.updateBone(SM64BodyParts::MARIO_RIGHT_LOWER_LEG, submergedDisplacement, rightLegDisplacement, ticks, doLerp);
-            rightFoot.updateBone(SM64BodyParts::MARIO_RIGHT_FOOT, submergedDisplacement, rightLegDisplacement, ticks, doLerp);
-
+            //We skip the 1st frame because there's no valid data yet.
+            active=true;
         }
     };
 
-    MarioRig *marioRig;
+    bool inited;
 
-    TR::Mesh::Vertex **customVertices;
-    TR::Mesh::Vertex **origVertices;
-    int *jointsVerticesCount;
+    vec3 leftArmDisplacement, rightArmDisplacement;
+    vec3 leftLegDisplacement, rightLegDisplacement;
 
-    TR::Face **jointFaces;
-    int *jointFacesCount;
+    struct MarioBone head, torso, pelvis, 
+        leftUpperArm, leftLowerArm, leftHand,
+        rigthUpperArm, rightLowerArm, rightHand,
+        leftUpperLeg, leftLowerLeg, leftFoot,
+        rightUpperLeg, rightLowerLeg, rightFoot;
 
-    int jointsCount;
+    struct MarioBone *bones[15];
+    int bonesCount;
 
-    void prepareCustomVertices()
+    void initRig()
     {
-        //TR::Model *model = &(level->models[entity->modelIndex - 1]);
-        const TR::Model *model = getModel(); //&(level->models[controller->layers[0].model-1]);
-        jointsCount = model->mCount;
+        inited = false;
 
-        customVertices = (TR::Mesh::Vertex **)malloc(sizeof(TR::Mesh::Vertex *)*jointsCount);
-        origVertices = (TR::Mesh::Vertex **)malloc(sizeof(TR::Mesh::Vertex *)*jointsCount);
-        jointFaces = (TR::Face **)malloc(sizeof(TR::Face *)*jointsCount);
-        jointsVerticesCount = (int*)malloc(sizeof(int)*jointsCount);
-        jointFacesCount = (int*)malloc(sizeof(int)*jointsCount);
-        for(int i=0; i<jointsCount; i++)
+        leftArmDisplacement=vec3(0.0f);
+        rightArmDisplacement=vec3(0.0f);
+        leftLegDisplacement=vec3(0.0f);
+        rightLegDisplacement=vec3(0.0f);
+
+        int idx = 0;
+
+        bones[PELVIS]=&pelvis;
+
+        bones[LEFT_UPPER_LEG]=&leftUpperLeg;
+        bones[LEFT_LOWER_LEG]=&leftLowerLeg;		
+        bones[LEFT_FOOT]=&leftFoot;
+
+        bones[RIGHT_UPPER_LEG]=&rightUpperLeg;
+        bones[RIGHT_LOWER_LEG]=&rightLowerLeg;
+        bones[RIGHT_FOOT]=&rightFoot;
+
+        bones[TORSO]=&torso;
+        
+        bones[RIGHT_UPPER_ARM]=&rigthUpperArm;
+        bones[RIGHT_LOWER_ARM]=&rightLowerArm;
+        bones[RIGHT_HAND]=&rightHand;
+
+        bones[LEFT_UPPER_ARM]=&leftUpperArm;
+        bones[LEFT_LOWER_ARM]=&leftLowerArm;
+        bones[LEFT_HAND]=&leftHand;
+
+        bones[HEAD]=&head;
+
+        bonesCount=15;
+
+        for(int i=0; i<bonesCount; i++)
         {
-            int index = level->meshOffsets[model->mStart + i];
-            TR::Mesh *mesh = &(level->meshes[index]);
-            customVertices[i]=(TR::Mesh::Vertex *)malloc(sizeof(TR::Mesh::Vertex)*mesh->vCount);
-            jointsVerticesCount[i]=mesh->vCount;
-            for(int j=0; j<mesh->vCount; j++)
-            {
-                customVertices[i][j] = mesh->vertices[j];
-            }
-            origVertices[i] = mesh->vertices;
-            jointFaces[i]=mesh->faces;
-            jointFacesCount[i]=mesh->fCount;
+            bones[i]->initBone(this);
         }
     }
 
-    void switchVertices(bool custom)
+    mat4 getPartMatrix(int marioId, SM64BodyParts partId)
     {
-        //TR::Model *model = &(level->models[entity->modelIndex - 1]);
-        //TR::Model *model = &(level->models[controller->layers[0].model-1]);
-        const TR::Model *model = getModel();
+        mat4 mat;
 
-        for(int i=0; i<jointsCount; i++)
+        float** originalMatrix = sm64_get_mario_part_animation_matrix(marioId, partId);
+
+        if(originalMatrix==NULL)
         {
-            int index = level->meshOffsets[model->mStart + i];
-            TR::Mesh *mesh = &(level->meshes[index]);
-
-            mesh->vertices = custom ? customVertices[i] : origVertices[i];
-        }
-    }
-
-    void transformLaraBodyPart(BodyParts partIndex, vec3 displacement, vec3 scale)
-    {
-        for(int i=0; i<jointsVerticesCount[partIndex]; i++)
-        {
-            customVertices[partIndex][i].coord.x=(int16)(customVertices[partIndex][i].coord.x*scale.x);
-            customVertices[partIndex][i].coord.x=(int16)(customVertices[partIndex][i].coord.x + displacement.x);
-
-            customVertices[partIndex][i].coord.y=(int16)(customVertices[partIndex][i].coord.y*scale.y);
-            customVertices[partIndex][i].coord.y=(int16)(customVertices[partIndex][i].coord.y + displacement.y);
-
-            customVertices[partIndex][i].coord.z=(int16)(customVertices[partIndex][i].coord.z*scale.z);
-            customVertices[partIndex][i].coord.z=(int16)(customVertices[partIndex][i].coord.z + displacement.z);
-        }
-    }
-
-    void rotateLaraBodyPart(BodyParts partIndex, vec3 rotation)
-    {
-        mat4 m;
-        m.identity();
-        if(rotation.x!=0)
-        {
-            m.rotateX(rotation.x);
+            mat.identity();
+            return mat;
         }
 
-        for(int i=0; i<jointsVerticesCount[partIndex]; i++)
-        {
-            vec3 vertex = vec3(customVertices[partIndex][i].coord.x, customVertices[partIndex][i].coord.y, customVertices[partIndex][i].coord.z);
-            
-            vertex = m*vertex;
+        mat = mat4(
+            originalMatrix[0][0], originalMatrix[0][1], originalMatrix[0][2], originalMatrix[0][3], 
+            originalMatrix[1][0], originalMatrix[1][1], originalMatrix[1][2], originalMatrix[1][3], 
+            originalMatrix[2][0], originalMatrix[2][1], originalMatrix[2][2], originalMatrix[2][3],
+            originalMatrix[3][0], originalMatrix[3][1], originalMatrix[3][2], originalMatrix[3][3]
+        );
 
-            customVertices[partIndex][i].coord.x = (int16)vertex.x;
-            customVertices[partIndex][i].coord.y = (int16)vertex.y;
-            customVertices[partIndex][i].coord.z = (int16)vertex.z;
-
-            vertex = vec3(customVertices[partIndex][i].normal.x, customVertices[partIndex][i].normal.y, customVertices[partIndex][i].normal.z);
-            
-            vertex = m*vertex;
-
-            customVertices[partIndex][i].normal.x = (int16)vertex.x;
-            customVertices[partIndex][i].normal.y = (int16)vertex.y;
-            customVertices[partIndex][i].normal.z = (int16)vertex.z;
-        }
+        mat.rotateX(M_PI/2);
+        mat.rotateZ(-M_PI/2);
 
         mat4 T = mat4(
             1.0f,  0.0f,  0.0f,  0.0f,
@@ -364,31 +213,210 @@ struct ChibiLara : Mario
             0.0f,  0.0f,  0.0f,  1.0f
         );
 
-        for(int i=0; i<jointsVerticesCount[partIndex]; i++)
+        mat = T.inverse()*mat*T;
+
+        return mat;
+    }
+
+    void calculateLimpsDisplacements(SM64BodyParts leftPart, SM64BodyParts rightPart, vec3 *lefDisplacement, vec3 *rightDisplacement, float displacement)
+    {
+        vec3 leftPosition = getPartMatrix(marioId, leftPart).getPos();
+        vec3 rightPosition = getPartMatrix(marioId, rightPart).getPos();
+
+        *lefDisplacement = leftPosition-leftPosition.lerp(rightPosition, displacement);
+        *rightDisplacement = rightPosition-rightPosition.lerp(leftPosition, displacement);
+    }
+
+    void updateRig(int marioId, vec3 submergedDisplacement, float ticks, bool doLerp)
+    {
+        inited = true;
+        this->marioId = marioId;
+
+        calculateLimpsDisplacements(SM64BodyParts::MARIO_LEFT_UPPER_ARM, SM64BodyParts::MARIO_RIGHT_UPPER_ARM, &leftArmDisplacement, &rightArmDisplacement, 0.15f);
+        calculateLimpsDisplacements(SM64BodyParts::MARIO_LEFT_UPPER_LEG, SM64BodyParts::MARIO_RIGHT_UPPER_LEG, &leftLegDisplacement, &rightLegDisplacement, 0.15f);
+
+        head.updateBone(SM64BodyParts::MARIO_HEAD, submergedDisplacement, vec3(0), ticks, doLerp);            
+        torso.updateBone(SM64BodyParts::MARIO_TORSO, submergedDisplacement, vec3(0), ticks, doLerp);
+        pelvis.updateBone(SM64BodyParts::MARIO_PELVIS, submergedDisplacement, vec3(0), ticks, doLerp);
+
+        leftUpperArm.updateBone(SM64BodyParts::MARIO_LEFT_UPPER_ARM, submergedDisplacement, leftArmDisplacement, ticks, doLerp);
+        leftLowerArm.updateBone(SM64BodyParts::MARIO_LEFT_LOWER_ARM, submergedDisplacement,leftArmDisplacement, ticks, doLerp);
+        leftHand.updateBone(SM64BodyParts::MARIO_LEFT_HAND, submergedDisplacement, leftArmDisplacement, ticks, doLerp);
+
+        rigthUpperArm.updateBone(SM64BodyParts::MARIO_RIGHT_UPPER_ARM, submergedDisplacement, rightArmDisplacement, ticks, doLerp);
+        rightLowerArm.updateBone(SM64BodyParts::MARIO_RIGHT_LOWER_ARM, submergedDisplacement, rightArmDisplacement, ticks, doLerp);
+        rightHand.updateBone(SM64BodyParts::MARIO_RIGHT_HAND, submergedDisplacement, rightArmDisplacement, ticks, doLerp);
+
+        leftUpperLeg.updateBone(SM64BodyParts::MARIO_LEFT_UPPER_LEG, submergedDisplacement, leftLegDisplacement, ticks, doLerp);
+        leftLowerLeg.updateBone(SM64BodyParts::MARIO_LEFT_LOWER_LEG, submergedDisplacement, leftLegDisplacement, ticks, doLerp);
+        leftFoot.updateBone(SM64BodyParts::MARIO_LEFT_FOOT, submergedDisplacement, leftLegDisplacement, ticks, doLerp);
+
+        rightUpperLeg.updateBone(SM64BodyParts::MARIO_RIGHT_UPPER_LEG, submergedDisplacement, rightLegDisplacement, ticks, doLerp);
+        rightLowerLeg.updateBone(SM64BodyParts::MARIO_RIGHT_LOWER_LEG, submergedDisplacement, rightLegDisplacement, ticks, doLerp);
+        rightFoot.updateBone(SM64BodyParts::MARIO_RIGHT_FOOT, submergedDisplacement, rightLegDisplacement, ticks, doLerp);
+    }
+
+    struct LayerModelPart
+    {
+        TR::Mesh::Vertex *customVertices;
+        TR::Mesh::Vertex *origVertices;
+        TR::Mesh *mesh;
+        int vCount;
+    };
+
+    struct LayerModel
+    {
+        struct LayerModelPart layerModelParts[CHIBI_LARA_MAX_JOINTS];
+        int partsCount;
+    };
+
+    struct LayerModel ChibiLaraLayers[MAX_LAYERS];
+
+    TR::Mesh::Vertex *origTransformedVertices[MAX_LAYERS*CHIBI_LARA_MAX_JOINTS];
+    TR::Mesh::Vertex *customTransformedVertices[MAX_LAYERS*CHIBI_LARA_MAX_JOINTS];
+    bool verticesAlreadyTransformed[MAX_LAYERS*CHIBI_LARA_MAX_JOINTS];
+    
+    int origTransformedVerticesCount=0;
+
+    TR::Mesh::Vertex *getTransformedVertices(TR::Mesh::Vertex *origVertices)
+    {
+        for(int i=0; i<origTransformedVerticesCount; i++)
         {
-            vec3 vertex = vec3(customVertices[partIndex][i].coord.x, customVertices[partIndex][i].coord.y, customVertices[partIndex][i].coord.z);
+            if(origVertices == origTransformedVertices[i])
+            {
+                return customTransformedVertices[i];
+            }
+        }
+        return NULL;
+    }
+
+    int getOriginalVerticesIndex(TR::Mesh::Vertex *origVertices)
+    {
+        for(int i=0; i<origTransformedVerticesCount; i++)
+        {
+            if(origVertices == origTransformedVertices[i])
+            {
+                return i;
+            }
+        }
+        printf("Chibi lara: Could not find the original vertices to transform! This is going to wrong now! Returning 0 to avoid segfault!\n");
+        return 0;
+    }
+
+    void LoadLayerModelVertices(int layerNumber)
+    {
+        const TR::Model *model = &(level->models[layers[layerNumber].model]);
+        ChibiLaraLayers[layerNumber].partsCount = model->mCount;
+
+        for(int i=0; i<ChibiLaraLayers[layerNumber].partsCount; i++)
+        {
+            int index = level->meshOffsets[model->mStart + i];
+            TR::Mesh *mesh = &(level->meshes[index]);
+            ChibiLaraLayers[layerNumber].layerModelParts[i].mesh=mesh;
+
+            TR::Mesh::Vertex *customVertices = getTransformedVertices(mesh->vertices);
+            TR::Mesh::Vertex *originalVertices = mesh->vertices;
+
+            // if customVertices == NULL then these are brand new vertices. Otherwise these were already used on another layer (parts can be reused between different layers)
+            if(customVertices == NULL)
+            {
+                origTransformedVertices[origTransformedVerticesCount] = mesh->vertices;
+                customTransformedVertices[origTransformedVerticesCount] = (TR::Mesh::Vertex *)malloc(sizeof(TR::Mesh::Vertex)*mesh->vCount);
+                for(int j=0; j<mesh->vCount; j++)
+                {
+                    customTransformedVertices[origTransformedVerticesCount][j] = mesh->vertices[j];
+                }
+                verticesAlreadyTransformed[origTransformedVerticesCount] = false;
+                customVertices = customTransformedVertices[origTransformedVerticesCount];
+                origTransformedVerticesCount++;
+            }
             
-            vertex = T*vertex;
-
-            customVertices[partIndex][i].coord.x = (int16)vertex.x;
-            customVertices[partIndex][i].coord.y = (int16)vertex.y;
-            customVertices[partIndex][i].coord.z = (int16)vertex.z;
-
-            vertex = vec3(customVertices[partIndex][i].normal.x, customVertices[partIndex][i].normal.y, customVertices[partIndex][i].normal.z);
-            
-            vertex = T*vertex;
-
-            customVertices[partIndex][i].normal.x = (int16)vertex.x;
-            customVertices[partIndex][i].normal.y = (int16)vertex.y;
-            customVertices[partIndex][i].normal.z = (int16)vertex.z;
+            ChibiLaraLayers[layerNumber].layerModelParts[i].customVertices = customVertices;
+            ChibiLaraLayers[layerNumber].layerModelParts[i].origVertices = originalVertices;
+            ChibiLaraLayers[layerNumber].layerModelParts[i].vCount = mesh->vCount;
         }
     }
 
-    void transformLaraBodyParts()
+    void transformAndRotateLaraLayerBodyPart(int layer, BodyParts partIndex, vec3 displacement, vec3 scale, vec3 rotation)
     {
-        transformLaraBodyPart(BodyParts::HEAD, vec3(0.0f, -30.0f, -20.0f), vec3(1.4f));
-        transformLaraBodyPart(BodyParts::TORSO, vec3(0.0f, 20.0f, 10.0f), vec3(0.75f, 0.7f, 0.75f));
-        transformLaraBodyPart(BodyParts::PELVIS, vec3(0.0f, -20.0f, 0.0f), vec3(0.75f, 0.6f, 0.75f));
+        struct LayerModelPart *part = &(ChibiLaraLayers[layer].layerModelParts[partIndex]);
+        int originalVertexIdx = getOriginalVerticesIndex(part->origVertices);
+
+        if(!verticesAlreadyTransformed[originalVertexIdx])
+        {
+            mat4 m;
+            m.identity();
+            if(rotation.x!=0)
+            {
+                m.rotateX(rotation.x);
+            }
+            for(int i=0; i<part->vCount; i++)
+            {
+                vec3 vertex = vec3(part->customVertices[i].coord.x, part->customVertices[i].coord.y, part->customVertices[i].coord.z);
+                
+                vertex = m*vertex;
+
+                part->customVertices[i].coord.x = (int16)vertex.x;
+                part->customVertices[i].coord.y = (int16)vertex.y;
+                part->customVertices[i].coord.z = (int16)vertex.z;
+
+                vertex = vec3(part->customVertices[i].normal.x, part->customVertices[i].normal.y, part->customVertices[i].normal.z);
+                
+                vertex = m*vertex;
+
+                part->customVertices[i].normal.x = (int16)vertex.x;
+                part->customVertices[i].normal.y = (int16)vertex.y;
+                part->customVertices[i].normal.z = (int16)vertex.z;
+            }
+
+            mat4 T = mat4(
+                1.0f,  0.0f,  0.0f,  0.0f,
+                0.0f, -1.0f,  0.0f,  0.0f,
+                0.0f,  0.0f, -1.0f,  0.0f,
+                0.0f,  0.0f,  0.0f,  1.0f
+            );
+
+            for(int i=0; i<part->vCount; i++)
+            {
+                vec3 vertex = vec3(part->customVertices[i].coord.x, part->customVertices[i].coord.y, part->customVertices[i].coord.z);
+                
+                vertex = T*vertex;
+
+                part->customVertices[i].coord.x = (int16)vertex.x;
+                part->customVertices[i].coord.y = (int16)vertex.y;
+                part->customVertices[i].coord.z = (int16)vertex.z;
+
+                vertex = vec3(part->customVertices[i].normal.x, part->customVertices[i].normal.y, part->customVertices[i].normal.z);
+                
+                vertex = T*vertex;
+
+                part->customVertices[i].normal.x = (int16)vertex.x;
+                part->customVertices[i].normal.y = (int16)vertex.y;
+                part->customVertices[i].normal.z = (int16)vertex.z;
+            }
+            
+
+            for(int i=0; i<part->vCount; i++)
+            {
+                part->customVertices[i].coord.x=(int16)(part->customVertices[i].coord.x*scale.x);
+                part->customVertices[i].coord.x=(int16)(part->customVertices[i].coord.x + displacement.x);
+
+                part->customVertices[i].coord.y=(int16)(part->customVertices[i].coord.y*scale.y);
+                part->customVertices[i].coord.y=(int16)(part->customVertices[i].coord.y + displacement.y);
+
+                part->customVertices[i].coord.z=(int16)(part->customVertices[i].coord.z*scale.z);
+                part->customVertices[i].coord.z=(int16)(part->customVertices[i].coord.z + displacement.z);
+            }
+            verticesAlreadyTransformed[originalVertexIdx] = true;
+            return;
+        }
+    }
+
+    void transformLaraLayerBodyParts(int layer)
+    {
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::HEAD, vec3(0.0f, -30.0f, -20.0f), vec3(1.4f), vec3(M_PI, 0.0f, 0.0f));
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::TORSO, vec3(0.0f, 20.0f, 10.0f), vec3(0.75f, 0.7f, 0.75f), vec3(M_PI, 0.0f, 0.0f));
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::PELVIS, vec3(0.0f, -20.0f, 0.0f), vec3(0.75f, 0.6f, 0.75f), vec3(M_PI, 0.0f, 0.0f));
 
         vec3 upperArmDisplacement = vec3(0.0f, 20.0f, 0.0f);
         vec3 upperArmScaling = vec3(0.8f, 0.8f, 0.8f);
@@ -402,19 +430,13 @@ struct ChibiLara : Mario
         vec3 handScaling = vec3(1.1f, 1.1f, 1.1f);
         vec3 handRotation = vec3(0.0f, 0.0f, 0.0f);
 
-        rotateLaraBodyPart(BodyParts::LEFT_UPPER_ARM, upperArmRotation);
-        transformLaraBodyPart(BodyParts::LEFT_UPPER_ARM, upperArmDisplacement, upperArmScaling);
-        rotateLaraBodyPart(BodyParts::LEFT_LOWER_ARM, lowerArmRotation);
-        transformLaraBodyPart(BodyParts::LEFT_LOWER_ARM, lowerArmDisplacement, lowerArmScaling);
-        rotateLaraBodyPart(BodyParts::LEFT_HAND, handRotation);
-        transformLaraBodyPart(BodyParts::LEFT_HAND, handDisplacement, handScaling);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::LEFT_UPPER_ARM, upperArmDisplacement, upperArmScaling, upperArmRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::LEFT_LOWER_ARM, lowerArmDisplacement, lowerArmScaling, lowerArmRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::LEFT_HAND, handDisplacement, handScaling, handRotation);
 
-        rotateLaraBodyPart(BodyParts::RIGHT_UPPER_ARM, upperArmRotation);
-        transformLaraBodyPart(BodyParts::RIGHT_UPPER_ARM, upperArmDisplacement.mirrorX(), upperArmScaling);
-        rotateLaraBodyPart(BodyParts::RIGHT_LOWER_ARM, lowerArmRotation);
-        transformLaraBodyPart(BodyParts::RIGHT_LOWER_ARM, lowerArmDisplacement.mirrorX(), lowerArmScaling);
-        rotateLaraBodyPart(BodyParts::RIGHT_HAND, handRotation);
-        transformLaraBodyPart(BodyParts::RIGHT_HAND, handDisplacement.mirrorX(), handScaling);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::RIGHT_UPPER_ARM, upperArmDisplacement.mirrorX(), upperArmScaling, upperArmRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::RIGHT_LOWER_ARM, lowerArmDisplacement.mirrorX(), lowerArmScaling, lowerArmRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::RIGHT_HAND, handDisplacement.mirrorX(), handScaling, handRotation);
 
         vec3 upperLegDisplacement = vec3(0.0f, 0.0f, 0.0f);
         vec3 upperLegScaling = vec3(0.7f,0.45f,0.7f);
@@ -428,19 +450,35 @@ struct ChibiLara : Mario
         vec3 footScaling = vec3(0.7f, 0.7f, 0.7f);
         vec3 footRotation = vec3(-M_PI/2.5, 0.0f, 0.0f);
 
-        rotateLaraBodyPart(BodyParts::LEFT_UPPER_LEG, upperLegRotation);
-        transformLaraBodyPart(BodyParts::LEFT_UPPER_LEG, upperLegDisplacement, upperLegScaling);
-        rotateLaraBodyPart(BodyParts::LEFT_LOWER_LEG, lowerLegRotation);
-        transformLaraBodyPart(BodyParts::LEFT_LOWER_LEG, lowerLegDisplacement, lowerLegScaling);
-        rotateLaraBodyPart(BodyParts::LEFT_FOOT, footRotation);
-        transformLaraBodyPart(BodyParts::LEFT_FOOT, footDisplacement, footScaling);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::LEFT_UPPER_LEG, upperLegDisplacement, upperLegScaling, upperLegRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::LEFT_LOWER_LEG, lowerLegDisplacement, lowerLegScaling, lowerLegRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::LEFT_FOOT, footDisplacement, footScaling, footRotation);
 
-        rotateLaraBodyPart(BodyParts::RIGHT_UPPER_LEG, upperLegRotation);
-        transformLaraBodyPart(BodyParts::RIGHT_UPPER_LEG, upperLegDisplacement.mirrorX(), upperLegScaling);
-        rotateLaraBodyPart(BodyParts::RIGHT_LOWER_LEG, lowerLegRotation);
-        transformLaraBodyPart(BodyParts::RIGHT_LOWER_LEG, lowerLegDisplacement.mirrorX(), lowerLegScaling);
-        rotateLaraBodyPart(BodyParts::RIGHT_FOOT, footRotation);
-        transformLaraBodyPart(BodyParts::RIGHT_FOOT, footDisplacement.mirrorX(), footScaling);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::RIGHT_UPPER_LEG, upperLegDisplacement.mirrorX(), upperLegScaling, upperLegRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::RIGHT_LOWER_LEG, lowerLegDisplacement.mirrorX(), lowerLegScaling, lowerLegRotation);
+        transformAndRotateLaraLayerBodyPart(layer, BodyParts::RIGHT_FOOT, footDisplacement.mirrorX(), footScaling, footRotation);
+    }
+
+    void LoadVerticesFromAllLayersAndTransform()
+    {
+        for(int i=0; i<MAX_LAYERS; i++)
+        {
+            LoadLayerModelVertices(i);
+            transformLaraLayerBodyParts(i);
+        }
+    }
+
+    void switchVertices(bool custom)
+    {
+        for(int i=0; i<MAX_LAYERS; i++)
+        {
+            struct LayerModel *laraLayer = &(ChibiLaraLayers[i]);
+            for(int j=0; j<laraLayer->partsCount; j++)
+            {
+                struct LayerModelPart *laraPart = &(laraLayer->layerModelParts[j]);
+                laraPart->mesh->vertices = custom ? laraPart->customVertices : laraPart->origVertices;
+            }
+        }
     }
     
     MeshBuilder *chibiMeshBuilder;
@@ -449,28 +487,21 @@ struct ChibiLara : Mario
     {
         isChibiLara = true;
         animationScale = MARIO_SCALE;
-        prepareCustomVertices();
-        transformLaraBodyParts();
+        LoadVerticesFromAllLayersAndTransform();
         switchVertices(true);
         chibiMeshBuilder = new MeshBuilder(level, game->getMesh()->atlas);
         chibiMeshBuilder->transparent=0;
         switchVertices(false);
-        marioRig = new MarioRig();
+        initRig();
     }
 
     virtual ~ChibiLara()
     {
         delete chibiMeshBuilder;
-        delete marioRig;
-        free(jointsVerticesCount);
-        for(int i; i<jointsCount; i++)
+        for(int i; i<origTransformedVerticesCount; i++)
         {
-            free(customVertices[i]);
-        }
-        free(customVertices);
-        free(origVertices);
-        free(jointFaces);
-        free(jointFacesCount);        
+            free(customTransformedVertices[i]);
+        }    
     }
 
     virtual void saveLastMarioGeometry(vec3 submergedDisplacement)
@@ -480,64 +511,51 @@ struct ChibiLara : Mario
 
     virtual void setNewMarioGeometry(vec3 submergedDisplacement)
     {
-        marioRig->updateRig(marioId, submergedDisplacement, 0, false);
+        updateRig(marioId, submergedDisplacement, 0, false);
     }
 
     virtual void updateMarioGeometry(vec3 submergedDisplacement)
     {
-        marioRig->updateRig(marioId, submergedDisplacement, marioTicks/(1./30), true);
-    }
-
-    void getDebugVertices(BodyParts part, vec3 vertices[1024])
-    {
-        for(int i=0; i<jointsVerticesCount[part]; i++)
-        {
-            vertices[i]=vec3(customVertices[part][i].coord.x+marioRig->bones[part]->position.x, customVertices[part][i].coord.y+marioRig->bones[part]->position.y, customVertices[part][i].coord.z+marioRig->bones[part]->position.z);
-        }
-    }
-    TR::Face *getDebugFaces(BodyParts part, int *count)
-    {
-        *count = jointFacesCount[part];
-        return jointFaces[part];
+        updateRig(marioId, submergedDisplacement, marioTicks/(1./30), true);
     }
 
     void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
 	{
-		if(!marioRig->inited) return;
+		if(!inited) return;
 
         const TR::Model *model = getModel();
 
         mat4 matrix = getMatrix();
 
-        Box box = animation.getBoundingBox(vec3(0, 0, 0), 0);
-        if (!explodeMask && frustum && !frustum->isVisible(matrix, box.min, box.max))
-            return;
-
-        ASSERT(model);
-
         flags.rendered = true;
 
         Core::mModel = matrix;
 
-        // set meshes visibility
-        for (int j = 0; j < model->mCount; j++)
-        {
-            if(  marioRig->bones[j]->active )
-            {
-                joints[j].w = 1.0 ? 1.0f : 0.0f; // hide invisible parts
-                joints[j].pos = marioRig->bones[j]->position;
-                joints[j].rot = marioRig->bones[j]->rot;
-            }
-            else
-            {
-                joints[j].w = 0.0;
-            }
-            
-        }
+        updateJoints();
 
-        // render
-        Core::setBasis(joints, model->mCount);
-        chibiMeshBuilder->renderModel(layers[0].model, caustics);
+        uint32 mask = 0;
+
+        for (int i = MAX_LAYERS - 1; i >= 0; i--) {
+            uint32 vmask = (layers[i].mask & ~mask) | (!i ? explodeMask : 0);
+            vmask &= visibleMask;
+            if (!vmask) {
+                //printf("Layer %d invisible!\n", i);
+                continue;
+            }
+            mask |= layers[i].mask;
+
+            // set meshes visibility
+            for (int j = 0; j < model->mCount; j++)
+            {
+                joints[j].w = (vmask & (1 << j)) ? 1.0f : 0.0f; // hide invisible parts
+                joints[j].pos = bones[j]->position;
+                joints[j].rot = bones[j]->rot;
+            }
+
+            // render
+            Core::setBasis(joints, model->mCount);
+            chibiMeshBuilder->renderModel(layers[i].model, caustics);
+        }
 
         return;
 	}

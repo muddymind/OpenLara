@@ -3274,49 +3274,6 @@ struct Level : IGame {
                     Debug::Level::sm64DebugMarioPosition(mario->marioId, levelSM64);
                 }
             }
-
-            Core::setDepthTest(false);
-
-            Lara *lara = (Lara *)getLara(0);
-            if(lara && lara->isChibiLara){
-                ChibiLara *chibilara = (ChibiLara *)lara;
-                //mario->chibiLara->drawDebugPart(ChibiLara::BodyParts::RIGHT_FOOT);
-                // vec3 dvertices[1024];
-                // mario->chibiLara->getDebugVertices(ChibiLara::BodyParts::RIGHT_FOOT, dvertices);
-                // int fcount;
-                // TR::Face *dfaces = mario->chibiLara->getDebugFaces(ChibiLara::BodyParts::RIGHT_FOOT, &fcount);
-                // for(int i=0; i<fcount; i++)
-                // {
-                //     TR::Face *face = &(dfaces[i]);
-                //     Debug::Draw::triangle(dvertices[face->vertices[0]], dvertices[face->vertices[1]], dvertices[face->vertices[2]], vec4(1.0, 0,0,1), vec4(0,1,0,0.3));
-                // }
-
-                // for(int i=0; i< 16; i++)
-                // {
-                //     Debug::Draw::sphere(dvertices[i], 5, vec4(1.0, 0,0,1));
-                // }
-
-                struct ChibiLara::MarioRig *marioRig = chibilara->marioRig;
-
-                // if(marioRig->inited)
-                // {
-                //     int ssize=8;
-
-                //     for(int i=0; i<marioRig->bonesCount; i++)
-                //     {
-                //         // if(i != ChibiLara::BodyParts::LEFT_UPPER_LEG && i!= ChibiLara::BodyParts::RIGHT_UPPER_LEG)
-                //         //     continue;
-                //         Debug::Draw::sphere(marioRig->bones[i]->position, ssize, vec4(1.0f, 1.0f, 1.0f, 0.5f)); 
-                //     }
-                // }
-
-                // struct ChibiLara::MarioRig::MarioBone *torso= mario->chibiLara->marioRig->bones[ChibiLara::BodyParts::TORSO];
-                // Debug::Draw::sphere(torso->position, 32, vec4(1.0f, 1.0f, 1.0f, 0.5f)); 
-                // Debug::Draw::line(torso->lowJointPoint, torso->upperJointPoint, vec4(1.0,0.0,0.0,1.0));
-                // Debug::Draw::line(torso->leftJointPoint, torso->rightJointPoint, vec4(0.0,1.0,0.0,1.0));
-                // Debug::Draw::line(torso->backJointPoint, torso->frontJointPoint, vec4(0.0,0.0,1.0,1.0));
-                
-            }
             
             Core::setDepthTest(true);
             Core::setBlendMode(bmNone);
