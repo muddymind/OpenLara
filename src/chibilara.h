@@ -79,6 +79,170 @@ struct ChibiLara : Mario
         MARIO_RIGHT_FOOT = 19
     };
 
+    struct ChibiBraid {
+        ChibiLara *lara;
+        vec3 offset;
+
+        Basis *basis;
+        struct Joint {
+            vec3 posPrev, pos;
+            float length;
+        } *joints;
+        int jointsCount;
+        float time;
+
+        ChibiBraid(ChibiLara *lara, const vec3 &offset) : lara(lara), offset(offset), time(0.0f) {
+            TR::Level *level = lara->level;
+            TR::Model *model = getModel();
+            jointsCount = model->mCount + 1;
+            joints      = new Joint[jointsCount];
+            basis       = new Basis[jointsCount - 1];
+
+            Basis basis = getBasis();
+            basis.translate(offset);
+
+            TR::Node *node = (int)model->node < level->nodesDataSize ? (TR::Node*)&level->nodesData[model->node] : NULL;
+            for (int i = 0; i < jointsCount - 1; i++) {
+                TR::Node &t = node[min(i, model->mCount - 2)];
+                joints[i].posPrev = joints[i].pos = basis.pos;
+                joints[i].length  = float(t.z);
+                basis.translate(vec3(0.0f, 0.0f, -joints[i].length));
+            }
+            joints[jointsCount - 1].posPrev = joints[jointsCount - 1].pos = basis.pos;
+            joints[jointsCount - 1].length  = 1.0f;
+        }
+
+        ~ChibiBraid() {
+            delete[] joints;
+            delete[] basis;
+        }
+
+        TR::Model* getModel() {
+            return &lara->level->models[lara->level->extra.braid];
+        }
+
+        Basis getBasis() {
+            return lara->head.basis;
+        }
+
+        vec3 getPos() {
+            return getBasis() * offset;
+        }
+
+        void integrate() {
+            float TIMESTEP = Core::deltaTime;
+            float ACCEL    = 16.0f * GRAVITY * 30.0f * TIMESTEP * TIMESTEP;
+            float DAMPING  = 1.5f;
+
+            if (lara->stand == STAND_UNDERWATER) {
+                ACCEL *= 0.5f;
+                DAMPING = 4.0f;
+            }
+
+            DAMPING = 1.0f / (1.0f + DAMPING * TIMESTEP); // Pade approximation
+
+            for (int i = 1; i < jointsCount; i++) {
+                Joint &j = joints[i];
+                vec3 delta = j.pos - j.posPrev;
+                delta = delta.normal() * (min(delta.length(), 2048.0f * Core::deltaTime) * DAMPING); // speed limit
+                j.posPrev  = j.pos;
+                j.pos     += delta;
+                if ((lara->stand == STAND_WADE || lara->stand == STAND_ONWATER || lara->stand == STAND_UNDERWATER) && (j.pos.y > lara->waterLevel))
+                    j.pos.y -= ACCEL;
+                else
+                    j.pos.y += ACCEL;
+            }
+        }
+
+        void collide() {
+            TR::Level *level = lara->level;
+            const TR::Model *model = lara->getModel();
+
+            TR::Level::FloorInfo info;
+            lara->getFloorInfo(lara->getRoomIndex(), lara->getViewPoint(), info);
+
+            for (int j = 1; j < jointsCount; j++)
+                if (joints[j].pos.y > info.floor)
+                    joints[j].pos.y = info.floor;
+
+            #define BRAID_RADIUS 0.0f
+
+            lara->updateJoints();
+
+            for (int i = 0; i < model->mCount; i++) {
+                if (!(JOINT_MASK_BRAID & (1 << i))) continue;
+
+                vec3 center    = lara->bones[i]->basis * lara->ChibiLaraLayers[0].layerModelParts[i].center;
+                float radiusSq = lara->ChibiLaraLayers[0].layerModelParts[i].radius + BRAID_RADIUS;
+                radiusSq *= radiusSq;
+
+                for (int j = 1; j < jointsCount; j++) {
+                    vec3 dir = joints[j].pos - center;
+                    float len = dir.length2() + EPS;
+                    if (len < radiusSq) {
+                        len = sqrtf(len);
+                        dir *= (lara->ChibiLaraLayers[0].layerModelParts[i].radius + BRAID_RADIUS- len) / len;
+                        joints[j].pos += dir * 0.9f;
+                    }
+                }
+            }
+
+            #undef BRAID_RADIUS
+        }
+
+        void solve() {
+            for (int i = 0; i < jointsCount - 1; i++) {
+                Joint &a = joints[i];
+                Joint &b = joints[i + 1];
+
+                vec3 dir = b.pos - a.pos;
+                float len = dir.length() + EPS;
+                dir *= 1.0f / len;
+
+                float d = a.length - len;
+
+                if (i > 0) {
+                    dir *= d * (0.5f * 1.0f);
+                    a.pos -= dir;
+                    b.pos += dir;
+                } else
+                    b.pos += dir * (d * 1.0f);
+            }
+        }
+
+        void update() {
+            joints[0].pos = getPos();
+            integrate(); // Verlet integration step
+            collide();   // check collision with Lara's mesh
+            for (int i = 0; i < jointsCount; i++) // solve connections (springs)
+                solve();
+
+            vec3 headDir = getBasis().rot * vec3(0.0f, 0.0f, -1.0f);
+
+            for (int i = 0; i < jointsCount - 1; i++) {
+                vec3 d = (joints[i + 1].pos - joints[i].pos).normal();
+                vec3 r = d.cross(headDir).normal();
+                vec3 u = d.cross(r).normal();
+
+                mat4 m;
+                m.up()     = vec4(u, 0.0f);
+                m.dir()    = vec4(d, 0.0f);
+                m.right()  = vec4(r, 0.0f);
+                m.offset() = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+                basis[i].identity();
+                basis[i].translate(joints[i].pos);
+                basis[i].rotate(m.getRot());
+            }
+        }
+        
+        void render(MeshBuilder *mesh) {
+            Core::setBasis(basis, jointsCount - 1);
+            mesh->renderModel(lara->level->extra.braid);
+        }
+
+    } *chibibraid[2];
+
     struct MarioBone
     {
         bool active;
@@ -90,6 +254,7 @@ struct ChibiLara : Mario
         vec3 nextPosition;
         quat nextRot;
         struct ChibiLara *rig;
+        Basis basis;
         
         void initBone(struct ChibiLara *parentRig)
         {
@@ -102,6 +267,10 @@ struct ChibiLara : Mario
             mat.identity();
             active=false;
             rig=parentRig;
+            basis.pos = vec3(0.0f);
+            basis.rot = quat();
+            basis.w = 1.0f;
+
         }
 
         void updateBone(ChibiLara::SM64BodyParts partId, vec3 submergedDisplacement, vec3 limbDisplacement, float ticks, bool doLerp)
@@ -122,6 +291,10 @@ struct ChibiLara : Mario
                 {
                     position = prevPosition.lerp(nextPosition, ticks);
                     rot = prevRot.lerp(nextRot, ticks);
+
+                    basis.pos = position;
+                    basis.rot = rot;
+                    basis.w = 1.0f;
                 }
             }
             //We skip the 1st frame because there's no valid data yet.
@@ -261,6 +434,8 @@ struct ChibiLara : Mario
         TR::Mesh::Vertex *customVertices;
         TR::Mesh::Vertex *origVertices;
         TR::Mesh *mesh;
+        short3 center;
+        int16 radius;
         int vCount;
     };
 
@@ -408,7 +583,39 @@ struct ChibiLara : Mario
                 part->customVertices[i].coord.z=(int16)(part->customVertices[i].coord.z + displacement.z);
             }
             verticesAlreadyTransformed[originalVertexIdx] = true;
-            return;
+        }
+
+        // Calculate the part center for the braid collision.
+        short3 maxc, minc;
+
+        maxc=part->customVertices[0].coord;
+        minc=part->customVertices[0].coord;
+        for(int i=1; i<part->vCount; i++) 
+        {
+            if(part->customVertices[i].coord.x > maxc.x) maxc.x = part->customVertices[i].coord.x;
+            if(part->customVertices[i].coord.y > maxc.y) maxc.y = part->customVertices[i].coord.y;
+            if(part->customVertices[i].coord.z > maxc.z) maxc.z = part->customVertices[i].coord.z;
+
+            if(part->customVertices[i].coord.x < minc.x) minc.x = part->customVertices[i].coord.x;
+            if(part->customVertices[i].coord.y < minc.y) minc.y = part->customVertices[i].coord.y;
+            if(part->customVertices[i].coord.z < minc.z) minc.z = part->customVertices[i].coord.z;
+        }
+
+        part->center = short3((maxc.x+minc.x)/2.0, (maxc.y+minc.y)/2.0, (maxc.y+minc.y)/2.0);
+        part->radius = part->mesh->radius * scale.max();        
+
+        // For some reason (probably rotation shenanigans) these parts get a tottally wrong z offset and must be manually corrected
+        switch (partIndex)
+        {
+        case BodyParts::HEAD:
+            part->center.z +=70;
+            break;
+        case BodyParts::TORSO:
+            part->center.z +=50;
+            break;
+        case BodyParts::PELVIS:
+            part->center.z +=10;
+            break;
         }
     }
 
@@ -482,6 +689,7 @@ struct ChibiLara : Mario
     }
     
     MeshBuilder *chibiMeshBuilder;
+    int braidCount = 0;
 
     ChibiLara(IGame *game, int entity) : Mario(game, entity)
     {
@@ -493,6 +701,31 @@ struct ChibiLara : Mario
         chibiMeshBuilder->transparent=0;
         switchVertices(false);
         initRig();
+
+        if(COUNT(braid) > 0)
+        {
+            switch (level->version & TR::VER_VERSION) {
+                case TR::VER_TR1 :
+                    //braid[0] = new Braid(this, vec3(-4.0f, 24.0f, -48.0f)); // it's just ugly :)
+                    break;
+                case TR::VER_TR2 :
+                case TR::VER_TR3 :
+                    chibibraid[0] = new ChibiBraid(this, vec3(0.0f, -45.0f, -55.0f*1.7f));
+                    braidCount=1;
+                    break;
+                case TR::VER_TR4 :
+                    if (isYoung()) {
+                        chibibraid[0] = new ChibiBraid(this, vec3(-32.0f, -48.0f, -32.0f));
+                        chibibraid[1] = new ChibiBraid(this, vec3( 32.0f, -48.0f, -32.0f));
+                        braidCount=2;
+                    } else {
+                        chibibraid[0] = new ChibiBraid(this, vec3(0.0f, -23.0f, -32.0f));
+                        braidCount=1;
+                    }
+                    break;
+            }
+        }
+        
     }
 
     virtual ~ChibiLara()
@@ -501,7 +734,12 @@ struct ChibiLara : Mario
         for(int i; i<origTransformedVerticesCount; i++)
         {
             free(customTransformedVertices[i]);
-        }    
+        } 
+
+        for (int i = 0; i < braidCount; i++) 
+        {
+            delete chibibraid[i];
+        } 
     }
 
     virtual void saveLastMarioGeometry(vec3 submergedDisplacement)
@@ -517,6 +755,17 @@ struct ChibiLara : Mario
     virtual void updateMarioGeometry(vec3 submergedDisplacement)
     {
         updateRig(marioId, submergedDisplacement, marioTicks/(1./30), true);
+
+        if(inited)
+        {
+            for (int i = 0; i < braidCount; i++) 
+            {
+                if (chibibraid[i]) 
+                {
+                    chibibraid[i]->update();
+                }
+            }
+        }
     }
 
     void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
@@ -555,6 +804,14 @@ struct ChibiLara : Mario
             // render
             Core::setBasis(joints, model->mCount);
             chibiMeshBuilder->renderModel(layers[i].model, caustics);
+        }
+
+        for (int i = 0; i < braidCount; i++) 
+        {
+            if (chibibraid[i]) 
+            {
+                chibibraid[i]->render(chibiMeshBuilder);
+            }
         }
 
         return;

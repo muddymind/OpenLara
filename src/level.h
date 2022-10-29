@@ -3274,6 +3274,18 @@ struct Level : IGame {
                     Debug::Level::sm64DebugMarioPosition(mario->marioId, levelSM64);
                 }
             }
+
+            // Lara *lara = (Lara *)getLara(0);
+            // if(lara && lara->isChibiLara)
+            // {
+            //     ChibiLara *chibilara = (ChibiLara *) lara;
+            //     int layer = 0;
+            //     for(int i=0; i<chibilara->ChibiLaraLayers[layer].partsCount; i++)
+            //     {
+            //         Debug::Draw::sphere(chibilara->bones[i]->basis*chibilara->ChibiLaraLayers[layer].layerModelParts[i].center, chibilara->ChibiLaraLayers[layer].layerModelParts[i].radius, vec4(1.0f, 1.0f, 1.0f, 0.3f));
+            //     }
+            // }
+
             
             Core::setDepthTest(true);
             Core::setBlendMode(bmNone);

@@ -507,6 +507,18 @@ struct vec3 {
     vec3 mirrorX() const {
         return vec3(-x, y, z);
     }
+
+    float avg() const {
+        return (x+y+z)/3.0;
+    }
+
+    float max() const {
+        if(x>y && x>z)
+            return x;
+        if(y>x && y>z)
+            return y;
+        return z;
+    }
 };
 
 struct vec4 {
