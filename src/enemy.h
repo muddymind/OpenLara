@@ -10,6 +10,7 @@ extern "C" {
 #include "objects.h"
 #include "mario.h"
 #include "marioMacros.h"
+#include "chibilarabase.h"
 #include "marioDoppelganger.img.h"
 
 #define STALK_BOX       (1024 * 3)
@@ -2639,6 +2640,172 @@ struct MarioDoppelganger: Enemy
 			for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
 			for (int i=0; i<3 * mesh_num_vertices; i++) marioGeometry.position[i] = lerp(lastGeom[i], currGeom[i], marioTicks/(1./30));
 			TRmarioMesh->update(&marioGeometry);
+		}
+
+		Enemy::updateRoom();
+
+		TR::Level::FloorInfo info;
+		getFloorInfo(getRoomIndex(), target->pos, info);
+		float laraHeight = info.floor - target->pos.y;
+
+		getFloorInfo(getRoomIndex(), pos, info);
+		float selfHeight = info.floor - pos.y;
+
+		if (stand != STAND_AIR && target->stand == Character::STAND_GROUND && selfHeight > 1024 && laraHeight < 256)
+		{
+			stand = STAND_AIR;
+			memset(&marioInputs, 0, sizeof(struct SM64MarioInputs));
+		}
+
+		if (stand == STAND_AIR)
+		{
+			pos.y = -marioState.position[1];
+			if (marioState.action == ACT_IDLE) stand = STAND_GROUND; 
+			marioInputs.buttonZ = (marioState.action == ACT_LEDGE_GRAB);
+
+			if (selfHeight < 128.0f)
+			{
+				game->checkTrigger(this, true);
+				flags.invisible = true;
+				deactivate(true);
+			}
+		}
+	}
+
+	virtual int getStateGround()
+	{
+		if (!think(true))
+			return state;
+		return state;
+	}
+
+	virtual void updatePosition()
+	{
+		Enemy::updatePosition();
+		lookAt(target);
+	}
+};
+
+struct ChibiDoppelganger: Enemy
+{
+	int32_t marioId;
+	struct SM64MarioInputs marioInputs;
+    struct SM64MarioState marioState;
+    struct ChibiLaraBase *chibilara;
+    struct SM64MarioGeometryBuffers marioGeometry;
+
+	float lastPos[3], currPos[3];
+
+	float marioTicks;
+	bool tickedOnce;
+
+	ChibiDoppelganger(IGame *game, int entity) : Enemy(game, entity, 1000, 341, 150.0f, 0.0f)
+	{
+		marioId = -1;
+		marioTicks = 0;
+		tickedOnce = false;
+        chibilara = new ChibiLaraBase(game, level, this);
+
+        marioGeometry.position = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
+		marioGeometry.color    = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
+		marioGeometry.normal   = (float*)malloc( sizeof(float) * 9 * SM64_GEO_MAX_TRIANGLES );
+		marioGeometry.uv       = (float*)malloc( sizeof(float) * 6 * SM64_GEO_MAX_TRIANGLES );
+	}
+
+	virtual ~ChibiDoppelganger()
+	{
+        free(marioGeometry.position);
+		free(marioGeometry.color);
+		free(marioGeometry.normal);
+		free(marioGeometry.uv);
+        delete chibilara;
+		if (marioId != -1) levelSM64->deleteMarioInstance(marioId);
+	}
+
+	void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
+	{
+        if(!chibilara->inited) return;
+
+        const TR::Model *model = getModel();
+
+        mat4 matrix = getMatrix();
+
+        flags.rendered = true;
+
+        Core::mModel = matrix;
+
+        updateJoints();
+
+        for(int j=0; j < model->mCount; j++)
+        {
+            joints[j].pos = chibilara->bones[j]->position;
+            joints[j].rot = chibilara->bones[j]->rot;
+        }
+
+        Core::setBasis(joints, model->mCount);
+        chibilara->chibiMeshBuilder->renderModel(model->index, caustics);
+
+        return;
+	}
+
+	virtual void hit(float damage, Controller *enemy = NULL, TR::HitType hitType = TR::HIT_DEFAULT)
+	{
+		enemy->hit(damage * 10, this);
+		sm64_mario_take_damage(marioId, (uint32_t)(ceil(damage/100.f)), 0, enemy->pos.x, enemy->pos.y, enemy->pos.z);
+	}
+
+	virtual void update()
+	{
+		if (!target)
+		{
+            marioId = levelSM64->createMarioInstance(getRoomIndex(), pos, MARIO_SCALE);
+            chibilara->chibiMarioId = marioId;
+			//sm64_set_mario_state(marioId, 0);
+			target = (Character*)game->getLara(0);
+		}
+
+        if(marioId!=-1)
+        {
+            levelSM64->getCurrentAndAdjacentRoomsWithClips(marioId, pos, getRoomIndex(), getRoomIndex(), 1);
+        }
+
+		if (stand != STAND_AIR && tickedOnce)
+		{
+			Mario* targetMario = ((Mario*)target);
+			pos.x    = DOPPELGANGER_ROOM_CENTER.x * 2.0f - targetMario->marioState.position[0];
+			pos.y    = target->pos.y;
+			pos.z    = DOPPELGANGER_ROOM_CENTER.z * 2.0f + targetMario->marioState.position[2];
+			angle    = target->angle;
+			angle.y -= PI;
+			sm64_set_mario_position(marioId, pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+
+			memcpy(&marioInputs, &targetMario->marioInputs, sizeof(struct SM64MarioInputs));
+			marioInputs.camLookX *= -1;
+			marioInputs.camLookZ *= -1;
+		}
+
+		if (flags.active)
+		{
+			float hp = target->health / 1000.f;
+			if (hp > 0.f) sm64_mario_set_health(marioId, (hp <= 0.2f) ? MARIO_LOW_HEALTH : MARIO_FULL_HEALTH); // mario panting animation if low on health
+			else sm64_mario_kill(marioId);
+
+			marioTicks += Core::deltaTime;
+			while (marioTicks > 1./30)
+			{
+				tickedOnce = true;
+
+				for (int i=0; i<3; i++) lastPos[i] = marioState.position[i];
+
+				sm64_mario_tick(marioId, &marioInputs, &marioState, &marioGeometry);
+				marioTicks -= 1./30;
+
+				for (int i=0; i<3; i++) currPos[i] = marioState.position[i] * MARIO_SCALE;
+				chibilara->updateRig(vec3(0.0f), 0, false);
+			}
+
+			for (int i=0; i<3; i++) marioState.position[i] = lerp(lastPos[i], currPos[i], marioTicks/(1./30));
+            chibilara->updateRig(vec3(0.0f), marioTicks/(1./30), true);
 		}
 
 		Enemy::updateRoom();

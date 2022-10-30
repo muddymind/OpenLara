@@ -1267,8 +1267,9 @@ struct Level : IGame {
             case TR::Entity::ENEMY_DOPPELGANGER    : switch (character)
                                                         {
                                                         case 0:
+                                                            return new MarioDoppelganger(this, index);
                                                         case 1:
-                                                            return new MarioDoppelganger(this, index);                
+                                                            return new ChibiDoppelganger(this, index);                
                                                         default:
                                                             return new Doppelganger(this, index);
                                                         }
