@@ -267,6 +267,12 @@ struct ChibiLara : Mario
 
     void render(Frustum *frustum, MeshBuilder *mesh, Shader::Type type, bool caustics)
 	{
+        if (level->isCutsceneLevel()) 
+        {
+            Lara::render(frustum, mesh, type, caustics);
+            return;
+        }
+
 		if(!chibilara->inited) return;
 
         const TR::Model *model = getModel();
