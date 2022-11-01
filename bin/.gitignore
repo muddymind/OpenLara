@@ -10,3 +10,6 @@
 lib*.dll
 *.exe
 sm64.dll
+data/**
+audio/**
+fmv/**

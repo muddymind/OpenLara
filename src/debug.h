@@ -18,7 +18,7 @@ extern "C" {
 #include "marioMacros.h"
 #include "enemy.h"
 #include "controller.h"
-
+#include "sm64debug.h"
 
 namespace Debug {
 
@@ -1068,11 +1068,15 @@ namespace Debug {
                 for(int i=0; i<MAX_MARIO_PLAYERS; i++)
                 {
                     SM64::MarioPlayer *player = &(levelSM64->marioPlayers[i]);
+                    
                     if(player->marioId!=-1)
                     {
+                        struct SM64StatesDictionary *stateName = get_mario_state_name(sm64_get_mario_action(player->marioId));
+                        
                         y += 16;
-                        int index = sprintf(buf, "Mario Id: %d, tickTime: %.4fms, clipBoxes = %d, clipTime: %.4fms", 
-                            player->marioId, player->marioTickTimeTaken, player->lastClipsFound, player->clipsTimeTaken);
+                        int index = sprintf(buf, "Mario Id: %d, State: %s, tickTime: %.4fms, clipBoxes = %d, clipTime: %.4fms", 
+                            player->marioId, (stateName? stateName->name: "Unknown"),
+                            player->marioTickTimeTaken, player->lastClipsFound, player->clipsTimeTaken);
                         Debug::Draw::text(vec2(16, y += 16), vec4(1.0f), buf);
 
                         index = sprintf(buf, "roomsLoaded:");
