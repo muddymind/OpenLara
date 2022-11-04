@@ -550,7 +550,7 @@ struct ChibiLaraBase
     virtual ~ChibiLaraBase()
     {
         delete chibiMeshBuilder;
-        for(int i; i<origTransformedVerticesCount; i++)
+        for(int i=0; i<origTransformedVerticesCount; i++)
         {
             free(customTransformedVertices[i]);
         }
