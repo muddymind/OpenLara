@@ -62,6 +62,12 @@ namespace SM64
             MESH_LOADING_BOUNDING_BOX
 	    };
 
+        #define MAX_ZIP_LINES 20
+	
+        TR::Entity *ZipLines[MAX_ZIP_LINES];
+        int ZipLinesCount = 0;
+        int zipLineCableId = -1;
+
         struct MarioPlayer marioPlayers[MAX_MARIO_PLAYERS];
 
         double updateDynamicTimeTaken=0.0;

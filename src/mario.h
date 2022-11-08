@@ -1400,6 +1400,59 @@ struct Mario : Lara
 		TRmarioMesh->update(&marioGeometry);
 	}
 
+	float zipLineGrabTime=0.0f;
+	vec3 zipLineGrabInitPosition;
+	#define ZIP_LINE_GRAB_TIME 0.2f
+	bool playedYahooOnZipLine = false;
+
+	void checkZipLine()
+	{
+		struct ZipLineHandle *zipLineHandle =(struct ZipLineHandle *)levelSM64->ZipLines[0]->controller;
+		zipLineHandle->updateJoints();
+		float distance = (zipLineHandle->joints[0].pos-pos).length();
+		float yheight =zipLineHandle->joints[0].pos.y-pos.y;
+		float angleDiff = zipLineHandle->angle.y-angle.y;
+		int pid = camera->cameraIndex;
+
+		if(distance < 930 && yheight>-750 && yheight<-710 && angleDiff > -0.2 && angleDiff < 0.2 
+			&& (marioState.action == ACT_IDLE || marioState.action == ACT_WALKING) && Input::state[pid][cAction])
+		{
+			sm64_set_mario_faceangle(marioId, (int16_t)((-angle.y-angleDiff + M_PI) / M_PI * 32768.0f));
+			sm64_set_mario_action(marioId, ACT_ZIPLINE_GRAB_START);
+			sm64_play_sound_global(SOUND_MARIO_WAH2);
+			zipLineGrabInitPosition = pos;
+			zipLineGrabTime=0.0f;
+			zipLineHandle->start(true);
+			playedYahooOnZipLine = false;
+		}
+		else if( marioState.action == ACT_ZIPLINE_GRAB_START )
+		{
+			zipLineGrabTime+=Core::deltaTime;
+			if(zipLineGrabTime>ZIP_LINE_GRAB_TIME)
+			{
+				zipLineGrabTime = ZIP_LINE_GRAB_TIME;
+				sm64_set_mario_action(marioId, ACT_ZIPLINE_SLIDE);
+			}
+			pos =  zipLineGrabInitPosition.lerp(zipLineHandle->joints[0].pos-(0,680,0), zipLineGrabTime/ZIP_LINE_GRAB_TIME);
+			sm64_set_mario_position(marioId, pos.x/MARIO_SCALE, -pos.y/MARIO_SCALE, -pos.z/MARIO_SCALE);
+		} 
+		else if( marioState.action == ACT_ZIPLINE_SLIDE )
+		{
+			if(!playedYahooOnZipLine && zipLineHandle->animation.state == ZipLineHandle::STATE_SLIDING)
+			{
+				sm64_play_sound_global(SOUND_MARIO_YAHOO);
+				playedYahooOnZipLine = true;
+			}
+			sm64_set_mario_faceangle(marioId, (int16_t)((-zipLineHandle->angle.y + M_PI) / M_PI * 32768.0f));
+			sm64_set_mario_position(marioId, zipLineHandle->joints[0].pos.x/MARIO_SCALE, -zipLineHandle->joints[0].pos.y/MARIO_SCALE, -zipLineHandle->joints[0].pos.z/MARIO_SCALE);
+			if(zipLineHandle->flags.state == TR::Entity::ActiveState::asInactive || Input::state[pid][cAction])
+			{
+				sm64_play_sound_global(SOUND_MARIO_WAH2);
+				sm64_set_mario_action(marioId, ACT_ZIPLINE_CANCEL);
+			}
+		}
+	}
+
 	void update()
 	{
 		updateWaterLevel();
@@ -1451,6 +1504,10 @@ struct Mario : Lara
 			updateRoom();
 
 			if (animation.index != ANIM_STAND && state != STATE_PICK_UP) animation.setAnim(ANIM_STAND);
+
+
+			checkZipLine();
+
 
 			vec3 p = pos;
 			input = getInput();

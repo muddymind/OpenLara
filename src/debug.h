@@ -730,7 +730,12 @@ namespace Debug {
             //     }
             // }
             
-
+            if(((Mario*)lara)->levelSM64->ZipLinesCount)
+            {
+                ZipLineHandle *zipline = (ZipLineHandle *)((Mario*)lara)->levelSM64->ZipLines[0]->controller;
+                zipline->updateJoints();
+                Debug::Draw::sphere(zipline->joints[0].pos, 20.0f, vec4(1.0f,1.0f,1.0f,0.5f));
+            }
                    
 
             Core::setDepthTest(true);            

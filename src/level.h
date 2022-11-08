@@ -1432,6 +1432,8 @@ struct Level : IGame {
 
             case TR::Entity::FISH_EMITTER           : return new DummyController(this, index);
 
+            case TR::Entity::ZIPLINE_HANDLE         : return new ZipLineHandle(this, index);
+
             default                                 : return new Controller(this, index);
         }
     }

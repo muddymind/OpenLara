@@ -1035,6 +1035,12 @@ struct LevelSM64 : SM64::ILevelSM64
 		for (int i=0; i<level->entitiesCount; i++)
 		{
 			TR::Entity *e = &level->entities[i];
+
+			if(e->type == TR::Entity::ZIPLINE_HANDLE)
+			{
+				ZipLines[ZipLinesCount++]=e;
+			}
+
 			if (e->isEnemy() || e->isLara() || e->isSprite() || e->isPuzzleHole() || e->isPickup() || e->type == 169)
 				continue;
 

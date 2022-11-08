@@ -10,7 +10,7 @@ struct SM64StatesDictionary
     uint32_t index;
 };
 
-#define SM64_DICTIONARY_SIZE 236
+#define SM64_DICTIONARY_SIZE 240
 
 struct SM64StatesDictionary SM64_States_Dictionary[SM64_DICTIONARY_SIZE] =
     {{"ACT_IDLE",0x0C400201 },
@@ -248,7 +248,11 @@ struct SM64StatesDictionary SM64_States_Dictionary[SM64_DICTIONARY_SIZE] =
     {"ACT_LADDER_START_GRAB",0x000003C0 },
     {"ACT_LADDER_IDLE",0x000003C1 },
     {"ACT_LADDER_MOVING_VERTICAL",0x000005c2 },
-    {"ACT_LADDER_MOVING_HORIZONTAL",0x000005c3}};
+    {"ACT_LADDER_MOVING_HORIZONTAL",0x000005c3 },
+    {"ACT_ZIPLINE_GRAB_START",0x000005c4 },
+    {"ACT_ZIPLINE_GRAB",0x000005c5 },
+    {"ACT_ZIPLINE_SLIDE",0x000005c6 },
+    {"ACT_ZIPLINE_CANCEL",0x000005c7 }};
 
 struct SM64StatesDictionary *get_mario_state_name(uint32_t index)
 {

@@ -1517,6 +1517,11 @@ namespace TR {
         SND_WINSTON_TRAY    = 347,
     };
 
+    enum TR2Sounds {
+        SND_ZIPLINE_SLIDING     = 280,
+        SND_ZIPLINE_STOPPING    = 281,
+    };
+
     enum {
         MODEL_LARA          = 0,
         MODEL_PISTOLS       = 1,

@@ -514,6 +514,173 @@ struct TrapBoulder : Controller {
     }
 };
 
+struct ZipLineHandle : Controller {
+    enum {
+        STATE_IDLE,
+        STATE_GRABBING,
+        STATE_SLIDING
+    };
+
+    int previousState;
+
+    vec3 velocity;
+    vec3 initJointpos;
+    vec3 initPos;
+    int zipLineCableId;
+    struct Animation initAnimation;
+    Sound::Sample* slidingSound;
+
+    ZipLineHandle(IGame *game, int entity) : Controller(game, entity) 
+    {
+        flags.active = false;
+        updateJoints();
+        initJointpos = joints[0].pos;
+        initPos=pos;
+        hasFinalposition = false;
+        initAnimation = animation;
+        slidingSound=NULL;
+    }
+
+    bool activate()
+    {
+        return start(false);
+    }
+
+    bool start(bool withActor=false)
+    {
+        //We are activating something that is already activated
+        if (flags.state == TR::Entity::asActive || next)
+            return false;
+
+        //We are reseting this controller
+        if (initPos!=pos)
+        {
+            pos=initPos;
+            animation = initAnimation;
+            updateJoints();
+            joints[0].pos=initJointpos;
+            return false;
+        }
+
+        // If it is in the correct place to start we only allow starting with an actor
+        if(!withActor)
+        {
+            return false;
+        }
+        
+        float closestMeshDistante=10000;
+        float closestMeshId=-1;
+
+        vec3 roomOffset = getRoom().getOffset();
+
+        for (int j = 0; j < getRoom().meshesCount; j++)
+		{
+            
+			TR::Room::Mesh *m  = &(getRoom().meshes[j]);
+			TR::StaticMesh *sm = &(level->staticMeshes[m->meshIndex]);
+
+            float meshDistance = ((vec3(m->x, m->y, m->z)+((sm->vbox.max()+sm->vbox.min()/2.0)))-initJointpos).length();
+
+            if(meshDistance<closestMeshDistante)
+            {
+                closestMeshId = m->meshIndex;
+                closestMeshDistante = meshDistance;
+            }                     
+        }
+
+        zipLineCableId = closestMeshId;
+        flags.active = true;
+
+        if (flags.state == TR::Entity::asActive || next)
+            return false;
+        flags.invisible = false;
+        flags.state = TR::Entity::asActive;
+        next = first;
+        first = this;
+        return true;
+    }
+
+    vec3 finalPosition;
+    bool hasFinalposition;
+
+    virtual void update() 
+    {
+        updateJoints();
+
+        if(animation.state == STATE_SLIDING && !hasFinalposition)
+        {
+            vec3 newpos = joints[0].pos;
+            while(true)
+            {
+                newpos += velocity;
+                int16 roomIdx = this->roomIndex;
+                for (int16 i = 0; i < level->roomsCount; i++)
+                {
+                    if (insideRoom(newpos, i)) {
+                        roomIdx = i;
+                    }
+                }
+                TR::Room newroom = level->rooms[roomIdx];
+
+                bool foundCable = false;
+                for (int j = 0; j < newroom.meshesCount; j++)
+                {
+                    
+                    TR::Room::Mesh *m  = &(newroom.meshes[j]);
+                    if(m->meshIndex!=zipLineCableId)
+                    {
+                        continue;
+                    }
+                    if(abs(m->x-newpos.x)<500 || abs(m->z-newpos.z)<500)
+                    {
+                        foundCable = true;
+                        break;
+                    }
+                }
+                if(!foundCable)
+                {
+                    finalPosition = newpos-velocity;
+                    hasFinalposition=true;
+                    break;
+                }
+            }
+        }
+
+        if(animation.state == STATE_SLIDING)
+        {
+            vec3 newpos = joints[0].pos + velocity;
+
+            if(abs((finalPosition-newpos).length())<512)
+            {
+                deactivate();
+                slidingSound->stop();
+                slidingSound = NULL;
+                game->playSound(TR::TR2Sounds::SND_ZIPLINE_STOPPING, joints[0].pos, Sound::PAN);
+            }
+            else
+            {
+                pos += velocity;
+                slidingSound->pos = joints[0].pos;
+            }
+            
+        }
+        else if(animation.state == STATE_GRABBING)
+        {
+            if(!slidingSound && animation.frameIndex>45)
+            {
+                slidingSound = game->playSound(TR::TR2Sounds::SND_ZIPLINE_SLIDING, joints[0].pos, Sound::PAN);
+            }
+            
+            if(animation.frameIndex == animation.framesCount-1)
+            {
+                velocity = (joints[0].pos-initJointpos).normal() * 15.0f;
+            }
+        }
+
+        updateAnimation(true);
+    }
+};
+
 // not a trigger
 struct Block : Controller {
     enum {
