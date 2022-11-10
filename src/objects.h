@@ -521,6 +521,14 @@ struct ZipLineHandle : Controller {
         STATE_SLIDING
     };
 
+    enum {
+        DIRECTION_X_POSITIVE = 1 << 0,
+        DIRECTION_X_NEGATIVE = 1 << 1,
+        DIRECTION_Z_POSITIVE = 1 << 2,
+        DIRECTION_Z_NEGATIVE = 1 << 3,
+    };
+
+
     int previousState;
 
     vec3 velocity;
@@ -529,6 +537,8 @@ struct ZipLineHandle : Controller {
     int zipLineCableId;
     struct Animation initAnimation;
     Sound::Sample* slidingSound;
+    int direction;
+    int originalRoom;
 
     ZipLineHandle(IGame *game, int entity) : Controller(game, entity) 
     {
@@ -536,9 +546,10 @@ struct ZipLineHandle : Controller {
         updateJoints();
         initJointpos = joints[0].pos;
         initPos=pos;
-        hasFinalposition = false;
         initAnimation = animation;
         slidingSound=NULL;
+        direction=0;
+        originalRoom = roomIndex;
     }
 
     bool activate()
@@ -559,6 +570,7 @@ struct ZipLineHandle : Controller {
             animation = initAnimation;
             updateJoints();
             joints[0].pos=initJointpos;
+            roomIndex = originalRoom;
             return false;
         }
 
@@ -600,57 +612,69 @@ struct ZipLineHandle : Controller {
         return true;
     }
 
-    vec3 finalPosition;
-    bool hasFinalposition;
+    bool hasReachedEnd(vec3 newpos)
+    {
+        int16 roomIdx = this->roomIndex;
+        for (int16 i = 0; i < level->roomsCount; i++)
+        {
+            if (insideRoom(newpos, i)) {
+                roomIdx = i;
+            }
+        }
+
+        calculateAdjacentRooms(roomIdx, roomIdx, 1);
+
+        for(int i=0; i<adjacentRoomsCount; i++)
+        {
+            TR::Room newroom = level->rooms[adjacentRooms[i]];
+
+            for (int j = 0; j < newroom.meshesCount; j++)
+            {
+                
+                TR::Room::Mesh *m  = &(newroom.meshes[j]);
+                if(m->meshIndex!=zipLineCableId)
+                {
+                    continue;
+                }
+                switch (direction)
+                {
+                case DIRECTION_X_POSITIVE:
+                    printf("DIRECTION_X_POSITIVE\n");
+                    if(newpos.x>=m->x) continue;
+                    break;
+                case DIRECTION_X_NEGATIVE:
+                    printf("DIRECTION_X_NEGATIVE\n");
+                    if(newpos.x<=m->x) continue;
+                    break;
+                case DIRECTION_Z_POSITIVE:
+                    printf("DIRECTION_Z_POSITIVE\n");
+                    if(newpos.z>=m->z) continue;
+                    break;
+                case DIRECTION_Z_NEGATIVE:
+                    printf("DIRECTION_Z_NEGATIVE\n");
+                    if(newpos.z<=m->z) continue; 
+                    break;               
+                }
+                if(abs(m->x-newpos.x)<1024 && abs(m->z-newpos.z)<1024)
+                {
+                    roomIndex = roomIdx;
+                    printf("distx(%f) distz(%f) room(%d)\n", abs(m->x-newpos.x), abs(m->z-newpos.z), roomIdx);
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
     virtual void update() 
     {
         updateJoints();
 
-        if(animation.state == STATE_SLIDING && !hasFinalposition)
-        {
-            vec3 newpos = joints[0].pos;
-            while(true)
-            {
-                newpos += velocity;
-                int16 roomIdx = this->roomIndex;
-                for (int16 i = 0; i < level->roomsCount; i++)
-                {
-                    if (insideRoom(newpos, i)) {
-                        roomIdx = i;
-                    }
-                }
-                TR::Room newroom = level->rooms[roomIdx];
-
-                bool foundCable = false;
-                for (int j = 0; j < newroom.meshesCount; j++)
-                {
-                    
-                    TR::Room::Mesh *m  = &(newroom.meshes[j]);
-                    if(m->meshIndex!=zipLineCableId)
-                    {
-                        continue;
-                    }
-                    if(abs(m->x-newpos.x)<500 || abs(m->z-newpos.z)<500)
-                    {
-                        foundCable = true;
-                        break;
-                    }
-                }
-                if(!foundCable)
-                {
-                    finalPosition = newpos-velocity;
-                    hasFinalposition=true;
-                    break;
-                }
-            }
-        }
-
         if(animation.state == STATE_SLIDING)
         {
-            vec3 newpos = joints[0].pos + velocity;
+            vec3 newpos = joints[0].pos + (velocity * Core::deltaTime * 2400.0f);
 
-            if(abs((finalPosition-newpos).length())<512)
+            if(hasReachedEnd(newpos))
             {
                 deactivate();
                 slidingSound->stop();
@@ -659,7 +683,7 @@ struct ZipLineHandle : Controller {
             }
             else
             {
-                pos += velocity;
+                pos += velocity * Core::deltaTime * 2400.0f;
                 slidingSound->pos = joints[0].pos;
             }
             
@@ -673,7 +697,16 @@ struct ZipLineHandle : Controller {
             
             if(animation.frameIndex == animation.framesCount-1)
             {
-                velocity = (joints[0].pos-initJointpos).normal() * 15.0f;
+                velocity = (joints[0].pos-initJointpos).normal();
+
+                if(abs(velocity.x)>abs(velocity.z))
+                {
+                    direction = velocity.x > 0 ? DIRECTION_X_POSITIVE : DIRECTION_X_NEGATIVE;
+                }
+                else
+                {
+                    direction = velocity.z > 0 ? DIRECTION_Z_POSITIVE : DIRECTION_Z_NEGATIVE;
+                }
             }
         }
 

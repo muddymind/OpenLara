@@ -235,6 +235,9 @@ struct Controller {
     bool isMario;
     bool isChibiLara;
 
+    int16 adjacentRoomsCount;
+    int16 adjacentRooms[256];
+
     Controller(IGame *game, int entity) : next(NULL), game(game), level(game->getLevel()), levelSM64(game->getLevelSM64()), entity(entity), animation(level, getModel(), level->entities[entity].flags.smooth), state(animation.state), invertAim(false), layers(0), explodeMask(0), explodeParts(0), lastPos(0) {
         isMario = false;
         isChibiLara = false;
@@ -1598,6 +1601,41 @@ struct Controller {
         game->addEntity(TR::Entity::RICOCHET, getRoomIndex(), pos);
         if (sound)
             game->playSound(TR::SND_RICOCHET, pos, Sound::PAN);
+    }
+
+    void calculateAdjacentRooms(int16 to, int16 from, int16 maxDepth = 0, int16 currentDepth = 0 )
+    {
+        if(currentDepth==0)
+        {
+            adjacentRoomsCount = 0;
+            
+            // Optimization for this special case
+            if(maxDepth==0)
+            {
+                adjacentRooms[adjacentRoomsCount++]=to;
+                return;
+            }
+
+            // 1st we set all rooms visibility to false
+            for (int i = 0; i < level->roomsCount; i++)
+                level->rooms[i].flags.visible = false;
+        }
+
+        adjacentRooms[adjacentRoomsCount++]=to;
+        level->rooms[to].flags.visible = true;	
+
+        currentDepth++;
+
+        TR::Room room = level->rooms[to];
+
+        for (int i = 0; i < room.portalsCount && currentDepth<=maxDepth; i++) 
+        {
+			// Let's avoid going backwards or to a room we already visited
+			if(from == room.portals[i].roomIndex || level->rooms[room.portals[i].roomIndex].flags.visible)
+				continue;
+
+            calculateAdjacentRooms(room.portals[i].roomIndex, to, maxDepth, currentDepth);
+		}	
     }
 };
 
