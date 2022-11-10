@@ -639,26 +639,21 @@ struct ZipLineHandle : Controller {
                 switch (direction)
                 {
                 case DIRECTION_X_POSITIVE:
-                    printf("DIRECTION_X_POSITIVE\n");
                     if(newpos.x>=m->x) continue;
                     break;
                 case DIRECTION_X_NEGATIVE:
-                    printf("DIRECTION_X_NEGATIVE\n");
                     if(newpos.x<=m->x) continue;
                     break;
                 case DIRECTION_Z_POSITIVE:
-                    printf("DIRECTION_Z_POSITIVE\n");
                     if(newpos.z>=m->z) continue;
                     break;
                 case DIRECTION_Z_NEGATIVE:
-                    printf("DIRECTION_Z_NEGATIVE\n");
                     if(newpos.z<=m->z) continue; 
                     break;               
                 }
                 if(abs(m->x-newpos.x)<1024 && abs(m->z-newpos.z)<1024)
                 {
                     roomIndex = roomIdx;
-                    printf("distx(%f) distz(%f) room(%d)\n", abs(m->x-newpos.x), abs(m->z-newpos.z), roomIdx);
                     return false;
                 }
             }
